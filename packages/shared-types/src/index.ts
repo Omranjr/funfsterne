@@ -44,32 +44,6 @@ export const UpdateBranchSchema = CreateBranchSchema.partial();
 
 export type UpdateBranch = z.infer<typeof UpdateBranchSchema>;
 
-export const ProductSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  description: z.string().optional(),
-  category: ProductCategorySchema,
-  basePrice: z.number().nonnegative(),
-  images: z.array(z.string()).default([]),
-  isActive: z.boolean().default(true),
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date(),
-});
-
-export type Product = z.infer<typeof ProductSchema>;
-
-export const CreateProductSchema = ProductSchema.omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export type CreateProduct = z.infer<typeof CreateProductSchema>;
-
-export const UpdateProductSchema = CreateProductSchema.partial();
-
-export type UpdateProduct = z.infer<typeof UpdateProductSchema>;
-
 export const ProductBranchAvailabilitySchema = z.object({
   id: z.string(),
   productId: z.string(),
@@ -88,6 +62,34 @@ export const UpsertProductBranchAvailabilitySchema =
 export type UpsertProductBranchAvailability = z.infer<
   typeof UpsertProductBranchAvailabilitySchema
 >;
+
+export const ProductSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  category: ProductCategorySchema,
+  basePrice: z.number().nonnegative(),
+  images: z.array(z.string()).default([]),
+  isActive: z.boolean().default(true),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+  availabilities: z.array(ProductBranchAvailabilitySchema).optional(),
+});
+
+export type Product = z.infer<typeof ProductSchema>;
+
+export const CreateProductSchema = ProductSchema.omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  availabilities: true,
+});
+
+export type CreateProduct = z.infer<typeof CreateProductSchema>;
+
+export const UpdateProductSchema = CreateProductSchema.partial();
+
+export type UpdateProduct = z.infer<typeof UpdateProductSchema>;
 
 export const DiscountCodeSchema = z.object({
   id: z.string(),
