@@ -17,7 +17,11 @@ export default function RootLayout() {
             headerTintColor: theme.colors.text,
             contentStyle: { backgroundColor: theme.colors.background },
           }}
-        />
+        >
+          <Stack.Screen name="login" options={{ title: "Sign in" }} />
+          <Stack.Screen name="verify" options={{ title: "Verify" }} />
+          <Stack.Screen name="account" options={{ title: "Account" }} />
+        </Stack>
       </View>
     </QueryClientProvider>
   );
