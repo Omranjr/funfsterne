@@ -16,6 +16,41 @@ export async function consumerRoutes(app: FastifyInstance) {
     });
   });
 
+  app.get("/me/discount-codes", async (request) => {
+    const userId = request.consumer!.userId;
+
+    const user = await app.prisma.user.findUnique({
+      where: { id: userId },
+      include: { preferredBranch: true },
+    });
+
+    const codes = await app.prisma.discountCode.findMany({
+      where: {
+        isActive: true,
+        OR: [
+          { scopeBranchId: null },
+          { scopeBranchId: user?.preferredBranchId ?? undefined },
+        ],
+      },
+      include: { scopeBranch: true },
+      orderBy: { code: "asc" },
+    });
+
+    const redeemedIds = new Set(
+      (
+        await app.prisma.discountCodeRedemption.findMany({
+          where: { userId },
+          select: { discountCodeId: true },
+        })
+      ).map((r) => r.discountCodeId),
+    );
+
+    return codes.map((code) => ({
+      ...code,
+      redeemed: redeemedIds.has(code.id),
+    }));
+  });
+
   app.post("/discount-codes/redeem", async (request, reply) => {
     const parse = RedeemBodySchema.safeParse(request.body);
     if (!parse.success) {
@@ -53,11 +88,34 @@ export async function consumerRoutes(app: FastifyInstance) {
         .send({ error: "Discount code not valid for your preferred branch" });
     }
 
-    const updated = await app.prisma.discountCode.update({
-      where: { id: discount.id },
-      data: { currentRedemptions: { increment: 1 } },
+    const existingRedemption = await app.prisma.discountCodeRedemption.findUnique({
+      where: {
+        userId_discountCodeId: {
+          userId: consumer.userId,
+          discountCodeId: discount.id,
+        },
+      },
     });
 
-    return { success: true, discount: updated };
+    if (existingRedemption) {
+      return reply
+        .status(400)
+        .send({ error: "Discount code already redeemed by this user" });
+    }
+
+    const [updated, redemption] = await app.prisma.$transaction([
+      app.prisma.discountCode.update({
+        where: { id: discount.id },
+        data: { currentRedemptions: { increment: 1 } },
+      }),
+      app.prisma.discountCodeRedemption.create({
+        data: {
+          userId: consumer.userId,
+          discountCodeId: discount.id,
+        },
+      }),
+    ]);
+
+    return { success: true, discount: updated, redemption };
   });
 }

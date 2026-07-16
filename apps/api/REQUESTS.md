@@ -152,13 +152,38 @@ curl -s -X PATCH http://localhost:4000/admin/products/<product-id> \
   -d '{"images": ["https://...supabase.co/storage/v1/object/public/product-images/...jpg"]}' | jq
 ```
 
+## User auth (magic-link)
+
+### Request a magic link
+```bash
+curl -s -X POST http://localhost:4000/auth/magic-link/request \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com"}' | jq
+```
+
+### Verify magic link and register/login
+```bash
+curl -s -X POST http://localhost:4000/auth/magic-link/verify \
+  -H "Content-Type: application/json" \
+  -d '{
+    "token": "<magic-link-token>",
+    "pushToken": { "token": "<expo-push-token>", "platform": "IOS" }
+  }' | jq
+```
+
 ## Consumer routes (require Bearer consumer token)
 
-The consumer token is a `PushToken.token` value. The OTP/email verification flow that issues these tokens will be implemented in Todo 9.
+The consumer token is a `PushToken.token` value issued by the magic-link verify flow.
 
 ### Get current user
 ```bash
 curl -s http://localhost:4000/consumer/me \
+  -H "Authorization: Bearer <consumer-token>" | jq
+```
+
+### List discount codes available to the logged-in user
+```bash
+curl -s http://localhost:4000/consumer/me/discount-codes \
   -H "Authorization: Bearer <consumer-token>" | jq
 ```
 

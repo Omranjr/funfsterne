@@ -75,17 +75,18 @@ model ProductBranchAvailability {
 }
 
 model DiscountCode {
-  id                String    @id @default(cuid())
-  code              String    @unique
+  id                String                   @id @default(cuid())
+  code              String                   @unique
   type              DiscountCodeType
-  value             Decimal   @db.Decimal(10, 2)
+  value             Decimal                  @db.Decimal(10, 2)
   expiresAt         DateTime?
   maxRedemptions    Int?
-  currentRedemptions Int      @default(0)
-  isActive          Boolean   @default(true)
+  currentRedemptions Int                     @default(0)
+  isActive          Boolean                  @default(true)
   scopeBranchId     String?
-  scopeBranch       Branch?   @relation("DiscountCodeScopeBranch", fields: [scopeBranchId], references: [id], onDelete: SetNull)
+  scopeBranch       Branch?                  @relation("DiscountCodeScopeBranch", fields: [scopeBranchId], references: [id], onDelete: SetNull)
   notifications     Notification[]
+  redemptions       DiscountCodeRedemption[]
 
   @@index([code])
   @@index([isActive])
@@ -100,6 +101,7 @@ model User {
   preferredBranchId String?
   preferredBranch   Branch?    @relation("PreferredBranch", fields: [preferredBranchId], references: [id], onDelete: SetNull)
   pushTokens        PushToken[]
+  redemptions       DiscountCodeRedemption[]
   createdAt         DateTime   @default(now())
 
   @@index([preferredBranchId])
@@ -115,6 +117,31 @@ model PushToken {
 
   @@index([userId])
   @@index([platform])
+}
+
+model MagicLink {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  used      Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([token])
+  @@index([email])
+}
+
+model DiscountCodeRedemption {
+  id             String       @id @default(cuid())
+  userId         String
+  discountCodeId String
+  redeemedAt     DateTime     @default(now())
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  discountCode   DiscountCode @relation(fields: [discountCodeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, discountCodeId])
+  @@index([userId])
+  @@index([discountCodeId])
 }
 
 model Notification {

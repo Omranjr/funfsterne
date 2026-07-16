@@ -163,6 +163,33 @@ export async function adminRoutes(app: FastifyInstance) {
     return app.prisma.discountCode.create({ data: parse.data });
   });
 
+  app.get("/discount-codes/:id", async (request, reply) => {
+    const id = (request.params as { id: string }).id;
+    const discount = await app.prisma.discountCode.findUnique({
+      where: { id },
+      include: { scopeBranch: true, redemptions: true },
+    });
+    if (!discount) {
+      return reply.status(404).send({ error: "Discount code not found" });
+    }
+    return discount;
+  });
+
+  app.patch("/discount-codes/:id", async (request, reply) => {
+    const id = (request.params as { id: string }).id;
+    const parse = CreateDiscountCodeSchema.partial().safeParse(request.body);
+    if (!parse.success) {
+      return reply.status(400).send({ error: "Invalid discount code payload" });
+    }
+    return app.prisma.discountCode.update({ where: { id }, data: parse.data });
+  });
+
+  app.delete("/discount-codes/:id", async (request, reply) => {
+    const id = (request.params as { id: string }).id;
+    await app.prisma.discountCode.delete({ where: { id } });
+    return reply.status(204).send();
+  });
+
   // ── Notifications ────────────────────────────────────────────────────────
 
   app.get("/notifications", async () => {
