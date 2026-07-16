@@ -32,6 +32,18 @@ export const BranchSchema = z.object({
 
 export type Branch = z.infer<typeof BranchSchema>;
 
+export const CreateBranchSchema = BranchSchema.omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type CreateBranch = z.infer<typeof CreateBranchSchema>;
+
+export const UpdateBranchSchema = CreateBranchSchema.partial();
+
+export type UpdateBranch = z.infer<typeof UpdateBranchSchema>;
+
 export const ProductSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -46,6 +58,18 @@ export const ProductSchema = z.object({
 
 export type Product = z.infer<typeof ProductSchema>;
 
+export const CreateProductSchema = ProductSchema.omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type CreateProduct = z.infer<typeof CreateProductSchema>;
+
+export const UpdateProductSchema = CreateProductSchema.partial();
+
+export type UpdateProduct = z.infer<typeof UpdateProductSchema>;
+
 export const ProductBranchAvailabilitySchema = z.object({
   id: z.string(),
   productId: z.string(),
@@ -56,6 +80,13 @@ export const ProductBranchAvailabilitySchema = z.object({
 
 export type ProductBranchAvailability = z.infer<
   typeof ProductBranchAvailabilitySchema
+>;
+
+export const UpsertProductBranchAvailabilitySchema =
+  ProductBranchAvailabilitySchema.omit({ id: true });
+
+export type UpsertProductBranchAvailability = z.infer<
+  typeof UpsertProductBranchAvailabilitySchema
 >;
 
 export const DiscountCodeSchema = z.object({
@@ -71,6 +102,17 @@ export const DiscountCodeSchema = z.object({
 });
 
 export type DiscountCode = z.infer<typeof DiscountCodeSchema>;
+
+export const CreateDiscountCodeSchema = DiscountCodeSchema.omit({
+  id: true,
+  currentRedemptions: true,
+});
+
+export type CreateDiscountCode = z.infer<typeof CreateDiscountCodeSchema>;
+
+export const UpdateDiscountCodeSchema = CreateDiscountCodeSchema.partial();
+
+export type UpdateDiscountCode = z.infer<typeof UpdateDiscountCodeSchema>;
 
 export const UserSchema = z.object({
   id: z.string(),
@@ -103,6 +145,14 @@ export const NotificationSchema = z.object({
 });
 
 export type Notification = z.infer<typeof NotificationSchema>;
+
+export const CreateNotificationSchema = NotificationSchema.omit({
+  id: true,
+  sentAt: true,
+  sentToCount: true,
+});
+
+export type CreateNotification = z.infer<typeof CreateNotificationSchema>;
 
 export const AdminUserSchema = z.object({
   id: z.string(),

@@ -17,11 +17,14 @@
   "dependencies": {
     "@fastify/cors": "^9.0.0",
     "@fastify/jwt": "^10.2.0",
+    "@fastify/multipart": "^10.1.0",
     "@funfsterne/shared-types": "*",
     "@prisma/client": "^5.16.0",
+    "@supabase/supabase-js": "^2.110.7",
     "bcryptjs": "^3.0.3",
     "dotenv": "^16.4.5",
-    "fastify": "^4.28.0"
+    "fastify": "^4.28.0",
+    "zod-to-json-schema": "^3.25.2"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
