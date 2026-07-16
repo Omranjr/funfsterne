@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   FlatList,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { Eye, EyeOff, LogOut } from "lucide-react-native";
 import { theme } from "@/constants/theme";
 import {
@@ -33,6 +33,7 @@ function formatDiscountValue(type: "PERCENTAGE" | "FIXED", value: number) {
 
 export default function AccountScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ highlightDiscounts?: string }>();
   const { data: user, isLoading: userLoading } = useCurrentUser();
   const { data: branches, isLoading: branchesLoading } = useBranches();
   const { data: codes, isLoading: codesLoading } = useConsumerDiscountCodes();
@@ -41,6 +42,20 @@ export default function AccountScreen() {
 
   const [name, setName] = useState(user?.name ?? "");
   const [revealedCodeId, setRevealedCodeId] = useState<string | null>(null);
+  const [discountsRef, setDiscountsRef] = useState<View | null>(null);
+
+  const highlightDiscounts = params.highlightDiscounts === "true";
+
+  useEffect(() => {
+    if (highlightDiscounts && discountsRef && codes?.length) {
+      discountsRef.measureLayout(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (discountsRef as any).getAncestor?.() ?? undefined,
+        () => {},
+        () => {}
+      );
+    }
+  }, [highlightDiscounts, discountsRef, codes?.length]);
 
   const isLoading = userLoading || branchesLoading;
 
@@ -119,7 +134,13 @@ export default function AccountScreen() {
             )}
           </Card>
 
-          <Card style={styles.card}>
+          <Card
+            style={[
+              styles.card,
+              highlightDiscounts && styles.cardHighlighted,
+            ]}
+            ref={setDiscountsRef}
+          >
             <Text style={styles.sectionTitle}>My Discount Codes</Text>
             {codesLoading ? (
               <ListSkeleton count={2} />
@@ -286,5 +307,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: theme.spacing.sm,
+  },
+  cardHighlighted: {
+    borderColor: theme.colors.primary,
+    borderWidth: 1.5,
   },
 });

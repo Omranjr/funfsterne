@@ -1,4 +1,4 @@
-import React from "react";
+import React, { forwardRef } from "react";
 import {
   View,
   StyleSheet,
@@ -17,22 +17,25 @@ export interface CardProps {
 
 const AnimatedView = Animated.createAnimatedComponent(View);
 
-export function Card({ children, style, animated = true, testID }: CardProps) {
-  const Wrapper = animated ? AnimatedView : View;
-  const wrapperProps = animated
-    ? { entering: FadeIn.duration(250) }
-    : {};
+export const Card = forwardRef<View, CardProps>(
+  ({ children, style, animated = true, testID }, ref) => {
+    const Wrapper = animated ? AnimatedView : View;
+    const wrapperProps = animated ? { entering: FadeIn.duration(250) } : {};
 
-  return (
-    <Wrapper
-      testID={testID}
-      style={[styles.card, style]}
-      {...wrapperProps}
-    >
-      {children}
-    </Wrapper>
-  );
-}
+    return (
+      <Wrapper
+        ref={ref}
+        testID={testID}
+        style={[styles.card, style]}
+        {...wrapperProps}
+      >
+        {children}
+      </Wrapper>
+    );
+  }
+);
+
+Card.displayName = "Card";
 
 const styles = StyleSheet.create({
   card: {
