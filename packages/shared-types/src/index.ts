@@ -154,6 +154,22 @@ export const CreateNotificationSchema = NotificationSchema.omit({
 
 export type CreateNotification = z.infer<typeof CreateNotificationSchema>;
 
+export const SendNotificationSchema = z.object({
+  title: z.string().min(1),
+  body: z.string().min(1),
+  discountCodeId: z.string().optional(),
+  target: z.enum(["all"]),
+});
+
+export type SendNotification = z.infer<typeof SendNotificationSchema>;
+
+export const RegisterPushTokenSchema = z.object({
+  token: z.string().min(1),
+  platform: PlatformSchema,
+});
+
+export type RegisterPushToken = z.infer<typeof RegisterPushTokenSchema>;
+
 export const AdminUserSchema = z.object({
   id: z.string(),
   email: z.string().email(),

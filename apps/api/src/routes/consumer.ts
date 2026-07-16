@@ -1,3 +1,4 @@
+import { RegisterPushTokenSchema } from "@funfsterne/shared-types";
 import { z } from "zod";
 import type { FastifyInstance } from "fastify";
 import { consumerAuthMiddleware } from "../middleware/consumer-auth.js";
@@ -14,6 +15,24 @@ export async function consumerRoutes(app: FastifyInstance) {
       where: { id: request.consumer!.userId },
       include: { preferredBranch: true },
     });
+  });
+
+  app.post("/me/push-token", async (request, reply) => {
+    const parse = RegisterPushTokenSchema.safeParse(request.body);
+    if (!parse.success) {
+      return reply.status(400).send({ error: "Invalid push token payload" });
+    }
+
+    const { token, platform } = parse.data;
+    const userId = request.consumer!.userId;
+
+    const pushToken = await app.prisma.pushToken.upsert({
+      where: { token },
+      create: { userId, token, platform },
+      update: { userId, platform },
+    });
+
+    return pushToken;
   });
 
   app.get("/me/discount-codes", async (request) => {

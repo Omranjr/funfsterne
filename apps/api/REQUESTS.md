@@ -135,6 +135,19 @@ curl -s -X POST http://localhost:4000/admin/notifications \
   }' | jq
 ```
 
+### Send push notification to all users
+```bash
+curl -s -X POST http://localhost:4000/admin/notifications/send \
+  -H "Authorization: Bearer <admin-token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Neue Aktion",
+    "body": "20% Rabatt auf alle Haarprodukte!",
+    "discountCodeId": "<discount-code-id>",
+    "target": "all"
+  }' | jq
+```
+
 ## Image upload (admin only)
 
 ### Upload a product image
@@ -179,6 +192,14 @@ The consumer token is a `PushToken.token` value issued by the magic-link verify 
 ```bash
 curl -s http://localhost:4000/consumer/me \
   -H "Authorization: Bearer <consumer-token>" | jq
+```
+
+### Register/update Expo push token
+```bash
+curl -s -X POST http://localhost:4000/consumer/me/push-token \
+  -H "Authorization: Bearer <consumer-token>" \
+  -H "Content-Type: application/json" \
+  -d '{"token":"ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]","platform":"IOS"}' | jq
 ```
 
 ### List discount codes available to the logged-in user

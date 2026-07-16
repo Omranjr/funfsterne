@@ -5,6 +5,7 @@ import {
   CreateDiscountCodeSchema,
   CreateNotificationSchema,
   ProductSchema,
+  SendNotificationSchema,
   UpdateBranchSchema,
   UpdateProductSchema,
   UpsertProductBranchAvailabilitySchema,
@@ -12,6 +13,7 @@ import {
 import { z } from "zod";
 import type { FastifyInstance } from "fastify";
 import { adminAuthMiddleware } from "../middleware/admin-auth.js";
+import { sendPushNotifications } from "../services/push.service.js";
 
 export async function adminRoutes(app: FastifyInstance) {
   app.addHook("preHandler", adminAuthMiddleware);
@@ -202,5 +204,70 @@ export async function adminRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: "Invalid notification payload" });
     }
     return app.prisma.notification.create({ data: parse.data });
+  });
+
+  app.post("/notifications/send", async (request, reply) => {
+    const parse = SendNotificationSchema.safeParse(request.body);
+    if (!parse.success) {
+      return reply.status(400).send({ error: "Invalid notification payload" });
+    }
+
+    const { title, body, discountCodeId, target } = parse.data;
+
+    if (target !== "all") {
+      return reply.status(400).send({ error: "Unsupported target" });
+    }
+
+    if (discountCodeId) {
+      const discount = await app.prisma.discountCode.findUnique({
+        where: { id: discountCodeId },
+      });
+      if (!discount) {
+        return reply.status(404).send({ error: "Discount code not found" });
+      }
+    }
+
+    const pushTokens = await app.prisma.pushToken.findMany({
+      include: { user: true },
+    });
+
+    const tokens = pushTokens.map((pt) => pt.token);
+    const { sent, failed } = await sendPushNotifications(
+      tokens,
+      title,
+      body,
+      discountCodeId ? { discountCodeId } : undefined,
+    );
+
+    if (discountCodeId) {
+      const userIds = [...new Set(pushTokens.map((pt) => pt.userId))];
+      const existing = await app.prisma.discountCodeRedemption.findMany({
+        where: { discountCodeId, userId: { in: userIds } },
+        select: { userId: true },
+      });
+      const existingUserIds = new Set(existing.map((r) => r.userId));
+      const newRedemptions = userIds
+        .filter((id) => !existingUserIds.has(id))
+        .map((userId) => ({ userId, discountCodeId }));
+
+      if (newRedemptions.length > 0) {
+        await app.prisma.discountCodeRedemption.createMany({
+          data: newRedemptions,
+          skipDuplicates: true,
+        });
+      }
+    }
+
+    const notification = await app.prisma.notification.create({
+      data: {
+        title,
+        body,
+        discountCodeId,
+        sentAt: new Date(),
+        sentToCount: sent.length,
+      },
+    });
+
+    return { notification, sent: sent.length, failed: failed.length };
   });
 }
