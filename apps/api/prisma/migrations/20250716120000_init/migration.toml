@@ -1,0 +1,6 @@
+# Prisma migration metadata
+# This migration was generated manually because the local DATABASE_URL in .env is a placeholder.
+# Apply it by setting a valid DATABASE_URL/DIRECT_URL and running:
+#   npx prisma migrate resolve --applied 20250716120000_init
+# or, if the database is empty and reachable:
+#   npx prisma migrate deploy
