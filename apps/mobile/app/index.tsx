@@ -6,7 +6,10 @@ export default function HomeScreen() {
     id: "1",
     name: "Sample Product",
     description: "Workspace resolution test",
-    price: 9.99,
+    basePrice: 9.99,
+    category: "HAIR",
+    images: [],
+    isActive: true,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
