@@ -8,15 +8,20 @@ export const ProductCategorySchema = z.enum([
   "OTHER",
 ]);
 
-export type ProductCategory = z.infer<typeof ProductCategorySchema>;
+export type ProductCategory =
+  | "HAIR"
+  | "SKIN_CARE"
+  | "BEARD"
+  | "TOOLS"
+  | "OTHER";
 
 export const DiscountCodeTypeSchema = z.enum(["PERCENTAGE", "FIXED"]);
 
-export type DiscountCodeType = z.infer<typeof DiscountCodeTypeSchema>;
+export type DiscountCodeType = "PERCENTAGE" | "FIXED";
 
 export const PlatformSchema = z.enum(["IOS", "ANDROID"]);
 
-export type Platform = z.infer<typeof PlatformSchema>;
+export type Platform = "IOS" | "ANDROID";
 
 export const BranchSchema = z.object({
   id: z.string(),

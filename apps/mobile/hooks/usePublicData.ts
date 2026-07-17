@@ -22,7 +22,7 @@ export function useProducts(options?: {
   branchId?: string;
 }) {
   const params = new URLSearchParams();
-  if (options?.category) params.set("category", options.category);
+  if (options?.category) params.set("category", String(options.category));
   if (options?.branchId) params.set("branchId", options.branchId);
   const query = params.toString();
 

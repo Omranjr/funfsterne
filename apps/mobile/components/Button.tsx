@@ -14,7 +14,7 @@ import Animated, {
   runOnJS,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
-import { theme } from "@/constants/theme";
+import { useTheme } from "@/contexts/ThemeContext";
 
 type ButtonVariant = "primary" | "secondary";
 
@@ -41,6 +41,7 @@ export function Button({
   hapticOnPress = true,
   testID,
 }: ButtonProps) {
+  const { theme } = useTheme();
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -71,12 +72,12 @@ export function Button({
 
   const isPrimary = variant === "primary";
   const backgroundColor = disabled
-    ? theme.colors.muted
+    ? theme.muted
     : isPrimary
-      ? theme.colors.primary
+      ? theme.gold
       : "transparent";
-  const borderColor = disabled ? theme.colors.muted : theme.colors.primary;
-  const color = disabled ? theme.colors.textMuted : theme.colors.text;
+  const borderColor = disabled ? theme.muted : theme.gold;
+  const color = disabled ? theme.textMuted : theme.text;
 
   return (
     <AnimatedPressable
@@ -91,6 +92,7 @@ export function Button({
           backgroundColor,
           borderColor,
           borderWidth: isPrimary ? 0 : StyleSheet.hairlineWidth,
+          borderRadius: 12,
         },
         animatedStyle,
         style,
@@ -105,13 +107,12 @@ const styles = StyleSheet.create({
   base: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg,
-    borderRadius: theme.borderRadius.lg,
-    minHeight: 48,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    minHeight: 44,
   },
   text: {
-    fontSize: 16,
-    fontWeight: "600",
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 14,
   },
 });

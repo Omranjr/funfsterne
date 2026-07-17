@@ -7,7 +7,7 @@ import Animated, {
   withTiming,
   interpolate,
 } from "react-native-reanimated";
-import { theme } from "@/constants/theme";
+import { useTheme } from "@/contexts/ThemeContext";
 
 export interface SkeletonProps {
   width?: number | string;
@@ -22,10 +22,11 @@ const AnimatedView = Animated.createAnimatedComponent(View);
 export function Skeleton({
   width = "100%",
   height = 16,
-  borderRadius = theme.borderRadius.md,
+  borderRadius = 8,
   style,
   testID,
 }: SkeletonProps) {
+  const { theme } = useTheme();
   const shimmer = useSharedValue(0);
 
   shimmer.value = withRepeat(
@@ -45,7 +46,7 @@ export function Skeleton({
       testID={testID}
       style={[
         styles.skeleton,
-        { width: resolvedWidth, height, borderRadius },
+        { width: resolvedWidth, height, borderRadius, backgroundColor: theme.muted },
         animatedStyle,
         style,
       ]}
@@ -64,7 +65,7 @@ export function ProductCardSkeleton({
 }: ProductCardSkeletonProps) {
   return (
     <View testID={testID} style={[styles.card, style]}>
-      <Skeleton height={160} borderRadius={theme.borderRadius.lg} />
+      <Skeleton height={160} borderRadius={16} />
       <View style={styles.content}>
         <Skeleton width="70%" height={18} />
         <Skeleton width="40%" height={14} />
@@ -95,23 +96,179 @@ export function ListSkeleton({
   );
 }
 
+export interface BranchPillSkeletonProps {
+  count?: number;
+  style?: StyleProp<ViewStyle>;
+  testID?: string;
+}
+
+export function BranchPillSkeleton({
+  count = 3,
+  style,
+  testID,
+}: BranchPillSkeletonProps) {
+  return (
+    <View testID={testID} style={[styles.pillRow, style]}>
+      {Array.from({ length: count }).map((_, index) => (
+        <Skeleton
+          key={index}
+          width={96}
+          height={36}
+          borderRadius={999}
+        />
+      ))}
+    </View>
+  );
+}
+
+export interface DiscountCodeSkeletonProps {
+  style?: StyleProp<ViewStyle>;
+  testID?: string;
+}
+
+export function DiscountCodeSkeleton({
+  style,
+  testID,
+}: DiscountCodeSkeletonProps) {
+  return (
+    <View testID={testID} style={[styles.codeRow, style]}>
+      <View style={styles.codeInfo}>
+        <Skeleton width="50%" height={18} />
+        <Skeleton width="30%" height={14} />
+        <Skeleton width="40%" height={12} />
+      </View>
+      <Skeleton width={64} height={24} borderRadius={999} />
+    </View>
+  );
+}
+
+export interface DiscountCodeListSkeletonProps {
+  count?: number;
+  style?: StyleProp<ViewStyle>;
+  testID?: string;
+}
+
+export function DiscountCodeListSkeleton({
+  count = 3,
+  style,
+  testID,
+}: DiscountCodeListSkeletonProps) {
+  return (
+    <View testID={testID} style={[styles.list, style]}>
+      {Array.from({ length: count }).map((_, index) => (
+        <DiscountCodeSkeleton key={index} />
+      ))}
+    </View>
+  );
+}
+
+export interface AccountSkeletonProps {
+  style?: StyleProp<ViewStyle>;
+  testID?: string;
+}
+
+export function AccountSkeleton({ style, testID }: AccountSkeletonProps) {
+  return (
+    <View testID={testID} style={[styles.account, style]}>
+      <View style={styles.card}>
+        <Skeleton width="40%" height={18} />
+        <Skeleton width="100%" height={48} />
+        <Skeleton width="30%" height={40} />
+      </View>
+      <View style={styles.card}>
+        <Skeleton width="50%" height={18} />
+        <BranchPillSkeleton count={4} />
+      </View>
+      <View style={styles.card}>
+        <Skeleton width="50%" height={18} />
+        <DiscountCodeListSkeleton count={2} />
+      </View>
+    </View>
+  );
+}
+
+export interface ProductDetailSkeletonProps {
+  style?: StyleProp<ViewStyle>;
+  testID?: string;
+}
+
+export function ProductDetailSkeleton({
+  style,
+  testID,
+}: ProductDetailSkeletonProps) {
+  return (
+    <View testID={testID} style={[styles.detail, style]}>
+      <Skeleton width="100%" height={280} borderRadius={0} />
+      <View style={styles.detailContent}>
+        <View style={styles.detailHeader}>
+          <Skeleton width="60%" height={28} />
+          <Skeleton width={80} height={24} borderRadius={999} />
+        </View>
+        <Skeleton width="30%" height={22} />
+        <Skeleton width="100%" height={14} />
+        <Skeleton width="90%" height={14} />
+        <Skeleton width="40%" height={18} />
+        <View style={styles.branchList}>
+          <Skeleton width="100%" height={56} />
+          <Skeleton width="100%" height={56} />
+          <Skeleton width="100%" height={56} />
+        </View>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   skeleton: {
-    backgroundColor: theme.colors.muted,
+    // backgroundColor is set dynamically via theme
   },
   card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
+    borderRadius: 16,
     overflow: "hidden",
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: theme.colors.muted,
-    gap: theme.spacing.sm,
+    gap: 8,
   },
   content: {
-    padding: theme.spacing.md,
-    gap: theme.spacing.sm,
+    padding: 16,
+    gap: 8,
   },
   list: {
-    gap: theme.spacing.md,
+    gap: 16,
+  },
+  pillRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  codeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    gap: 8,
+  },
+  codeInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  account: {
+    gap: 24,
+  },
+  detail: {
+    flex: 1,
+  },
+  detailContent: {
+    padding: 16,
+    gap: 16,
+  },
+  detailHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  branchList: {
+    gap: 8,
   },
 });

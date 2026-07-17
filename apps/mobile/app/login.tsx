@@ -7,14 +7,18 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  useWindowDimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { theme } from "@/constants/theme";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTheme } from "@/contexts/ThemeContext";
 import { Button, Card } from "@/components";
 import { useRequestMagicLink } from "@/hooks/useAuth";
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { theme } = useTheme();
+  const { height } = useWindowDimensions();
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
@@ -31,25 +35,30 @@ export default function LoginScreen() {
     }
   }
 
+  const insets = useSafeAreaInsets();
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
+      style={[styles.container, { backgroundColor: theme.background }]}
     >
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          { minHeight: height - 120, paddingTop: insets.top + 24 },
+        ]}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.title}>Welcome back</Text>
-        <Text style={styles.subtitle}>
+        <Text style={[styles.title, { color: theme.text }]}>Welcome back</Text>
+        <Text style={[styles.subtitle, { color: theme.textMuted }]}>
           Sign in with your email and we'll send you a magic link.
         </Text>
 
         <Card style={styles.card}>
           {submitted ? (
             <View style={styles.success}>
-              <Text style={styles.successTitle}>Magic link sent!</Text>
-              <Text style={styles.successText}>
+              <Text style={[styles.successTitle, { color: theme.gold }]}>Magic link sent!</Text>
+              <Text style={[styles.successText, { color: theme.textMuted }]}>
                 Check your inbox at {email} and tap the link to continue.
               </Text>
               <Button
@@ -60,13 +69,20 @@ export default function LoginScreen() {
             </View>
           ) : (
             <View style={styles.form}>
-              <Text style={styles.label}>Email address</Text>
+              <Text style={[styles.label, { color: theme.text }]}>Email address</Text>
               <TextInput
-                style={styles.input}
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: theme.surface,
+                    borderColor: theme.muted,
+                    color: theme.text,
+                  },
+                ]}
                 value={email}
                 onChangeText={setEmail}
                 placeholder="you@example.com"
-                placeholderTextColor={theme.colors.textMuted}
+                placeholderTextColor={theme.textMuted}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -96,45 +112,38 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
   },
   content: {
     flexGrow: 1,
     justifyContent: "center",
-    padding: theme.spacing.lg,
-    gap: theme.spacing.lg,
+    padding: 24,
+    gap: 24,
   },
   title: {
     fontSize: 28,
     fontWeight: "800",
-    color: theme.colors.text,
     textAlign: "center",
   },
   subtitle: {
     fontSize: 16,
-    color: theme.colors.textMuted,
     textAlign: "center",
-    paddingHorizontal: theme.spacing.md,
+    paddingHorizontal: 16,
   },
   card: {
-    gap: theme.spacing.md,
+    gap: 16,
   },
   form: {
-    gap: theme.spacing.md,
+    gap: 16,
   },
   label: {
     fontSize: 14,
     fontWeight: "500",
-    color: theme.colors.text,
   },
   input: {
-    backgroundColor: theme.colors.surface,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: theme.colors.muted,
-    borderRadius: theme.borderRadius.md,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    color: theme.colors.text,
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     fontSize: 16,
     minHeight: 48,
   },
@@ -144,18 +153,16 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   success: {
-    gap: theme.spacing.md,
+    gap: 16,
     alignItems: "center",
   },
   successTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: theme.colors.primary,
     textAlign: "center",
   },
   successText: {
     fontSize: 14,
-    color: theme.colors.textMuted,
     textAlign: "center",
   },
 });

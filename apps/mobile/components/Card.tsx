@@ -6,7 +6,7 @@ import {
   type StyleProp,
 } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
-import { theme } from "@/constants/theme";
+import { useTheme } from "@/contexts/ThemeContext";
 
 export interface CardProps {
   children: React.ReactNode;
@@ -19,6 +19,7 @@ const AnimatedView = Animated.createAnimatedComponent(View);
 
 export const Card = forwardRef<View, CardProps>(
   ({ children, style, animated = true, testID }, ref) => {
+    const { theme } = useTheme();
     const Wrapper = animated ? AnimatedView : View;
     const wrapperProps = animated ? { entering: FadeIn.duration(250) } : {};
 
@@ -26,7 +27,14 @@ export const Card = forwardRef<View, CardProps>(
       <Wrapper
         ref={ref}
         testID={testID}
-        style={[styles.card, style]}
+        style={[
+          styles.card,
+          {
+            backgroundColor: theme.surface,
+            borderColor: theme.border,
+          },
+          style,
+        ]}
         {...wrapperProps}
       >
         {children}
@@ -39,10 +47,8 @@ Card.displayName = "Card";
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.md,
+    borderRadius: 16,
+    padding: 16,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: theme.colors.muted,
   },
 });

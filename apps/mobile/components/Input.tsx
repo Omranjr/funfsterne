@@ -9,7 +9,7 @@ import {
   type TextStyle,
   type StyleProp,
 } from "react-native";
-import { theme } from "@/constants/theme";
+import { useTheme } from "@/contexts/ThemeContext";
 
 export interface InputProps extends Omit<TextInputProps, "style"> {
   label?: string;
@@ -27,22 +27,25 @@ export function Input({
   inputStyle,
   labelStyle,
   errorStyle,
-  placeholderTextColor = theme.colors.textMuted,
+  placeholderTextColor,
   ...textInputProps
 }: InputProps) {
+  const { theme } = useTheme();
+
   return (
-    <View style={[styles.container, containerStyle]}>
+    <View style={[styles.container, { gap: 4 }, containerStyle]}>
       {label ? (
-        <Text style={[styles.label, labelStyle]}>{label}</Text>
+        <Text style={[styles.label, { color: theme.text }, labelStyle]}>{label}</Text>
       ) : null}
       <TextInput
         {...textInputProps}
-        placeholderTextColor={placeholderTextColor}
+        placeholderTextColor={placeholderTextColor ?? theme.textMuted}
         style={[
           styles.input,
           {
-            borderColor: error ? "#EF4444" : theme.colors.muted,
-            color: theme.colors.text,
+            backgroundColor: theme.surface,
+            borderColor: error ? "#EF4444" : theme.muted,
+            color: theme.text,
           },
           inputStyle,
         ]}
@@ -56,19 +59,17 @@ export function Input({
 
 const styles = StyleSheet.create({
   container: {
-    gap: theme.spacing.xs,
+    // gap set dynamically
   },
   label: {
     fontSize: 14,
     fontWeight: "500",
-    color: theme.colors.text,
   },
   input: {
-    backgroundColor: theme.colors.surface,
     borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: theme.borderRadius.md,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     fontSize: 16,
     minHeight: 48,
   },

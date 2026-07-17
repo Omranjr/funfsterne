@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -6,20 +6,28 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
+  RefreshControl,
+  useWindowDimensions,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { theme } from "@/constants/theme";
+import { useTheme } from "@/contexts/ThemeContext";
 import {
   ProductCard,
-  BranchPill,
-  Button,
   ListSkeleton,
   EmptyState,
-  Card,
+  HeroBanner,
+  BranchPicker,
+  CachedImage,
 } from "@/components";
-import { useProducts, useBranches, type ProductCategory } from "@/hooks/usePublicData";
+import { useProducts, useBranches } from "@/hooks/usePublicData";
+import { type ProductCategory, type Branch } from "@funfsterne/shared-types";
 
-const CATEGORIES: { key: ProductCategory; label: string }[] = [
+const CATEGORIES: {
+  key: ProductCategory;
+  label: string;
+  imageUrl?: string;
+}[] = [
   { key: "HAIR", label: "Hair" },
   { key: "SKIN_CARE", label: "Skin Care" },
   { key: "BEARD", label: "Beard" },
@@ -29,114 +37,155 @@ const CATEGORIES: { key: ProductCategory; label: string }[] = [
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { theme } = useTheme();
+  const { width } = useWindowDimensions();
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
-  const { data: branches, isLoading: branchesLoading } = useBranches();
-  const { data: products, isLoading: productsLoading } = useProducts({
+  const {
+    data: branches,
+    isLoading: branchesLoading,
+    refetch: refetchBranches,
+    isRefetching: branchesRefetching,
+  } = useBranches();
+  const {
+    data: products,
+    isLoading: productsLoading,
+    refetch: refetchProducts,
+    isRefetching: productsRefetching,
+  } = useProducts({
     branchId: selectedBranchId ?? undefined,
   });
 
-  const featured = products?.slice(0, 4) ?? [];
+  const featured = useMemo(() => products?.slice(0, 4) ?? [], [products]);
   const isLoading = branchesLoading || productsLoading;
+  const isRefetching = branchesRefetching || productsRefetching;
+
+  const selectedBranch = useMemo(
+    () => branches?.find((b) => b.id === selectedBranchId),
+    [branches, selectedBranchId]
+  );
+
+  const handleRefresh = useCallback(() => {
+    refetchBranches();
+    refetchProducts();
+  }, [refetchBranches, refetchProducts]);
+
+  const handleSelectBranch = useCallback((branch: Branch | null) => {
+    setSelectedBranchId(branch?.id ?? null);
+  }, []);
+
+  const renderCategory = ({ item }: { item: (typeof CATEGORIES)[0] }) => (
+    <TouchableOpacity
+      activeOpacity={0.8}
+      style={[
+        styles.categoryCard,
+        {
+          width: (width - 48) / 2,
+        },
+      ]}
+      onPress={() =>
+        router.push({
+          pathname: "/products",
+          params: { category: item.key, branchId: selectedBranchId ?? "" },
+        })
+      }
+    >
+      <CachedCategoryImage imageUrl={item.imageUrl} label={item.label} />
+    </TouchableOpacity>
+  );
 
   return (
     <ScrollView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: theme.background }]}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={isRefetching}
+          onRefresh={handleRefresh}
+          tintColor={theme.gold}
+          colors={[theme.gold]}
+        />
+      }
     >
-      <View style={styles.header}>
-        <Text style={styles.title}>FünfSterne</Text>
-        <Text style={styles.subtitle}>Premium barber products</Text>
-      </View>
+      <HeroBanner
+        selectedBranch={selectedBranch}
+        branches={branches}
+        onSelectBranch={handleSelectBranch}
+        onOpenBranchPicker={() => setPickerOpen(true)}
+      />
 
-      <Card style={styles.branchCard}>
-        <Text style={styles.sectionTitle}>Select Branch</Text>
-        {branchesLoading ? (
-          <View style={styles.pillRow}>
-            <View style={styles.skeletonPill} />
-            <View style={styles.skeletonPill} />
-            <View style={styles.skeletonPill} />
-          </View>
-        ) : branches?.length ? (
-          <FlatList
-            horizontal
-            data={branches}
-            keyExtractor={(b) => b.id}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.pillList}
-            renderItem={({ item }) => (
-              <BranchPill
-                name={item.name}
-                selected={selectedBranchId === item.id}
-                onPress={() =>
-                  setSelectedBranchId((prev) =>
-                    prev === item.id ? null : item.id
-                  )
-                }
-              />
-            )}
-          />
-        ) : (
-          <Text style={styles.muted}>No branches available</Text>
-        )}
-      </Card>
+      <BranchPicker
+        visible={pickerOpen}
+        branches={branches}
+        selectedBranchId={selectedBranchId}
+        onSelect={handleSelectBranch}
+        onClose={() => setPickerOpen(false)}
+      />
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Shop by Category</Text>
-        <View style={styles.categoryGrid}>
-          {CATEGORIES.map((cat) => (
-            <TouchableOpacity
-              key={cat.key}
-              activeOpacity={0.8}
-              style={styles.categoryCard}
-              onPress={() =>
-                router.push({
-                  pathname: "/products",
-                  params: { category: cat.key, branchId: selectedBranchId ?? "" },
-                })
-              }
-            >
-              <Text style={styles.categoryLabel}>{cat.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>
+          Shop by Category
+        </Text>
+        <FlatList
+          data={CATEGORIES}
+          numColumns={2}
+          keyExtractor={(c) => c.key}
+          scrollEnabled={false}
+          contentContainerStyle={styles.categoryGrid}
+          columnWrapperStyle={styles.categoryRow}
+          renderItem={renderCategory}
+        />
       </View>
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Featured Products</Text>
-          <Button
-            title="See all"
-            variant="secondary"
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            Featured Products
+          </Text>
+          <TouchableOpacity
+            activeOpacity={0.7}
             onPress={() =>
               router.push({
                 pathname: "/products",
                 params: { branchId: selectedBranchId ?? "" },
               })
             }
-          />
+          >
+            <Text style={[styles.seeAll, { color: theme.gold }]}>See all ›</Text>
+          </TouchableOpacity>
         </View>
 
         {isLoading ? (
-          <ListSkeleton count={2} />
+          <ListSkeleton count={4} />
         ) : featured.length ? (
-          <View style={styles.featuredList}>
-            {featured.map((product) => (
+          <FlatList
+            data={featured}
+            numColumns={2}
+            keyExtractor={(p) => p.id}
+            scrollEnabled={false}
+            contentContainerStyle={styles.featuredList}
+            columnWrapperStyle={styles.featuredRow}
+            renderItem={({ item }) => (
               <ProductCard
-                key={product.id}
-                name={product.name}
-                description={product.description}
-                price={product.basePrice}
-                imageUrl={product.images[0]}
-                category={product.category}
-                onPress={() => router.push(`/products/${product.id}`)}
+                name={item.name}
+                imageUrl={item.images[0] ?? null}
+                price={item.basePrice}
+                category={item.category}
+                onPress={() => router.push(`/products/${item.id}`)}
+                style={{
+                  width: (width - 48) / 2,
+                  backgroundColor: theme.surface,
+                  borderColor: theme.border,
+                }}
+                imageStyle={{ height: (width - 48) / 2, aspectRatio: 1 }}
               />
-            ))}
-          </View>
+            )}
+          />
         ) : (
           <EmptyState
-            title="No products yet"
+            title="Products coming soon"
             message="Check back soon for our premium selection."
           />
         )}
@@ -145,30 +194,59 @@ export default function HomeScreen() {
   );
 }
 
+function CachedCategoryImage({
+  imageUrl,
+  label,
+}: {
+  imageUrl?: string;
+  label: string;
+}) {
+  const { theme } = useTheme();
+
+  const placeholderColors: [string, string] =
+    theme.mode === "dark" ? ["#3a322a", "#1f1b17"] : ["#e8dfd1", "#d4c7b0"];
+
+  return (
+    <View style={styles.categoryTile}>
+      {imageUrl ? (
+        <CachedImage
+          source={imageUrl}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+        />
+      ) : (
+        <LinearGradient
+          colors={placeholderColors}
+          style={StyleSheet.absoluteFill}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        />
+      )}
+
+      <LinearGradient
+        colors={["transparent", "rgba(0,0,0,0.55)"]}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0, y: 0.4 }}
+        end={{ x: 0, y: 1 }}
+      />
+
+      <Text style={styles.categoryLabel}>{label}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
   },
   content: {
-    padding: theme.spacing.md,
-    gap: theme.spacing.lg,
-    paddingBottom: theme.spacing.xl,
-  },
-  header: {
-    gap: theme.spacing.xs,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "800",
-    color: theme.colors.primary,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: theme.colors.textMuted,
+    padding: 16,
+    gap: 28,
+    paddingBottom: 40,
   },
   section: {
-    gap: theme.spacing.md,
+    gap: 12,
   },
   sectionHeader: {
     flexDirection: "row",
@@ -176,55 +254,45 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.text,
+    fontFamily: "PlayfairDisplay_700Bold",
+    fontSize: 20,
   },
-  branchCard: {
-    gap: theme.spacing.sm,
-  },
-  pillList: {
-    gap: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-  },
-  pillRow: {
-    flexDirection: "row",
-    gap: theme.spacing.sm,
-  },
-  skeletonPill: {
-    width: 96,
-    height: 36,
-    borderRadius: theme.borderRadius.xl,
-    backgroundColor: theme.colors.muted,
-  },
-  muted: {
-    color: theme.colors.textMuted,
+  seeAll: {
+    fontFamily: "Inter_600SemiBold",
     fontSize: 14,
   },
   categoryGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: theme.spacing.md,
+    gap: 12,
+  },
+  categoryRow: {
+    justifyContent: "space-between",
+    gap: 12,
   },
   categoryCard: {
-    flex: 1,
-    minWidth: "30%",
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.md,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: theme.colors.muted,
-    minHeight: 80,
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+  categoryTile: {
+    width: "100%",
+    aspectRatio: 1.4,
+    borderRadius: 16,
+    overflow: "hidden",
+    justifyContent: "flex-end",
+    padding: 12,
   },
   categoryLabel: {
-    color: theme.colors.text,
-    fontWeight: "600",
-    fontSize: 14,
-    textAlign: "center",
+    fontFamily: "Inter_700Bold",
+    fontSize: 15,
+    color: "#FFFFFF",
+    textShadowColor: "rgba(0,0,0,0.35)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   featuredList: {
-    gap: theme.spacing.md,
+    gap: 12,
+  },
+  featuredRow: {
+    justifyContent: "space-between",
+    gap: 12,
   },
 });

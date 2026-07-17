@@ -7,7 +7,7 @@ import {
   type TextStyle,
   type StyleProp,
 } from "react-native";
-import { theme } from "@/constants/theme";
+import { useTheme } from "@/contexts/ThemeContext";
 
 export type BadgeVariant = "default" | "primary" | "success" | "danger";
 
@@ -19,16 +19,6 @@ export interface BadgeProps {
   testID?: string;
 }
 
-const variantStyles: Record<
-  BadgeVariant,
-  { background: string; color: string }
-> = {
-  default: { background: theme.colors.muted, color: theme.colors.text },
-  primary: { background: theme.colors.primary, color: theme.colors.text },
-  success: { background: "#22C55E", color: theme.colors.text },
-  danger: { background: "#EF4444", color: theme.colors.text },
-};
-
 export function Badge({
   label,
   variant = "default",
@@ -36,6 +26,24 @@ export function Badge({
   textStyle,
   testID,
 }: BadgeProps) {
+  const { theme } = useTheme();
+
+  const variantStyles: Record<
+    BadgeVariant,
+    { background: string; color: string }
+  > = {
+    default: { background: theme.muted, color: theme.text },
+    primary: { background: theme.gold, color: theme.background },
+    success: {
+      background: theme.mode === "dark" ? "#22C55E" : "#16A34A",
+      color: "#FFFFFF",
+    },
+    danger: {
+      background: theme.mode === "dark" ? "#EF4444" : "#DC2626",
+      color: "#FFFFFF",
+    },
+  };
+
   const { background, color } = variantStyles[variant];
 
   return (
@@ -55,12 +63,12 @@ export function Badge({
 const styles = StyleSheet.create({
   badge: {
     alignSelf: "flex-start",
-    paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.sm,
-    borderRadius: theme.borderRadius.xl,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 999,
   },
   text: {
-    fontSize: 12,
-    fontWeight: "600",
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 11,
   },
 });

@@ -1,389 +1,350 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import {
   View,
   Text,
   ScrollView,
   StyleSheet,
   Dimensions,
-  Image,
-  FlatList,
   TouchableOpacity,
+  RefreshControl,
+  Linking,
+  Platform,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  runOnJS,
-} from "react-native-reanimated";
-import * as Haptics from "expo-haptics";
-import { ChevronLeft, ChevronRight, MapPin } from "lucide-react-native";
-import { theme } from "@/constants/theme";
-import { Button, Badge, ListSkeleton, EmptyState } from "@/components";
+import { ChevronLeft, Share2, MapPin, MessageCircle } from "lucide-react-native";
+import { useTheme } from "@/contexts/ThemeContext";
+import { Badge, CachedImage, ProductDetailSkeleton } from "@/components";
 import { useProduct, useBranches } from "@/hooks/usePublicData";
-import { type Product } from "@funfsterne/shared-types";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+const SHOP_INSTAGRAM = "https://instagram.com/funfsterne";
+const SHOP_PHONE = "+492827123456";
 
-function formatPrice(value: number) {
-  return `€${value.toFixed(2)}`;
-}
-
-function resolveDiscountedPrice(
-  product: Product,
-  branchId?: string
-): { finalPrice: number; hasDiscount: boolean; originalPrice: number } {
-  const originalPrice = product.basePrice;
-
-  if (!branchId || !product.availabilities?.length) {
-    return { finalPrice: originalPrice, hasDiscount: false, originalPrice };
-  }
-
-  const availability = product.availabilities.find(
-    (a) => a.branchId === branchId
-  );
-
-  if (availability?.priceOverride != null) {
-    return {
-      finalPrice: availability.priceOverride,
-      hasDiscount: availability.priceOverride < originalPrice,
-      originalPrice,
-    };
-  }
-
-  return { finalPrice: originalPrice, hasDiscount: false, originalPrice };
-}
-
-export default function ProductDetailScreen() {
+export default function ProductDetailsScreen() {
   const router = useRouter();
-  const { id, branchId } = useLocalSearchParams<{
-    id: string;
-    branchId?: string;
-  }>();
+  const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
+  const { id } = useLocalSearchParams<{ id: string }>();
 
-  const { data: product, isLoading } = useProduct(id);
-  const { data: branches } = useBranches();
+  const {
+    data: product,
+    isLoading,
+    refetch,
+    isRefetching,
+  } = useProduct(id);
+  const { data: branches, refetch: refetchBranches } = useBranches();
 
-  const [selectedBranchId, setSelectedBranchId] = useState<string | undefined>(
-    branchId
-  );
-  const [imageIndex, setImageIndex] = useState(0);
+  const handleRefresh = useCallback(() => {
+    refetch();
+    refetchBranches();
+  }, [refetch, refetchBranches]);
 
-  const selectedBranch = useMemo(
-    () => branches?.find((b) => b.id === selectedBranchId),
-    [branches, selectedBranchId]
-  );
-
-  const pricing = useMemo(() => {
-    if (!product) {
-      return { finalPrice: 0, hasDiscount: false, originalPrice: 0 };
-    }
-    return resolveDiscountedPrice(product, selectedBranchId);
-  }, [product, selectedBranchId]);
-
-  const availability = useMemo(() => {
-    if (!product || !selectedBranchId) return null;
-    return (
-      product.availabilities?.find((a) => a.branchId === selectedBranchId) ?? null
+  const availableBranches = useMemo(() => {
+    if (!product?.availabilities || !branches) return [];
+    const inStockIds = new Set(
+      product.availabilities.filter((a) => a.inStock).map((a) => a.branchId)
     );
-  }, [product, selectedBranchId]);
+    return branches.filter((b) => inStockIds.has(b.id));
+  }, [product, branches]);
 
-  const ctaScale = useSharedValue(1);
-  const ctaAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: ctaScale.value }],
-  }));
+  const handleShare = useCallback(async () => {
+    if (!product) return;
+    try {
+      await Linking.openURL(SHOP_INSTAGRAM);
+    } catch {
+      // ignore
+    }
+  }, [product]);
 
-  const handleCtaPressIn = useCallback(() => {
-    ctaScale.value = withSpring(0.97, { stiffness: 400, damping: 20 });
-  }, [ctaScale]);
-
-  const handleCtaPressOut = useCallback(() => {
-    ctaScale.value = withSpring(1, { stiffness: 400, damping: 20 });
-  }, [ctaScale]);
-
-  const handleCtaPress = useCallback(() => {
-    "worklet";
-    runOnJS(() => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {
-        // ignore
-      });
-    })();
+  const handleContact = useCallback(async () => {
+    const url = Platform.select({
+      ios: `sms:${SHOP_PHONE}`,
+      android: `sms:${SHOP_PHONE}`,
+      default: `tel:${SHOP_PHONE}`,
+    });
+    try {
+      await Linking.openURL(url);
+    } catch {
+      // ignore
+    }
   }, []);
 
   if (isLoading) {
     return (
-      <View style={styles.container}>
-        <ListSkeleton count={1} />
+      <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
+        <ProductDetailSkeleton />
       </View>
     );
   }
 
   if (!product) {
     return (
-      <EmptyState
-        title="Product not found"
-        message="We couldn't find the product you're looking for."
-        actionTitle="Back to products"
-        onAction={() => router.push("/products")}
-      />
+      <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
+        <Text style={[styles.error, { color: theme.text }]} numberOfLines={2}>
+          Product not found
+        </Text>
+      </View>
     );
   }
 
-  const images = product.images.length ? product.images : [null];
-
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.gallery}>
-        <FlatList
-          horizontal
-          pagingEnabled
-          data={images}
-          keyExtractor={(_, index) => String(index)}
-          showsHorizontalScrollIndicator={false}
-          onScroll={(e) => {
-            const index = Math.round(
-              e.nativeEvent.contentOffset.x / SCREEN_WIDTH
-            );
-            setImageIndex(index);
-          }}
-          renderItem={({ item }) =>
-            item ? (
-              <Image
-                source={{ uri: item }}
-                style={styles.image}
-                resizeMode="cover"
-              />
-            ) : (
-              <View style={[styles.image, styles.placeholder]}>
-                <Text style={styles.placeholderText}>No Image</Text>
-              </View>
-            )
-          }
-        />
-
-        {images.length > 1 && (
-          <View style={styles.dots}>
-            {images.map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.dot,
-                  index === imageIndex && styles.dotActive,
-                ]}
-              />
-            ))}
-          </View>
-        )}
-      </View>
-
-      <View style={styles.header}>
-        <Text style={styles.name}>{product.name}</Text>
-        <Badge label={product.category} variant="primary" />
-      </View>
-
-      <View style={styles.priceRow}>
-        <Text style={styles.price}>{formatPrice(pricing.finalPrice)}</Text>
-        {pricing.hasDiscount && (
-          <Text style={styles.originalPrice}>
-            {formatPrice(pricing.originalPrice)}
-          </Text>
-        )}
-      </View>
-
-      {product.description ? (
-        <Text style={styles.description}>{product.description}</Text>
-      ) : null}
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Available at</Text>
-        <View style={styles.branchList}>
-          {branches?.map((branch) => {
-            const inStock = product.availabilities?.some(
-              (a) => a.branchId === branch.id && a.inStock
-            );
-            const isSelected = selectedBranchId === branch.id;
-
-            return (
-              <TouchableOpacity
-                key={branch.id}
-                activeOpacity={0.8}
-                style={[
-                  styles.branchRow,
-                  isSelected && styles.branchRowSelected,
-                ]}
-                onPress={() => setSelectedBranchId(branch.id)}
-              >
-                <View style={styles.branchInfo}>
-                  <Text style={styles.branchName}>{branch.name}</Text>
-                  {branch.address ? (
-                    <View style={styles.branchMeta}>
-                      <MapPin size={12} fill={theme.colors.textMuted} />
-                      <Text style={styles.branchAddress}>{branch.address}</Text>
-                    </View>
-                  ) : null}
-                </View>
-                <Badge
-                  label={inStock ? "In stock" : "Out of stock"}
-                  variant={inStock ? "success" : "danger"}
-                />
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-
-      {selectedBranch && (
-        <AnimatedTouchable
-          activeOpacity={1}
-          onPressIn={handleCtaPressIn}
-          onPressOut={handleCtaPressOut}
-          onPress={handleCtaPress}
-          style={[styles.cta, ctaAnimatedStyle]}
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, 16) }]}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={[
+            styles.iconButton,
+            { backgroundColor: theme.border },
+          ]}
+          accessibilityLabel="Go back"
         >
-          <Button
-            title={`View at ${selectedBranch.name}`}
-            variant="primary"
-            onPress={() => {}}
+          <ChevronLeft size={24} color={theme.text} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={handleShare}
+          style={[
+            styles.iconButton,
+            { backgroundColor: theme.border },
+          ]}
+          accessibilityLabel="Share product"
+        >
+          <Share2 size={20} color={theme.text} />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={handleRefresh}
+            tintColor={theme.gold}
+            colors={[theme.gold]}
           />
-        </AnimatedTouchable>
-      )}
-    </ScrollView>
+        }
+      >
+        <View style={styles.imageContainer}>
+          <CachedImage
+            source={product.images[0] ?? null}
+            style={styles.image}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            fallbackText="No image yet"
+          />
+        </View>
+
+        <View style={styles.body}>
+          <View style={styles.titleRow}>
+            <Text
+              style={[styles.name, { color: theme.text }]}
+              numberOfLines={3}
+            >
+              {product.name}
+            </Text>
+            <Badge
+              label={product.category}
+              variant="primary"
+              style={{ alignSelf: "flex-start" }}
+            />
+          </View>
+
+          <Text style={[styles.price, { color: theme.gold }]}>
+            €{product.basePrice.toFixed(2)}
+          </Text>
+
+          {product.description ? (
+            <Text style={[styles.description, { color: theme.textMuted }]}>
+              {product.description}
+            </Text>
+          ) : null}
+
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>
+              Available at
+            </Text>
+            {availableBranches.length ? (
+              <View style={styles.branchList}>
+                {availableBranches.map((branch) => (
+                  <View
+                    key={branch.id}
+                    style={[
+                      styles.branchChip,
+                      {
+                        backgroundColor: theme.surface,
+                        borderColor: theme.border,
+                      },
+                    ]}
+                  >
+                    <MapPin size={14} color={theme.gold} />
+                    <View style={styles.branchText}>
+                      <Text
+                        style={[styles.branchName, { color: theme.text }]}
+                        numberOfLines={1}
+                      >
+                        {branch.name}
+                      </Text>
+                      {branch.address ? (
+                        <Text
+                          style={[
+                            styles.branchAddress,
+                            { color: theme.textMuted },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {branch.address}
+                        </Text>
+                      ) : null}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Text style={[styles.empty, { color: theme.textMuted }]}>
+                Currently unavailable — check back soon
+              </Text>
+            )}
+          </View>
+
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={handleContact}
+            style={[
+              styles.cta,
+              { backgroundColor: theme.gold },
+            ]}
+          >
+            <MessageCircle size={18} color={theme.background} />
+            <Text style={[styles.ctaText, { color: theme.background }]}>
+              Ask about this product
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
+
+const IMAGE_HEIGHT = SCREEN_HEIGHT * 0.55;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+  },
+  scroll: {
+    flex: 1,
   },
   content: {
-    paddingBottom: theme.spacing.xl,
-  },
-  gallery: {
-    position: "relative",
-  },
-  image: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_WIDTH * 0.75,
-  },
-  placeholder: {
-    backgroundColor: theme.colors.muted,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  placeholderText: {
-    color: theme.colors.textMuted,
-    fontSize: 14,
-  },
-  dots: {
-    position: "absolute",
-    bottom: theme.spacing.md,
-    left: 0,
-    right: 0,
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: theme.spacing.sm,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: theme.colors.textMuted,
-  },
-  dotActive: {
-    backgroundColor: theme.colors.primary,
-    width: 16,
+    paddingBottom: 40,
   },
   header: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
-    padding: theme.spacing.md,
-    gap: theme.spacing.sm,
+    paddingHorizontal: 16,
+  },
+  iconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  imageContainer: {
+    width: SCREEN_WIDTH,
+    height: IMAGE_HEIGHT,
+  },
+  image: {
+    width: "100%",
+    height: "100%",
+  },
+  body: {
+    padding: 20,
+    gap: 16,
+  },
+  titleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 12,
   },
   name: {
     flex: 1,
-    fontSize: 24,
-    fontWeight: "800",
-    color: theme.colors.text,
-  },
-  priceRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    marginBottom: theme.spacing.md,
+    fontFamily: "PlayfairDisplay_700Bold",
+    fontSize: 28,
+    lineHeight: 34,
   },
   price: {
+    fontFamily: "Inter_700Bold",
     fontSize: 22,
-    fontWeight: "700",
-    color: theme.colors.primary,
-  },
-  originalPrice: {
-    fontSize: 16,
-    color: theme.colors.textMuted,
-    textDecorationLine: "line-through",
   },
   description: {
+    fontFamily: "Inter_400Regular",
     fontSize: 15,
     lineHeight: 22,
-    color: theme.colors.textMuted,
-    paddingHorizontal: theme.spacing.md,
-    marginBottom: theme.spacing.lg,
   },
   section: {
-    paddingHorizontal: theme.spacing.md,
-    gap: theme.spacing.md,
+    gap: 12,
+    marginTop: 8,
   },
   sectionTitle: {
+    fontFamily: "PlayfairDisplay_700Bold",
     fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.text,
   },
   branchList: {
-    gap: theme.spacing.sm,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
   },
-  branchRow: {
+  branchChip: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.md,
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: theme.colors.muted,
-    gap: theme.spacing.sm,
+    maxWidth: "100%",
   },
-  branchRowSelected: {
-    borderColor: theme.colors.primary,
-    borderWidth: 1.5,
-  },
-  branchInfo: {
-    flex: 1,
-    gap: theme.spacing.xs,
+  branchText: {
+    gap: 2,
   },
   branchName: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: theme.colors.text,
-  },
-  branchMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.xs,
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
   },
   branchAddress: {
+    fontFamily: "Inter_400Regular",
     fontSize: 12,
-    color: theme.colors.textMuted,
+  },
+  empty: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
   },
   cta: {
-    marginHorizontal: theme.spacing.md,
-    marginTop: theme.spacing.lg,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    paddingVertical: 16,
+    borderRadius: 14,
+    marginTop: 8,
+  },
+  ctaText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 15,
+  },
+  error: {
+    fontFamily: "PlayfairDisplay_700Bold",
+    fontSize: 24,
+    textAlign: "center",
+    marginTop: 100,
   },
 });

@@ -1,24 +1,29 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
+  ScrollView,
   TouchableOpacity,
   useWindowDimensions,
+  RefreshControl,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Grid3X3, List as ListIcon } from "lucide-react-native";
-import { theme } from "@/constants/theme";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTheme } from "@/contexts/ThemeContext";
 import {
   ProductCard,
   BranchPill,
   ListSkeleton,
+  BranchPillSkeleton,
   EmptyState,
 } from "@/components";
-import { useProducts, useBranches, type ProductCategory } from "@/hooks/usePublicData";
+import { useProducts, useBranches } from "@/hooks/usePublicData";
+import { type ProductCategory } from "@funfsterne/shared-types";
 
-const CATEGORIES: { key: ProductCategory | "ALL"; label: string }[] = [
+const CATEGORIES: { key: string; label: string }[] = [
   { key: "ALL", label: "All" },
   { key: "HAIR", label: "Hair" },
   { key: "SKIN_CARE", label: "Skin Care" },
@@ -36,49 +41,74 @@ export default function ProductsScreen() {
     branchId?: string;
   }>();
   const { width } = useWindowDimensions();
+  const { theme } = useTheme();
 
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [category, setCategory] = useState<ProductCategory | "ALL">(
-    (params.category as ProductCategory) ?? "ALL"
+    (params.category as ProductCategory | "ALL") ?? "ALL"
   );
   const [branchId, setBranchId] = useState<string | null>(
     params.branchId || null
   );
 
-  const { data: branches, isLoading: branchesLoading } = useBranches();
-  const { data: products, isLoading: productsLoading } = useProducts({
+  const {
+    data: branches,
+    isLoading: branchesLoading,
+    refetch: refetchBranches,
+    isRefetching: branchesRefetching,
+  } = useBranches();
+  const {
+    data: products,
+    isLoading: productsLoading,
+    refetch: refetchProducts,
+    isRefetching: productsRefetching,
+  } = useProducts({
     category: category === "ALL" ? undefined : category,
     branchId: branchId ?? undefined,
   });
 
   const isLoading = branchesLoading || productsLoading;
+  const isRefetching = branchesRefetching || productsRefetching;
+
+  const handleRefresh = useCallback(() => {
+    refetchBranches();
+    refetchProducts();
+  }, [refetchBranches, refetchProducts]);
   const numColumns = viewMode === "grid" ? 2 : 1;
   const cardWidth = viewMode === "grid" ? (width - 48) / 2 : undefined;
 
+  const insets = useSafeAreaInsets();
+
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Products</Text>
-        <View style={styles.toggle}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+        <Text style={[styles.title, { color: theme.text }]}>Products</Text>
+        <View style={[styles.toggle, { backgroundColor: theme.surface }]}>
           <TouchableOpacity
-            style={[styles.toggleButton, viewMode === "grid" && styles.toggleActive]}
+            style={[
+              styles.toggleButton,
+              viewMode === "grid" && { backgroundColor: theme.gold },
+            ]}
             onPress={() => setViewMode("grid")}
           >
             <Grid3X3
               size={18}
               fill={
-                viewMode === "grid" ? theme.colors.background : theme.colors.text
+                viewMode === "grid" ? theme.background : theme.text
               }
             />
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.toggleButton, viewMode === "list" && styles.toggleActive]}
+            style={[
+              styles.toggleButton,
+              viewMode === "list" && { backgroundColor: theme.gold },
+            ]}
             onPress={() => setViewMode("list")}
           >
             <ListIcon
               size={18}
               fill={
-                viewMode === "list" ? theme.colors.background : theme.colors.text
+                viewMode === "list" ? theme.background : theme.text
               }
             />
           </TouchableOpacity>
@@ -86,48 +116,45 @@ export default function ProductsScreen() {
       </View>
 
       <View style={styles.filters}>
-        <FlatList
+        <ScrollView
           horizontal
-          data={CATEGORIES}
-          keyExtractor={(c) => c.key}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterList}
-          renderItem={({ item }) => (
+        >
+          {CATEGORIES.map((item) => (
             <BranchPill
+              key={item.key}
               name={item.label}
               selected={category === item.key}
-              onPress={() => setCategory(item.key)}
+              onPress={() => setCategory(item.key as ProductCategory | "ALL")}
             />
-          )}
-        />
+          ))}
+        </ScrollView>
 
         {branchesLoading ? (
-          <View style={styles.pillRow}>
-            <View style={styles.skeletonPill} />
-            <View style={styles.skeletonPill} />
-          </View>
+          <BranchPillSkeleton count={4} />
         ) : branches?.length ? (
-          <FlatList
+          <ScrollView
             horizontal
-            data={branches}
-            keyExtractor={(b) => b.id}
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.filterList}
-            renderItem={({ item }) => (
+          >
+            {branches.map((item) => (
               <BranchPill
+                key={item.id}
                 name={item.name}
                 selected={branchId === item.id}
                 onPress={() =>
                   setBranchId((prev) => (prev === item.id ? null : item.id))
                 }
               />
-            )}
-          />
+            ))}
+          </ScrollView>
         ) : null}
       </View>
 
       {isLoading ? (
-        <ListSkeleton count={4} />
+        <ListSkeleton count={viewMode === "grid" ? 4 : 3} />
       ) : products?.length ? (
         <FlatList
           key={viewMode}
@@ -139,6 +166,14 @@ export default function ProductsScreen() {
             viewMode === "grid" ? styles.gridRow : undefined
           }
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={handleRefresh}
+              tintColor={theme.gold}
+              colors={[theme.gold]}
+            />
+          }
           renderItem={({ item }) => (
             <View style={viewMode === "grid" ? { width: cardWidth } : styles.listItem}>
               <ProductCard
@@ -170,59 +205,44 @@ export default function ProductsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
-    padding: theme.spacing.md,
+    padding: 16,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: theme.spacing.md,
+    marginBottom: 16,
   },
   title: {
     fontSize: 24,
     fontWeight: "800",
-    color: theme.colors.text,
   },
   toggle: {
     flexDirection: "row",
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.xs,
-    gap: theme.spacing.xs,
+    borderRadius: 8,
+    padding: 4,
+    gap: 4,
   },
   toggleButton: {
-    padding: theme.spacing.sm,
-    borderRadius: theme.borderRadius.sm,
-  },
-  toggleActive: {
-    backgroundColor: theme.colors.primary,
+    padding: 8,
+    borderRadius: 4,
   },
   filters: {
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
+    gap: 8,
+    marginBottom: 16,
   },
   filterList: {
-    gap: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
+    gap: 8,
+    paddingVertical: 4,
   },
-  pillRow: {
-    flexDirection: "row",
-    gap: theme.spacing.sm,
-  },
-  skeletonPill: {
-    width: 96,
-    height: 36,
-    borderRadius: theme.borderRadius.xl,
-    backgroundColor: theme.colors.muted,
-  },
+
   list: {
-    gap: theme.spacing.md,
-    paddingBottom: theme.spacing.xl,
+    gap: 16,
+    paddingBottom: 32,
   },
   gridRow: {
     justifyContent: "space-between",
-    gap: theme.spacing.md,
+    gap: 16,
   },
   listItem: {
     flex: 1,

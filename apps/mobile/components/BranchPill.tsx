@@ -12,7 +12,7 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
 } from "react-native-reanimated";
-import { theme } from "@/constants/theme";
+import { useTheme } from "@/contexts/ThemeContext";
 
 export interface BranchPillProps {
   name: string;
@@ -33,6 +33,7 @@ export function BranchPill({
   textStyle,
   testID,
 }: BranchPillProps) {
+  const { theme } = useTheme();
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -47,11 +48,9 @@ export function BranchPill({
     scale.value = withSpring(1, { stiffness: 400, damping: 20 });
   }, [scale]);
 
-  const backgroundColor = selected
-    ? theme.colors.primary
-    : theme.colors.surface;
-  const color = selected ? theme.colors.text : theme.colors.textMuted;
-  const borderColor = selected ? theme.colors.primary : theme.colors.muted;
+  const backgroundColor = selected ? theme.gold : theme.surface;
+  const color = selected ? theme.background : theme.textMuted;
+  const borderColor = selected ? theme.gold : theme.border;
 
   return (
     <AnimatedPressable
@@ -67,7 +66,14 @@ export function BranchPill({
         style,
       ]}
     >
-      <Text numberOfLines={1} style={[styles.text, { color }, textStyle]}>
+      <Text
+        numberOfLines={1}
+        style={[
+          styles.text,
+          { color, fontFamily: selected ? "Inter_600SemiBold" : "Inter_500Medium" },
+          textStyle,
+        ]}
+      >
         {name}
       </Text>
     </AnimatedPressable>
@@ -76,15 +82,14 @@ export function BranchPill({
 
 const styles = StyleSheet.create({
   pill: {
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.borderRadius.xl,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 999,
     borderWidth: StyleSheet.hairlineWidth,
     alignItems: "center",
     justifyContent: "center",
   },
   text: {
     fontSize: 14,
-    fontWeight: "500",
   },
 });

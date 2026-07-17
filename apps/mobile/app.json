@@ -5,11 +5,14 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
+    "scheme": "funfsterne",
+    "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.funfsterne.mobile"
     },
     "android": {
+      "package": "com.funfsterne.mobile",
       "adaptiveIcon": {
         "backgroundColor": "#0A0A0A",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -24,13 +27,33 @@
     "plugins": [
       "expo-router",
       [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0A0A0A",
+          "image": "./assets/splash-icon.png",
+          "resizeMode": "contain",
+          "dark": {
+            "backgroundColor": "#0A0A0A",
+            "image": "./assets/splash-icon.png"
+          }
+        }
+      ],
+      [
         "expo-notifications",
         {
-          "icon": "./assets/notification-icon.png",
-          "color": "#C9A84C",
-          "sounds": ["./assets/notification-sound.wav"]
+          "color": "#C9A84C"
         }
-      ]
-    ]
+      ],
+      "expo-font"
+    ],
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "039e2e3e-b52e-477a-a8be-73426a2332eb"
+      }
+    },
+    "owner": "omran22"
   }
 }

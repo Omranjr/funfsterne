@@ -7,7 +7,7 @@ import {
   type TextStyle,
   type StyleProp,
 } from "react-native";
-import { theme } from "@/constants/theme";
+import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "./Button";
 
 export interface EmptyStateProps {
@@ -31,11 +31,13 @@ export function EmptyState({
   messageStyle,
   testID,
 }: EmptyStateProps) {
+  const { theme } = useTheme();
+
   return (
     <View testID={testID} style={[styles.container, style]}>
-      <Text style={[styles.title, titleStyle]}>{title}</Text>
+      <Text style={[styles.title, { color: theme.text }, titleStyle]}>{title}</Text>
       {message ? (
-        <Text style={[styles.message, messageStyle]}>{message}</Text>
+        <Text style={[styles.message, { color: theme.textMuted }, messageStyle]}>{message}</Text>
       ) : null}
       {actionTitle && onAction ? (
         <View style={styles.action}>
@@ -50,22 +52,21 @@ const styles = StyleSheet.create({
   container: {
     alignItems: "center",
     justifyContent: "center",
-    padding: theme.spacing.lg,
-    gap: theme.spacing.sm,
+    padding: 24,
+    gap: 8,
   },
   title: {
+    fontFamily: "PlayfairDisplay_700Bold",
     fontSize: 20,
-    fontWeight: "700",
-    color: theme.colors.text,
     textAlign: "center",
   },
   message: {
+    fontFamily: "Inter_400Regular",
     fontSize: 14,
-    color: theme.colors.textMuted,
     textAlign: "center",
   },
   action: {
-    marginTop: theme.spacing.md,
+    marginTop: 8,
     minWidth: 160,
   },
 });

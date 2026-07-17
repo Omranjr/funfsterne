@@ -3,7 +3,6 @@ import {
   Pressable,
   View,
   Text,
-  Image,
   StyleSheet,
   type ViewStyle,
   type TextStyle,
@@ -16,8 +15,9 @@ import Animated, {
   withSpring,
   FadeIn,
 } from "react-native-reanimated";
-import { theme } from "@/constants/theme";
+import { useTheme } from "@/contexts/ThemeContext";
 import { Badge } from "./Badge";
+import { CachedImage } from "./CachedImage";
 
 export interface ProductCardProps {
   name: string;
@@ -26,6 +26,7 @@ export interface ProductCardProps {
   imageUrl?: string | null;
   category?: string;
   isAvailable?: boolean;
+  isNew?: boolean;
   onPress?: () => void;
   style?: StyleProp<ViewStyle>;
   imageStyle?: StyleProp<ImageStyle>;
@@ -42,12 +43,14 @@ export function ProductCard({
   imageUrl,
   category,
   isAvailable = true,
+  isNew = false,
   onPress,
   style,
   imageStyle,
   textStyle,
   testID,
 }: ProductCardProps) {
+  const { theme } = useTheme();
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -70,40 +73,53 @@ export function ProductCard({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       disabled={!onPress}
-      style={[styles.card, animatedStyle, style]}
+      style={[
+        styles.card,
+        {
+          backgroundColor: theme.surface,
+          borderColor: theme.border,
+        },
+        animatedStyle,
+        style,
+      ]}
     >
-      {imageUrl ? (
-        <Image
-          source={{ uri: imageUrl }}
+      <View style={styles.imageWrapper}>
+        <CachedImage
+          source={imageUrl}
           style={[styles.image, imageStyle]}
-          resizeMode="cover"
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          fallbackText="No image yet"
         />
-      ) : (
-        <View style={[styles.image, styles.placeholder, imageStyle]}>
-          <Text style={styles.placeholderText}>No Image</Text>
-        </View>
-      )}
+        {isNew ? (
+          <Badge
+            label="New"
+            variant="primary"
+            style={styles.badge}
+          />
+        ) : null}
+      </View>
 
       <View style={styles.content}>
-        <View style={styles.header}>
-          <Text numberOfLines={1} style={[styles.name, textStyle]}>
-            {name}
-          </Text>
-          <Badge
-            label={isAvailable ? "Available" : "Unavailable"}
-            variant={isAvailable ? "success" : "danger"}
-          />
-        </View>
+        <Text numberOfLines={2} style={[styles.name, { color: theme.text }, textStyle]}>
+          {name}
+        </Text>
 
-        {category ? <Text style={styles.category}>{category}</Text> : null}
+        {category ? (
+          <Text numberOfLines={1} style={[styles.category, { color: theme.gold }]}>
+            {category}
+          </Text>
+        ) : null}
 
         {description ? (
-          <Text numberOfLines={2} style={styles.description}>
+          <Text numberOfLines={2} style={[styles.description, { color: theme.textMuted }]}>
             {description}
           </Text>
         ) : null}
 
-        <Text style={styles.price}>€{price.toFixed(2)}</Text>
+        <Text style={[styles.price, { color: theme.gold }]}>
+          €{price.toFixed(2)}
+        </Text>
       </View>
     </AnimatedPressable>
   );
@@ -111,54 +127,47 @@ export function ProductCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
+    borderRadius: 16,
     overflow: "hidden",
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: theme.colors.muted,
+  },
+  imageWrapper: {
+    position: "relative",
+    width: "100%",
+    aspectRatio: 1,
   },
   image: {
     width: "100%",
-    height: 160,
+    height: "100%",
   },
-  placeholder: {
-    backgroundColor: theme.colors.muted,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  placeholderText: {
-    color: theme.colors.textMuted,
-    fontSize: 14,
+  badge: {
+    position: "absolute",
+    top: 8,
+    left: 8,
   },
   content: {
-    padding: theme.spacing.md,
-    gap: theme.spacing.sm,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: theme.spacing.sm,
+    padding: 12,
+    gap: 4,
   },
   name: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: "700",
-    color: theme.colors.text,
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 14,
+    lineHeight: 18,
   },
   category: {
-    fontSize: 12,
-    color: theme.colors.primary,
-    fontWeight: "600",
+    fontFamily: "Inter_500Medium",
+    fontSize: 11,
     textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   description: {
-    fontSize: 14,
-    color: theme.colors.textMuted,
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    lineHeight: 16,
   },
   price: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: theme.colors.primary,
+    fontFamily: "Inter_700Bold",
+    fontSize: 14,
+    marginTop: 2,
   },
 });

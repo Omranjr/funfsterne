@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,18 +6,20 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  FlatList,
+  RefreshControl,
 } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { Eye, EyeOff, LogOut } from "lucide-react-native";
-import { theme } from "@/constants/theme";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTheme } from "@/contexts/ThemeContext";
 import {
   Button,
   Card,
   Badge,
-  ListSkeleton,
   EmptyState,
   BranchPill,
+  AccountSkeleton,
+  DiscountCodeListSkeleton,
 } from "@/components";
 import {
   useCurrentUser,
@@ -33,35 +35,43 @@ function formatDiscountValue(type: "PERCENTAGE" | "FIXED", value: number) {
 
 export default function AccountScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ highlightDiscounts?: string }>();
-  const { data: user, isLoading: userLoading } = useCurrentUser();
-  const { data: branches, isLoading: branchesLoading } = useBranches();
-  const { data: codes, isLoading: codesLoading } = useConsumerDiscountCodes();
+  const { theme } = useTheme();
+  const {
+    data: user,
+    isLoading: userLoading,
+    refetch: refetchUser,
+    isRefetching: userRefetching,
+  } = useCurrentUser();
+  const {
+    data: branches,
+    isLoading: branchesLoading,
+    refetch: refetchBranches,
+    isRefetching: branchesRefetching,
+  } = useBranches();
+  const {
+    data: codes,
+    isLoading: codesLoading,
+    refetch: refetchCodes,
+    isRefetching: codesRefetching,
+  } = useConsumerDiscountCodes();
   const updateProfile = useUpdateProfile();
   const logout = useLogout();
 
   const [name, setName] = useState(user?.name ?? "");
   const [revealedCodeId, setRevealedCodeId] = useState<string | null>(null);
-  const [discountsRef, setDiscountsRef] = useState<View | null>(null);
-
-  const highlightDiscounts = params.highlightDiscounts === "true";
-
-  useEffect(() => {
-    if (highlightDiscounts && discountsRef && codes?.length) {
-      discountsRef.measureLayout(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (discountsRef as any).getAncestor?.() ?? undefined,
-        () => {},
-        () => {}
-      );
-    }
-  }, [highlightDiscounts, discountsRef, codes?.length]);
 
   const isLoading = userLoading || branchesLoading;
+  const isRefetching = userRefetching || branchesRefetching || codesRefetching;
+
+  const handleRefresh = useCallback(() => {
+    refetchUser();
+    refetchBranches();
+    refetchCodes();
+  }, [refetchUser, refetchBranches, refetchCodes]);
 
   if (!user && !userLoading) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
         <EmptyState
           title="Sign in to view your account"
           message="Access your profile, preferred branch, and discount codes."
@@ -72,28 +82,51 @@ export default function AccountScreen() {
     );
   }
 
+  const insets = useSafeAreaInsets();
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: theme.background }]}
+      contentContainerStyle={[
+        styles.content,
+        { paddingTop: insets.top + 16 },
+      ]}
+      refreshControl={
+        <RefreshControl
+          refreshing={isRefetching}
+          onRefresh={handleRefresh}
+          tintColor={theme.gold}
+          colors={[theme.gold]}
+        />
+      }
+    >
       <View style={styles.header}>
-        <Text style={styles.title}>My Account</Text>
+        <Text style={[styles.title, { color: theme.text }]}>My Account</Text>
         <TouchableOpacity onPress={logout} style={styles.logout}>
-          <LogOut size={20} fill={theme.colors.textMuted} />
+          <LogOut size={20} fill={theme.textMuted} />
         </TouchableOpacity>
       </View>
 
       {isLoading ? (
-        <ListSkeleton count={2} />
+        <AccountSkeleton />
       ) : (
         <>
           <Card style={styles.card}>
-            <Text style={styles.sectionTitle}>Profile</Text>
-            <Text style={styles.label}>Name</Text>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Profile</Text>
+            <Text style={[styles.label, { color: theme.text }]}>Name</Text>
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: theme.surface,
+                  borderColor: theme.muted,
+                  color: theme.text,
+                },
+              ]}
               value={name}
               onChangeText={setName}
               placeholder="Your name"
-              placeholderTextColor={theme.colors.textMuted}
+              placeholderTextColor={theme.textMuted}
             />
             <Button
               title="Save name"
@@ -108,16 +141,16 @@ export default function AccountScreen() {
           </Card>
 
           <Card style={styles.card}>
-            <Text style={styles.sectionTitle}>Preferred Branch</Text>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Preferred Branch</Text>
             {branches?.length ? (
-              <FlatList
+              <ScrollView
                 horizontal
-                data={branches}
-                keyExtractor={(b) => b.id}
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.pillList}
-                renderItem={({ item }) => (
+              >
+                {branches.map((item) => (
                   <BranchPill
+                    key={item.id}
                     name={item.name}
                     selected={user?.preferredBranchId === item.id}
                     onPress={() =>
@@ -127,23 +160,17 @@ export default function AccountScreen() {
                       })
                     }
                   />
-                )}
-              />
+                ))}
+              </ScrollView>
             ) : (
-              <Text style={styles.muted}>No branches available</Text>
+              <Text style={[styles.muted, { color: theme.textMuted }]}>No branches available</Text>
             )}
           </Card>
 
-          <Card
-            style={[
-              styles.card,
-              highlightDiscounts && styles.cardHighlighted,
-            ]}
-            ref={setDiscountsRef}
-          >
-            <Text style={styles.sectionTitle}>My Discount Codes</Text>
+          <Card style={styles.card}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>My Discount Codes</Text>
             {codesLoading ? (
-              <ListSkeleton count={2} />
+              <DiscountCodeListSkeleton count={2} />
             ) : codes?.length ? (
               <View style={styles.codeList}>
                 {codes.map((code) => {
@@ -157,6 +184,10 @@ export default function AccountScreen() {
                       style={[
                         styles.codeRow,
                         isRedeemed && styles.codeRowRedeemed,
+                        {
+                          backgroundColor: theme.surface,
+                          borderColor: theme.muted,
+                        },
                       ]}
                       onPress={() =>
                         !isRedeemed && setRevealedCodeId((prev) =>
@@ -165,14 +196,14 @@ export default function AccountScreen() {
                       }
                     >
                       <View style={styles.codeInfo}>
-                        <Text style={styles.codeLabel}>
+                        <Text style={[styles.codeLabel, { color: theme.gold }]}>
                           {isRevealed ? code.code : "Tap to reveal"}
                         </Text>
-                        <Text style={styles.codeValue}>
+                        <Text style={[styles.codeValue, { color: theme.text }]}>
                           {formatDiscountValue(code.type, code.value)}
                         </Text>
                         {code.expiresAt ? (
-                          <Text style={styles.codeExpiry}>
+                          <Text style={[styles.codeExpiry, { color: theme.textMuted }]}>
                             Expires{" "}
                             {new Date(code.expiresAt).toLocaleDateString()}
                           </Text>
@@ -186,10 +217,10 @@ export default function AccountScreen() {
                             {isRevealed ? (
                               <EyeOff
                                 size={18}
-                                fill={theme.colors.textMuted}
+                                fill={theme.textMuted}
                               />
                             ) : (
-                              <Eye size={18} fill={theme.colors.textMuted} />
+                              <Eye size={18} fill={theme.textMuted} />
                             )}
                             <Badge label="Active" variant="success" />
                           </>
@@ -215,12 +246,11 @@ export default function AccountScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
   },
   content: {
-    padding: theme.spacing.md,
-    gap: theme.spacing.lg,
-    paddingBottom: theme.spacing.xl,
+    padding: 16,
+    gap: 24,
+    paddingBottom: 32,
   },
   header: {
     flexDirection: "row",
@@ -230,86 +260,70 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: "800",
-    color: theme.colors.text,
   },
   logout: {
-    padding: theme.spacing.sm,
+    padding: 8,
   },
   card: {
-    gap: theme.spacing.md,
+    gap: 16,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: theme.colors.text,
   },
   label: {
     fontSize: 14,
     fontWeight: "500",
-    color: theme.colors.text,
   },
   input: {
-    backgroundColor: theme.colors.surface,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: theme.colors.muted,
-    borderRadius: theme.borderRadius.md,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    color: theme.colors.text,
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     fontSize: 16,
     minHeight: 48,
   },
   pillList: {
-    gap: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
+    gap: 8,
+    paddingVertical: 4,
   },
   muted: {
-    color: theme.colors.textMuted,
     fontSize: 14,
   },
   codeList: {
-    gap: theme.spacing.sm,
+    gap: 8,
   },
   codeRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.md,
+    borderRadius: 16,
+    padding: 16,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: theme.colors.muted,
-    gap: theme.spacing.sm,
+    gap: 8,
   },
   codeRowRedeemed: {
     opacity: 0.6,
   },
   codeInfo: {
     flex: 1,
-    gap: theme.spacing.xs,
+    gap: 4,
   },
   codeLabel: {
     fontSize: 16,
     fontWeight: "700",
-    color: theme.colors.primary,
     letterSpacing: 1,
   },
   codeValue: {
     fontSize: 14,
     fontWeight: "600",
-    color: theme.colors.text,
   },
   codeExpiry: {
     fontSize: 12,
-    color: theme.colors.textMuted,
   },
   codeActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: theme.spacing.sm,
-  },
-  cardHighlighted: {
-    borderColor: theme.colors.primary,
-    borderWidth: 1.5,
+    gap: 8,
   },
 });
