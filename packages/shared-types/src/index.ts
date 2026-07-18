@@ -15,6 +15,33 @@ export type ProductCategory =
   | "TOOLS"
   | "OTHER";
 
+// Pretty label for each category, used by both the admin dashboard and the
+// mobile home screen. Single source of truth so the two stay in sync.
+export const ProductCategoryLabel: Record<ProductCategory, string> = {
+  HAIR: "Hair",
+  SKIN_CARE: "Skin Care",
+  BEARD: "Beard",
+  TOOLS: "Tools",
+  OTHER: "Other",
+};
+
+export const CategoryImageSchema = z.object({
+  category: ProductCategorySchema,
+  imageUrl: z.string().url(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+});
+
+export type CategoryImage = z.infer<typeof CategoryImageSchema>;
+
+// Admin upsert payload — only the URL is required; the category comes from
+// the route param so the body stays minimal.
+export const UpsertCategoryImageSchema = z.object({
+  imageUrl: z.string().url(),
+});
+
+export type UpsertCategoryImage = z.infer<typeof UpsertCategoryImageSchema>;
+
 export const DiscountCodeTypeSchema = z.enum(["PERCENTAGE", "FIXED"]);
 
 export type DiscountCodeType = "PERCENTAGE" | "FIXED";

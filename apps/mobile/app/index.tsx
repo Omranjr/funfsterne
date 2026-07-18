@@ -20,7 +20,7 @@ import {
   BranchPicker,
   CachedImage,
 } from "@/components";
-import { useProducts, useBranches } from "@/hooks/usePublicData";
+import { useProducts, useBranches, useCategoryImages } from "@/hooks/usePublicData";
 import { type ProductCategory, type Branch } from "@funfsterne/shared-types";
 
 const CATEGORIES: {
@@ -56,6 +56,7 @@ export default function HomeScreen() {
   } = useProducts({
     branchId: selectedBranchId ?? undefined,
   });
+  const { data: categoryImages } = useCategoryImages();
 
   const featured = useMemo(() => products?.slice(0, 4) ?? [], [products]);
   const isLoading = branchesLoading || productsLoading;
@@ -91,7 +92,10 @@ export default function HomeScreen() {
         })
       }
     >
-      <CachedCategoryImage imageUrl={item.imageUrl} label={item.label} />
+      <CachedCategoryImage
+        imageUrl={categoryImages?.[item.key]}
+        label={item.label}
+      />
     </TouchableOpacity>
   );
 

@@ -14,11 +14,13 @@ import {
   Bell,
   Menu,
   LogOut,
+  Images,
 } from "lucide-react";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/products", label: "Products", icon: Package },
+  { href: "/categories", label: "Category Images", icon: Images },
   { href: "/branches", label: "Branches", icon: MapPin },
   { href: "/discount-codes", label: "Discount Codes", icon: Ticket },
   { href: "/notifications", label: "Notifications", icon: Bell },

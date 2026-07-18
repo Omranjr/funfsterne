@@ -25,6 +25,17 @@ export async function publicRoutes(app: FastifyInstance) {
     });
   });
 
+  // Returns the admin-set category images as an array. The mobile app renders
+  // a fallback for any category that isn't in the result (or whose imageUrl is
+  // null/empty), so the response is intentionally the raw "what's in the DB"
+  // rather than always 5 entries.
+  app.get("/category-images", async () => {
+    const images = await app.prisma.categoryImage.findMany({
+      orderBy: { category: "asc" },
+    });
+    return serializePrisma(images);
+  });
+
   app.get("/products", async (request) => {
     const query = ProductQuerySchema.safeParse(request.query);
     if (!query.success) {

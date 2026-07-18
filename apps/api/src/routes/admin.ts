@@ -4,10 +4,12 @@ import {
   CreateProductSchema,
   CreateDiscountCodeSchema,
   CreateNotificationSchema,
+  ProductCategorySchema,
   ProductSchema,
   SendNotificationSchema,
   UpdateBranchSchema,
   UpdateProductSchema,
+  UpsertCategoryImageSchema,
   UpsertProductBranchAvailabilitySchema,
 } from "@funfsterne/shared-types";
 import { z } from "zod";
@@ -208,6 +210,63 @@ export async function adminRoutes(app: FastifyInstance) {
     const id = (request.params as { id: string }).id;
     await app.prisma.discountCode.delete({ where: { id } });
     return reply.status(204).send();
+  });
+
+  // ── Category images ─────────────────────────────────────────────────────
+
+  // Returns one entry per fixed ProductCategory, even if no image has been
+  // set yet. The mobile app's GET /public/category-images returns only the
+  // rows that exist; this admin endpoint synthesises the full 5-row list so
+  // the dashboard can render an upload slot for every category.
+  app.get("/category-images", async () => {
+    const existing = await app.prisma.categoryImage.findMany({
+      orderBy: { category: "asc" },
+    });
+    const byCategory = new Map(existing.map((row) => [row.category, row]));
+    const all = ProductCategorySchema.options.map((category) => {
+      const row = byCategory.get(category);
+      return row
+        ? {
+            category: row.category,
+            imageUrl: row.imageUrl,
+            createdAt: row.createdAt,
+            updatedAt: row.updatedAt,
+          }
+        : {
+            category,
+            imageUrl: null,
+            createdAt: null,
+            updatedAt: null,
+          };
+    });
+    return serializePrisma(all);
+  });
+
+  // Upsert the image URL for a single fixed category. The category comes from
+  // the route param (validated against the enum); only the URL is in the body.
+  app.put("/category-images/:category", async (request, reply) => {
+    const categoryParse = ProductCategorySchema.safeParse(
+      (request.params as { category: string }).category,
+    );
+    if (!categoryParse.success) {
+      return reply.status(400).send({ error: "Invalid category" });
+    }
+
+    const bodyParse = UpsertCategoryImageSchema.safeParse(request.body);
+    if (!bodyParse.success) {
+      return reply.status(400).send({ error: "Invalid category image payload" });
+    }
+
+    const category = categoryParse.data;
+    const { imageUrl } = bodyParse.data;
+
+    const row = await app.prisma.categoryImage.upsert({
+      where: { category },
+      create: { category, imageUrl },
+      update: { imageUrl },
+    });
+
+    return serializePrisma(row);
   });
 
   // ── Notifications ────────────────────────────────────────────────────────

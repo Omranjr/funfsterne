@@ -141,3 +141,12 @@ model AdminUser {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
+
+model CategoryImage {
+  // One row per fixed ProductCategory enum value. Admin upserts via PUT
+  // /admin/category-images/:category, mobile reads via GET /public/category-images.
+  category  ProductCategory @unique
+  imageUrl  String
+  updatedAt DateTime        @updatedAt
+  createdAt DateTime        @default(now())
+}
