@@ -14,6 +14,7 @@ import { z } from "zod";
 import type { FastifyInstance } from "fastify";
 import { adminAuthMiddleware } from "../middleware/admin-auth.js";
 import { sendPushNotifications } from "../services/push.service.js";
+import { serializePrisma } from "../serializers.js";
 
 export async function adminRoutes(app: FastifyInstance) {
   app.addHook("preHandler", adminAuthMiddleware);
@@ -25,7 +26,8 @@ export async function adminRoutes(app: FastifyInstance) {
   // ── Branches ─────────────────────────────────────────────────────────────
 
   app.get("/branches", async () => {
-    return app.prisma.branch.findMany({ orderBy: { name: "asc" } });
+    const branches = await app.prisma.branch.findMany({ orderBy: { name: "asc" } });
+    return serializePrisma(branches);
   });
 
   app.post("/branches", async (request, reply) => {
@@ -33,7 +35,9 @@ export async function adminRoutes(app: FastifyInstance) {
     if (!parse.success) {
       return reply.status(400).send({ error: "Invalid branch payload" });
     }
-    return app.prisma.branch.create({ data: parse.data });
+    return serializePrisma(
+      await app.prisma.branch.create({ data: parse.data }),
+    );
   });
 
   app.get("/branches/:id", async (request, reply) => {
@@ -42,7 +46,7 @@ export async function adminRoutes(app: FastifyInstance) {
     );
     const branch = await app.prisma.branch.findUnique({ where: { id } });
     if (!branch) return reply.status(404).send({ error: "Branch not found" });
-    return branch;
+    return serializePrisma(branch);
   });
 
   app.patch("/branches/:id", async (request, reply) => {
@@ -53,7 +57,9 @@ export async function adminRoutes(app: FastifyInstance) {
     if (!parse.success) {
       return reply.status(400).send({ error: "Invalid branch payload" });
     }
-    return app.prisma.branch.update({ where: { id }, data: parse.data });
+    return serializePrisma(
+      await app.prisma.branch.update({ where: { id }, data: parse.data }),
+    );
   });
 
   app.delete("/branches/:id", async (request, reply) => {
@@ -67,10 +73,11 @@ export async function adminRoutes(app: FastifyInstance) {
   // ── Products ─────────────────────────────────────────────────────────────
 
   app.get("/products", async () => {
-    return app.prisma.product.findMany({
+    const products = await app.prisma.product.findMany({
       orderBy: { name: "asc" },
       include: { availabilities: { include: { branch: true } } },
     });
+    return serializePrisma(products);
   });
 
   app.post("/products", async (request, reply) => {
@@ -78,7 +85,9 @@ export async function adminRoutes(app: FastifyInstance) {
     if (!parse.success) {
       return reply.status(400).send({ error: "Invalid product payload" });
     }
-    return app.prisma.product.create({ data: parse.data });
+    return serializePrisma(
+      await app.prisma.product.create({ data: parse.data }),
+    );
   });
 
   app.get("/products/:id", async (request, reply) => {
@@ -90,7 +99,7 @@ export async function adminRoutes(app: FastifyInstance) {
       include: { availabilities: { include: { branch: true } } },
     });
     if (!product) return reply.status(404).send({ error: "Product not found" });
-    return product;
+    return serializePrisma(product);
   });
 
   app.patch("/products/:id", async (request, reply) => {
@@ -101,7 +110,9 @@ export async function adminRoutes(app: FastifyInstance) {
     if (!parse.success) {
       return reply.status(400).send({ error: "Invalid product payload" });
     }
-    return app.prisma.product.update({ where: { id }, data: parse.data });
+    return serializePrisma(
+      await app.prisma.product.update({ where: { id }, data: parse.data }),
+    );
   });
 
   app.delete("/products/:id", async (request, reply) => {
@@ -141,20 +152,23 @@ export async function adminRoutes(app: FastifyInstance) {
       return reply.status(404).send({ error: "Branch not found" });
     }
 
-    return app.prisma.productBranchAvailability.upsert({
-      where: { productId_branchId: { productId, branchId } },
-      create: { productId, branchId, inStock, priceOverride },
-      update: { inStock, priceOverride },
-    });
+    return serializePrisma(
+      await app.prisma.productBranchAvailability.upsert({
+        where: { productId_branchId: { productId, branchId } },
+        create: { productId, branchId, inStock, priceOverride },
+        update: { inStock, priceOverride },
+      }),
+    );
   });
 
   // ── Discount codes ───────────────────────────────────────────────────────
 
   app.get("/discount-codes", async () => {
-    return app.prisma.discountCode.findMany({
+    const codes = await app.prisma.discountCode.findMany({
       orderBy: { code: "asc" },
       include: { scopeBranch: true },
     });
+    return serializePrisma(codes);
   });
 
   app.post("/discount-codes", async (request, reply) => {
@@ -162,7 +176,9 @@ export async function adminRoutes(app: FastifyInstance) {
     if (!parse.success) {
       return reply.status(400).send({ error: "Invalid discount code payload" });
     }
-    return app.prisma.discountCode.create({ data: parse.data });
+    return serializePrisma(
+      await app.prisma.discountCode.create({ data: parse.data }),
+    );
   });
 
   app.get("/discount-codes/:id", async (request, reply) => {
@@ -174,7 +190,7 @@ export async function adminRoutes(app: FastifyInstance) {
     if (!discount) {
       return reply.status(404).send({ error: "Discount code not found" });
     }
-    return discount;
+    return serializePrisma(discount);
   });
 
   app.patch("/discount-codes/:id", async (request, reply) => {
@@ -183,7 +199,9 @@ export async function adminRoutes(app: FastifyInstance) {
     if (!parse.success) {
       return reply.status(400).send({ error: "Invalid discount code payload" });
     }
-    return app.prisma.discountCode.update({ where: { id }, data: parse.data });
+    return serializePrisma(
+      await app.prisma.discountCode.update({ where: { id }, data: parse.data }),
+    );
   });
 
   app.delete("/discount-codes/:id", async (request, reply) => {
@@ -195,7 +213,10 @@ export async function adminRoutes(app: FastifyInstance) {
   // ── Notifications ────────────────────────────────────────────────────────
 
   app.get("/notifications", async () => {
-    return app.prisma.notification.findMany({ orderBy: { sentAt: "desc" } });
+    const notifications = await app.prisma.notification.findMany({
+      orderBy: { sentAt: "desc" },
+    });
+    return serializePrisma(notifications);
   });
 
   app.post("/notifications", async (request, reply) => {
@@ -203,7 +224,9 @@ export async function adminRoutes(app: FastifyInstance) {
     if (!parse.success) {
       return reply.status(400).send({ error: "Invalid notification payload" });
     }
-    return app.prisma.notification.create({ data: parse.data });
+    return serializePrisma(
+      await app.prisma.notification.create({ data: parse.data }),
+    );
   });
 
   app.post("/notifications/send", async (request, reply) => {
@@ -247,7 +270,11 @@ export async function adminRoutes(app: FastifyInstance) {
       },
     });
 
-    return { notification, sent: sent.length, failed: failed.length };
+    return {
+      notification: serializePrisma(notification),
+      sent: sent.length,
+      failed: failed.length,
+    };
   });
 
   app.get("/discount-codes/:id/redemptions", async (request, reply) => {
@@ -265,6 +292,9 @@ export async function adminRoutes(app: FastifyInstance) {
       orderBy: { redeemedAt: "desc" },
     });
 
-    return { discount, redemptions };
+    return {
+      discount: serializePrisma(discount),
+      redemptions: serializePrisma(redemptions),
+    };
   });
 }

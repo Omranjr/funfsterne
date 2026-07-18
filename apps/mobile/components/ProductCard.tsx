@@ -18,6 +18,7 @@ import Animated, {
 import { useTheme } from "@/contexts/ThemeContext";
 import { Badge } from "./Badge";
 import { CachedImage } from "./CachedImage";
+import { formatPrice } from "@/lib/format-price";
 
 export interface ProductCardProps {
   name: string;
@@ -118,7 +119,7 @@ export function ProductCard({
         ) : null}
 
         <Text style={[styles.price, { color: theme.gold }]}>
-          €{price.toFixed(2)}
+          €{formatPrice(price)}
         </Text>
       </View>
     </AnimatedPressable>

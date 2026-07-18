@@ -16,6 +16,7 @@ import { ChevronLeft, Share2, MapPin, MessageCircle } from "lucide-react-native"
 import { useTheme } from "@/contexts/ThemeContext";
 import { Badge, CachedImage, ProductDetailSkeleton } from "@/components";
 import { useProduct, useBranches } from "@/hooks/usePublicData";
+import { formatPrice } from "@/lib/format-price";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -153,7 +154,7 @@ export default function ProductDetailsScreen() {
           </View>
 
           <Text style={[styles.price, { color: theme.gold }]}>
-            €{product.basePrice.toFixed(2)}
+            €{formatPrice(product.basePrice)}
           </Text>
 
           {product.description ? (

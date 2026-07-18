@@ -24,6 +24,7 @@ import {
 } from "@/components";
 import { useDiscountCodes } from "@/hooks/usePublicData";
 import { getOrCreateDeviceId } from "@/lib/device-id";
+import { formatPrice } from "@/lib/format-price";
 import {
   redeemDiscountCode,
   PublicApiError,
@@ -41,9 +42,13 @@ function formatDiscountValue(
   type: ActiveDiscountCode["type"],
   value: ActiveDiscountCode["value"]
 ): string {
-  const num = typeof value === "string" ? Number(value) : value;
-  if (Number.isNaN(num)) return "—";
-  return type === "PERCENTAGE" ? `${num}% off` : `€${num.toFixed(2)} off`;
+  if (type === "PERCENTAGE") {
+    // Percentages are stored as whole numbers (e.g. 10 = 10%). The formatPrice
+    // helper still applies its NaN guard so a malformed value renders as "—".
+    const pct = formatPrice(value, { fractionDigits: 0 });
+    return `${pct}% off`;
+  }
+  return `€${formatPrice(value)} off`;
 }
 
 function describeExpiry(expiresAt: string | null): string | null {

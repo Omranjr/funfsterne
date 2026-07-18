@@ -5,6 +5,7 @@ import {
 } from "@funfsterne/shared-types";
 import { z } from "zod";
 import type { FastifyInstance } from "fastify";
+import { serializePrisma } from "../serializers.js";
 
 const ProductQuerySchema = z.object({
   category: ProductCategorySchema.optional(),
@@ -32,7 +33,7 @@ export async function publicRoutes(app: FastifyInstance) {
 
     const { category, branchId } = query.data;
 
-    return app.prisma.product.findMany({
+    const products = await app.prisma.product.findMany({
       where: {
         isActive: true,
         ...(category ? { category } : {}),
@@ -45,6 +46,8 @@ export async function publicRoutes(app: FastifyInstance) {
       },
       orderBy: { name: "asc" },
     });
+
+    return serializePrisma(products);
   });
 
   app.get("/products/:id", async (request, reply) => {
@@ -64,7 +67,7 @@ export async function publicRoutes(app: FastifyInstance) {
       return reply.status(404).send({ error: "Product not found" });
     }
 
-    return product;
+    return serializePrisma(product);
   });
 
   app.post("/push-tokens", async (request, reply) => {
@@ -87,7 +90,7 @@ export async function publicRoutes(app: FastifyInstance) {
   app.get("/discount-codes/active", async () => {
     const now = new Date();
 
-    return app.prisma.discountCode.findMany({
+    const codes = await app.prisma.discountCode.findMany({
       where: {
         isActive: true,
         OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
@@ -95,6 +98,8 @@ export async function publicRoutes(app: FastifyInstance) {
       include: { scopeBranch: true },
       orderBy: { code: "asc" },
     });
+
+    return serializePrisma(codes);
   });
 
   app.post("/discount-codes/:code/redeem", async (request, reply) => {
@@ -156,6 +161,10 @@ export async function publicRoutes(app: FastifyInstance) {
       }),
     ]);
 
-    return { success: true, discount: updated, redemption };
+    return {
+      success: true,
+      discount: serializePrisma(updated),
+      redemption: serializePrisma(redemption),
+    };
   });
 }
