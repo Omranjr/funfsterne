@@ -1,9 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, getActiveDiscountCodes } from "@/lib/api";
 import {
   type Product,
   type Branch,
-  type DiscountCode,
   ProductCategorySchema,
 } from "@funfsterne/shared-types";
 import { z } from "zod";
@@ -41,8 +40,8 @@ export function useProduct(id: string) {
 }
 
 export function useDiscountCodes() {
-  return useQuery<DiscountCode[]>({
-    queryKey: ["discount-codes"],
-    queryFn: () => apiFetch<DiscountCode[]>("/discount-codes"),
+  return useQuery({
+    queryKey: ["discount-codes", "active"],
+    queryFn: () => getActiveDiscountCodes(),
   });
 }

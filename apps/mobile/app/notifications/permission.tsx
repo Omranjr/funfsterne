@@ -36,7 +36,7 @@ export default function NotificationPermissionScreen() {
       if (cancelled) return;
       if (prompted !== null) {
         setHasFinished(true);
-        router.replace("/account");
+        router.replace("/discount-codes");
       }
     })();
 
@@ -52,11 +52,11 @@ export default function NotificationPermissionScreen() {
       try {
         await register.mutateAsync({ token, platform: getPlatformType() });
       } catch {
-        // Non-fatal: user is still signed in, they can re-enable later.
+        // Non-fatal: if registration fails, the user can re-enable later.
       }
     }
     setHasFinished(true);
-    router.replace("/account");
+    router.replace("/discount-codes");
   }, [refreshPushToken, register, router]);
 
   // If the user navigates back here and permission is already granted,
@@ -79,7 +79,7 @@ export default function NotificationPermissionScreen() {
       // User either denied or dismissed; either way, do not re-prompt.
       await setPrompted(result === "denied" ? "denied" : "pending");
       setHasFinished(true);
-      router.replace("/account");
+      router.replace("/discount-codes");
     } finally {
       setIsResolving(false);
     }
@@ -88,7 +88,7 @@ export default function NotificationPermissionScreen() {
   const handleSkip = useCallback(async () => {
     await setPrompted(canAskAgain ? "pending" : "denied");
     setHasFinished(true);
-    router.replace("/account");
+    router.replace("/discount-codes");
   }, [canAskAgain, router]);
 
   const insets = useSafeAreaInsets();

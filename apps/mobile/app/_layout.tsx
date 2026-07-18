@@ -1,3 +1,4 @@
+import "react-native-gesture-handler";
 import "../global.css";
 import { useEffect, useState, useCallback } from "react";
 import {
@@ -20,7 +21,7 @@ import {
   setHasSeenOnboarding,
 } from "@/lib/onboarding";
 import { useAppFonts } from "@/hooks/useFonts";
-import { Home, ShoppingBag, Tag, User } from "lucide-react-native";
+import { Home, ShoppingBag, Tag } from "lucide-react-native";
 
 /**
  * expo-router auto-derives deep linking from the file-based routes plus
@@ -103,27 +104,6 @@ function AppNavigator() {
             tabBarIcon: ({ color, size }) => (
               <Tag size={size} color={color} />
             ),
-          }}
-        />
-        <Tabs.Screen
-          name="account"
-          options={{
-            title: "Profile",
-            tabBarIcon: ({ color, size }) => (
-              <User size={size} color={color} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="login"
-          options={{
-            href: null,
-          }}
-        />
-        <Tabs.Screen
-          name="verify"
-          options={{
-            href: null,
           }}
         />
         <Tabs.Screen

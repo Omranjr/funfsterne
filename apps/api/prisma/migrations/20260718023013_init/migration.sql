@@ -64,21 +64,9 @@ CREATE TABLE "DiscountCode" (
 );
 
 -- CreateTable
-CREATE TABLE "User" (
-    "id" TEXT NOT NULL,
-    "phone" TEXT,
-    "email" TEXT,
-    "name" TEXT,
-    "preferredBranchId" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "PushToken" (
     "id" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
+    "deviceId" TEXT NOT NULL,
     "token" TEXT NOT NULL,
     "platform" "Platform" NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -87,21 +75,10 @@ CREATE TABLE "PushToken" (
 );
 
 -- CreateTable
-CREATE TABLE "MagicLink" (
-    "id" TEXT NOT NULL,
-    "email" TEXT NOT NULL,
-    "token" TEXT NOT NULL,
-    "used" BOOLEAN NOT NULL DEFAULT false,
-    "expiresAt" TIMESTAMP(3) NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "MagicLink_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "DiscountCodeRedemption" (
     "id" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
+    "deviceId" TEXT NOT NULL,
+    "branchId" TEXT,
     "discountCodeId" TEXT NOT NULL,
     "redeemedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -166,40 +143,28 @@ CREATE INDEX "DiscountCode_isActive_idx" ON "DiscountCode"("isActive");
 CREATE INDEX "DiscountCode_scopeBranchId_idx" ON "DiscountCode"("scopeBranchId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "User_phone_key" ON "User"("phone");
-
--- CreateIndex
-CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
-
--- CreateIndex
-CREATE INDEX "User_preferredBranchId_idx" ON "User"("preferredBranchId");
-
--- CreateIndex
 CREATE UNIQUE INDEX "PushToken_token_key" ON "PushToken"("token");
 
 -- CreateIndex
-CREATE INDEX "PushToken_userId_idx" ON "PushToken"("userId");
+CREATE INDEX "PushToken_deviceId_idx" ON "PushToken"("deviceId");
 
 -- CreateIndex
 CREATE INDEX "PushToken_platform_idx" ON "PushToken"("platform");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "MagicLink_token_key" ON "MagicLink"("token");
+CREATE UNIQUE INDEX "PushToken_deviceId_token_key" ON "PushToken"("deviceId", "token");
 
 -- CreateIndex
-CREATE INDEX "MagicLink_token_idx" ON "MagicLink"("token");
-
--- CreateIndex
-CREATE INDEX "MagicLink_email_idx" ON "MagicLink"("email");
-
--- CreateIndex
-CREATE INDEX "DiscountCodeRedemption_userId_idx" ON "DiscountCodeRedemption"("userId");
+CREATE INDEX "DiscountCodeRedemption_deviceId_idx" ON "DiscountCodeRedemption"("deviceId");
 
 -- CreateIndex
 CREATE INDEX "DiscountCodeRedemption_discountCodeId_idx" ON "DiscountCodeRedemption"("discountCodeId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "DiscountCodeRedemption_userId_discountCodeId_key" ON "DiscountCodeRedemption"("userId", "discountCodeId");
+CREATE INDEX "DiscountCodeRedemption_branchId_idx" ON "DiscountCodeRedemption"("branchId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "DiscountCodeRedemption_deviceId_discountCodeId_key" ON "DiscountCodeRedemption"("deviceId", "discountCodeId");
 
 -- CreateIndex
 CREATE INDEX "Notification_discountCodeId_idx" ON "Notification"("discountCodeId");
@@ -220,13 +185,7 @@ ALTER TABLE "ProductBranchAvailability" ADD CONSTRAINT "ProductBranchAvailabilit
 ALTER TABLE "DiscountCode" ADD CONSTRAINT "DiscountCode_scopeBranchId_fkey" FOREIGN KEY ("scopeBranchId") REFERENCES "Branch"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "User" ADD CONSTRAINT "User_preferredBranchId_fkey" FOREIGN KEY ("preferredBranchId") REFERENCES "Branch"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "PushToken" ADD CONSTRAINT "PushToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "DiscountCodeRedemption" ADD CONSTRAINT "DiscountCodeRedemption_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "DiscountCodeRedemption" ADD CONSTRAINT "DiscountCodeRedemption_branchId_fkey" FOREIGN KEY ("branchId") REFERENCES "Branch"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "DiscountCodeRedemption" ADD CONSTRAINT "DiscountCodeRedemption_discountCodeId_fkey" FOREIGN KEY ("discountCodeId") REFERENCES "DiscountCode"("id") ON DELETE CASCADE ON UPDATE CASCADE;

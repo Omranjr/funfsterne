@@ -227,9 +227,7 @@ export async function adminRoutes(app: FastifyInstance) {
       }
     }
 
-    const pushTokens = await app.prisma.pushToken.findMany({
-      include: { user: true },
-    });
+    const pushTokens = await app.prisma.pushToken.findMany();
 
     const tokens = pushTokens.map((pt) => pt.token);
     const { sent, failed } = await sendPushNotifications(
@@ -238,25 +236,6 @@ export async function adminRoutes(app: FastifyInstance) {
       body,
       discountCodeId ? { discountCodeId } : undefined,
     );
-
-    if (discountCodeId) {
-      const userIds = [...new Set(pushTokens.map((pt) => pt.userId))];
-      const existing = await app.prisma.discountCodeRedemption.findMany({
-        where: { discountCodeId, userId: { in: userIds } },
-        select: { userId: true },
-      });
-      const existingUserIds = new Set(existing.map((r) => r.userId));
-      const newRedemptions = userIds
-        .filter((id) => !existingUserIds.has(id))
-        .map((userId) => ({ userId, discountCodeId }));
-
-      if (newRedemptions.length > 0) {
-        await app.prisma.discountCodeRedemption.createMany({
-          data: newRedemptions,
-          skipDuplicates: true,
-        });
-      }
-    }
 
     const notification = await app.prisma.notification.create({
       data: {
@@ -269,5 +248,23 @@ export async function adminRoutes(app: FastifyInstance) {
     });
 
     return { notification, sent: sent.length, failed: failed.length };
+  });
+
+  app.get("/discount-codes/:id/redemptions", async (request, reply) => {
+    const id = (request.params as { id: string }).id;
+    const discount = await app.prisma.discountCode.findUnique({
+      where: { id },
+    });
+    if (!discount) {
+      return reply.status(404).send({ error: "Discount code not found" });
+    }
+
+    const redemptions = await app.prisma.discountCodeRedemption.findMany({
+      where: { discountCodeId: id },
+      include: { branch: true },
+      orderBy: { redeemedAt: "desc" },
+    });
+
+    return { discount, redemptions };
   });
 }

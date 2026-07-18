@@ -121,26 +121,25 @@ export const UpdateDiscountCodeSchema = CreateDiscountCodeSchema.partial();
 
 export type UpdateDiscountCode = z.infer<typeof UpdateDiscountCodeSchema>;
 
-export const UserSchema = z.object({
-  id: z.string(),
-  phone: z.string().optional(),
-  email: z.string().email().optional(),
-  name: z.string().optional(),
-  preferredBranchId: z.string().optional(),
-  createdAt: z.coerce.date(),
-});
-
-export type User = z.infer<typeof UserSchema>;
-
 export const PushTokenSchema = z.object({
   id: z.string(),
-  userId: z.string(),
+  deviceId: z.string(),
   token: z.string(),
   platform: PlatformSchema,
   createdAt: z.coerce.date(),
 });
 
 export type PushToken = z.infer<typeof PushTokenSchema>;
+
+export const DiscountCodeRedemptionSchema = z.object({
+  id: z.string(),
+  deviceId: z.string(),
+  branchId: z.string().optional(),
+  discountCodeId: z.string(),
+  redeemedAt: z.coerce.date(),
+});
+
+export type DiscountCodeRedemption = z.infer<typeof DiscountCodeRedemptionSchema>;
 
 export const NotificationSchema = z.object({
   id: z.string(),
@@ -171,6 +170,7 @@ export const SendNotificationSchema = z.object({
 export type SendNotification = z.infer<typeof SendNotificationSchema>;
 
 export const RegisterPushTokenSchema = z.object({
+  deviceId: z.string().min(1),
   token: z.string().min(1),
   platform: PlatformSchema,
 });

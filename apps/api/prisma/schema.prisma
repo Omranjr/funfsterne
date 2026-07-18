@@ -35,8 +35,8 @@ model Branch {
   phone       String?
   isActive    Boolean                   @default(true)
   products    ProductBranchAvailability[]
-  users       User[]                      @relation("PreferredBranch")
   discountCodes DiscountCode[]            @relation("DiscountCodeScopeBranch")
+  redemptions DiscountCodeRedemption[]
   createdAt   DateTime                  @default(now())
   updatedAt   DateTime                  @updatedAt
 
@@ -93,55 +93,31 @@ model DiscountCode {
   @@index([scopeBranchId])
 }
 
-model User {
-  id                String     @id @default(cuid())
-  phone             String?    @unique
-  email             String?    @unique
-  name              String?
-  preferredBranchId String?
-  preferredBranch   Branch?    @relation("PreferredBranch", fields: [preferredBranchId], references: [id], onDelete: SetNull)
-  pushTokens        PushToken[]
-  redemptions       DiscountCodeRedemption[]
-  createdAt         DateTime   @default(now())
-
-  @@index([preferredBranchId])
-}
-
 model PushToken {
   id        String   @id @default(cuid())
-  userId    String
+  deviceId  String
   token     String   @unique
   platform  Platform
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
-  @@index([userId])
+  @@unique([deviceId, token])
+  @@index([deviceId])
   @@index([platform])
-}
-
-model MagicLink {
-  id        String   @id @default(cuid())
-  email     String
-  token     String   @unique
-  used      Boolean  @default(false)
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-
-  @@index([token])
-  @@index([email])
 }
 
 model DiscountCodeRedemption {
   id             String       @id @default(cuid())
-  userId         String
+  deviceId       String
+  branchId       String?
   discountCodeId String
   redeemedAt     DateTime     @default(now())
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branch         Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
   discountCode   DiscountCode @relation(fields: [discountCodeId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, discountCodeId])
-  @@index([userId])
+  @@unique([deviceId, discountCodeId])
+  @@index([deviceId])
   @@index([discountCodeId])
+  @@index([branchId])
 }
 
 model Notification {

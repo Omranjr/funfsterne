@@ -12,7 +12,8 @@ import {
   type NotificationResponse,
   type NotificationBehavior,
 } from "expo-notifications";
-import { apiFetch } from "@/lib/api";
+import { registerPushToken } from "@/lib/api";
+import { getOrCreateDeviceId } from "@/lib/device-id";
 import { type Platform as PlatformType } from "@funfsterne/shared-types";
 
 export type NotificationPermissionStatus =
@@ -108,11 +109,10 @@ export function useNotificationPermission() {
 
 export function useRegisterPushToken() {
   return useMutation<void, Error, { token: string; platform: PlatformType }>({
-    mutationFn: ({ token, platform }) =>
-      apiFetch<void>("/consumer/me/push-token", {
-        method: "POST",
-        body: JSON.stringify({ token, platform }),
-      }),
+    mutationFn: async ({ token, platform }) => {
+      const deviceId = await getOrCreateDeviceId();
+      await registerPushToken({ deviceId, token, platform });
+    },
   });
 }
 

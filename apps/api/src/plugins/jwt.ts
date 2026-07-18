@@ -1,7 +1,8 @@
 import jwt from "@fastify/jwt";
+import fp from "fastify-plugin";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 
-export async function jwtPlugin(app: FastifyInstance) {
+export const jwtPlugin = fp(async function jwtPlugin(app: FastifyInstance) {
   const secret = process.env.JWT_SECRET;
   if (!secret) {
     throw new Error("JWT_SECRET environment variable is required");
@@ -14,7 +15,7 @@ export async function jwtPlugin(app: FastifyInstance) {
       signed: false,
     },
   });
-}
+});
 
 export interface AdminJwtPayload {
   sub: string;
