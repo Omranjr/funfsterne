@@ -12,7 +12,7 @@ export type ProductCategory = z.infer<typeof ProductCategorySchema>;
 export function useBranches() {
   return useQuery<Branch[]>({
     queryKey: ["branches"],
-    queryFn: () => apiFetch<Branch[]>("/branches"),
+    queryFn: () => apiFetch<Branch[]>("/public/branches"),
   });
 }
 
@@ -27,14 +27,15 @@ export function useProducts(options?: {
 
   return useQuery<Product[]>({
     queryKey: ["products", options?.category, options?.branchId],
-    queryFn: () => apiFetch<Product[]>(`/products${query ? `?${query}` : ""}`),
+    queryFn: () =>
+      apiFetch<Product[]>(`/public/products${query ? `?${query}` : ""}`),
   });
 }
 
 export function useProduct(id: string) {
   return useQuery<Product>({
     queryKey: ["product", id],
-    queryFn: () => apiFetch<Product>(`/products/${id}`),
+    queryFn: () => apiFetch<Product>(`/public/products/${id}`),
     enabled: Boolean(id),
   });
 }

@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Platform,
 } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useRootNavigationState, Tabs } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -162,18 +163,20 @@ export default function RootLayout() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <SafeAreaProvider>
-          <StatusBar style="auto" />
-          {showOnboarding ? (
-            <ThemedOnboarding onComplete={handleOnboardingComplete} />
-          ) : (
-            <AppNavigator />
-          )}
-        </SafeAreaProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <SafeAreaProvider>
+            <StatusBar style="auto" />
+            {showOnboarding ? (
+              <ThemedOnboarding onComplete={handleOnboardingComplete} />
+            ) : (
+              <AppNavigator />
+            )}
+          </SafeAreaProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </GestureHandlerRootView>
   );
 }
 
