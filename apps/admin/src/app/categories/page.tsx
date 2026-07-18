@@ -58,8 +58,11 @@ export default function CategoriesPage() {
   }, []);
 
   // Persist the new image URL for a category. The ImageUploader calls
-  // onChange with the new images array; we extract the first element (since
-  // each category has at most one image) and PUT it to the API.
+  // onChange with the new images array (old + newly uploaded, in that order);
+  // we extract the LAST element as the newest URL (each category has at most
+  // one image, so the newest upload always wins) and PUT it to the API. An
+  // empty array means the user removed the image — we send an empty string
+  // to the upsert, which the API now treats as a delete.
   const persistImage = useCallback(
     async (category: ProductCategory, urls: string[]) => {
       setErrors((prev) => {
@@ -70,10 +73,8 @@ export default function CategoriesPage() {
       });
       setSaving((prev) => ({ ...prev, [category]: true }));
 
-      // Empty array means "remove the image" — we send an empty string to the
-      // upsert, which the public endpoint treats as "no image" (the mobile
-      // app falls back to the gradient placeholder).
-      const imageUrl = urls[0] ?? "";
+      // Take the newest URL (last in the array), or empty string to clear.
+      const imageUrl = urls.length > 0 ? urls[urls.length - 1] : "";
 
       try {
         const res = await apiFetch(

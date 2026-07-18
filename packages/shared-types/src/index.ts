@@ -34,10 +34,19 @@ export const CategoryImageSchema = z.object({
 
 export type CategoryImage = z.infer<typeof CategoryImageSchema>;
 
-// Admin upsert payload — only the URL is required; the category comes from
-// the route param so the body stays minimal.
+// Admin upsert payload. The URL is required to be a non-empty http(s) URL
+// when present; an empty string is allowed as the "clear" sentinel — the
+// route handler treats it as "remove the image" so the admin UI can offer a
+// delete affordance without us shipping a dedicated DELETE endpoint.
+const CategoryImageUrlSchema = z
+  .string()
+  .refine(
+    (value) => value === "" || /^https?:\/\//i.test(value),
+    { message: "imageUrl must be an empty string or an http(s) URL" },
+  );
+
 export const UpsertCategoryImageSchema = z.object({
-  imageUrl: z.string().url(),
+  imageUrl: CategoryImageUrlSchema,
 });
 
 export type UpsertCategoryImage = z.infer<typeof UpsertCategoryImageSchema>;

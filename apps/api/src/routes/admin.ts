@@ -244,6 +244,9 @@ export async function adminRoutes(app: FastifyInstance) {
 
   // Upsert the image URL for a single fixed category. The category comes from
   // the route param (validated against the enum); only the URL is in the body.
+  // An empty-string imageUrl is treated as a "clear" — the row is deleted so
+  // the public endpoint returns that category as missing (and the mobile app
+  // falls back to its placeholder design).
   app.put("/category-images/:category", async (request, reply) => {
     const categoryParse = ProductCategorySchema.safeParse(
       (request.params as { category: string }).category,
@@ -260,6 +263,11 @@ export async function adminRoutes(app: FastifyInstance) {
     const category = categoryParse.data;
     const { imageUrl } = bodyParse.data;
 
+    if (imageUrl === "") {
+      await app.prisma.categoryImage.deleteMany({ where: { category } });
+      return { category, imageUrl: null, deleted: true };
+    }
+
     const row = await app.prisma.categoryImage.upsert({
       where: { category },
       create: { category, imageUrl },
@@ -267,6 +275,22 @@ export async function adminRoutes(app: FastifyInstance) {
     });
 
     return serializePrisma(row);
+  });
+
+  // Delete the image for a single fixed category. Returns 204 whether or not
+  // a row existed, so the admin UI can treat it as an idempotent operation.
+  app.delete("/category-images/:category", async (request, reply) => {
+    const categoryParse = ProductCategorySchema.safeParse(
+      (request.params as { category: string }).category,
+    );
+    if (!categoryParse.success) {
+      return reply.status(400).send({ error: "Invalid category" });
+    }
+
+    await app.prisma.categoryImage.deleteMany({
+      where: { category: categoryParse.data },
+    });
+    return reply.status(204).send();
   });
 
   // ── Notifications ────────────────────────────────────────────────────────
