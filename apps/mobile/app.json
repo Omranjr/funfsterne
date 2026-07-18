@@ -52,7 +52,8 @@
       },
       "eas": {
         "projectId": "039e2e3e-b52e-477a-a8be-73426a2332eb"
-      }
+      },
+      "apiBaseUrl": "https://funfsterne-admin.onrender.com"
     },
     "owner": "omran22"
   }
