@@ -7,7 +7,7 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "http://localhost:4000"
+        "EXPO_PUBLIC_API_BASE_URL": "https://funfsterne-admin.onrender.com"
       }
     },
     "preview": {

@@ -7,7 +7,7 @@ const extra = Constants.expoConfig?.extra ?? {};
 export const API_BASE_URL =
   (extra.apiBaseUrl as string | undefined) ??
   process.env.EXPO_PUBLIC_API_BASE_URL ??
-  "http://localhost:4000";
+  "https://funfsterne-admin.onrender.com";
 
 export async function apiFetch<T>(
   path: string,
