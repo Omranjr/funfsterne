@@ -27,6 +27,12 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleId": "uniresqq@gmail.com",
+        "ascAppId": "6796080276",
+        "appleTeamId": "54Y3JG33LJ"
+      }
+    }
   }
 }

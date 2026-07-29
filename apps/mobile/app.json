@@ -8,8 +8,11 @@
     "scheme": "funfsterne",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.funfsterne.mobile"
+      "supportsTablet": false,
+      "bundleIdentifier": "com.funfsterne.mobile",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.funfsterne.mobile",
@@ -30,11 +33,12 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#0A0A0A",
-          "image": "./assets/splash-icon.png",
-          "resizeMode": "contain",
+          "image": "./assets/splash-owner.png",
+          "resizeMode": "cover",
           "dark": {
             "backgroundColor": "#0A0A0A",
-            "image": "./assets/splash-icon.png"
+            "image": "./assets/splash-owner.png",
+            "resizeMode": "cover"
           }
         }
       ],

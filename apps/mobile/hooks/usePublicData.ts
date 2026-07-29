@@ -69,3 +69,21 @@ export function useCategoryImages() {
     staleTime: 1000 * 60 * 60,
   });
 }
+
+/**
+ * Returns true once the queries needed for the first paint of the home
+ * screen have resolved (success OR error — a flaky network must not keep
+ * the splash pinned forever; the splash's max-wait cap handles that).
+ *
+ * Calling this hook from the root layout also pre-warms the cache so
+ * that when the home screen mounts, its `useBranches()` and
+ * `useCategoryImages()` calls resolve instantly from cache.
+ */
+export function useInitialDataReady(): boolean {
+  const branches = useBranches();
+  const categories = useCategoryImages();
+  return (
+    (branches.isSuccess || branches.isError) &&
+    (categories.isSuccess || categories.isError)
+  );
+}

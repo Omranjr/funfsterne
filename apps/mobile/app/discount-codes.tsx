@@ -7,7 +7,6 @@ import {
   RefreshControl,
   useWindowDimensions,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
   runOnJS,
   useAnimatedStyle,
@@ -60,7 +59,6 @@ function describeExpiry(expiresAt: string | null): string | null {
 
 export default function OffersScreen() {
   const { theme } = useTheme();
-  const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { data, isLoading, refetch, isRefetching, error } = useDiscountCodes();
 
@@ -169,7 +167,7 @@ export default function OffersScreen() {
       style={[styles.container, { backgroundColor: theme.background }]}
       contentContainerStyle={[
         styles.content,
-        { paddingTop: insets.top + 16 },
+        { paddingTop: 12 },
       ]}
       showsVerticalScrollIndicator={false}
       refreshControl={

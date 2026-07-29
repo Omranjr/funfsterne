@@ -11,7 +11,6 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Grid3X3, List as ListIcon } from "lucide-react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/contexts/ThemeContext";
 import {
   ProductCard,
@@ -77,11 +76,9 @@ export default function ProductsScreen() {
   const numColumns = viewMode === "grid" ? 2 : 1;
   const cardWidth = viewMode === "grid" ? (width - 48) / 2 : undefined;
 
-  const insets = useSafeAreaInsets();
-
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+      <View style={[styles.header, { paddingTop: 12 }]}>
         <Text style={[styles.title, { color: theme.text }]}>Products</Text>
         <View style={[styles.toggle, { backgroundColor: theme.surface }]}>
           <TouchableOpacity

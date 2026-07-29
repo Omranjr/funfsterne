@@ -28,6 +28,8 @@ export {
   OnboardingSplash,
   type OnboardingSplashProps,
 } from "./OnboardingSplash";
+export { AnimatedSplash, type AnimatedSplashProps } from "./AnimatedSplash";
+export { BrandedIntroGate, type BrandedIntroGateProps } from "./BrandedIntroGate";
 export { ScreenWrapper, type ScreenWrapperProps } from "./ScreenWrapper";
 export { ThemeToggle, type ThemeToggleProps } from "./ThemeToggle";
 export { HeroBanner, type HeroBannerProps } from "./HeroBanner";

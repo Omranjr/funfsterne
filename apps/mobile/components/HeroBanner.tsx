@@ -8,7 +8,6 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { MapPin, ChevronRight, Store } from "lucide-react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/contexts/ThemeContext";
 import { ThemeToggle } from "./ThemeToggle";
 import { type Branch } from "@funfsterne/shared-types";
@@ -27,7 +26,6 @@ export function HeroBanner({
 }: HeroBannerProps) {
   const { theme } = useTheme();
   const { width } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
 
   const hasBranches = (branches?.length ?? 0) > 0;
 
@@ -45,12 +43,7 @@ export function HeroBanner({
         end={{ x: 1, y: 1 }}
       />
 
-      <View
-        style={[
-          styles.overlay,
-          { paddingTop: Math.max(insets.top, 16) + 8 },
-        ]}
-      >
+      <View style={[styles.overlay, { paddingTop: 16 }]}>
         <View style={styles.topRow}>
           <View style={{ width: 36 }} />
           <ThemeToggle
@@ -125,7 +118,6 @@ export function HeroBanner({
 
 const styles = StyleSheet.create({
   container: {
-    minHeight: 176,
     borderRadius: 20,
     overflow: "hidden",
     alignSelf: "center",
@@ -133,28 +125,29 @@ const styles = StyleSheet.create({
   overlay: {
     flexGrow: 1,
     padding: 16,
-    paddingBottom: 20,
+    paddingBottom: 16,
     justifyContent: "flex-start",
-    gap: 16,
+    gap: 12,
   },
   topRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginBottom: 4,
   },
   brand: {
-    gap: 4,
+    gap: 2,
   },
   wordmark: {
     fontFamily: "PlayfairDisplay_700Bold",
-    fontSize: 34,
-    letterSpacing: -0.5,
+    fontSize: 26,
+    letterSpacing: -0.3,
   },
   tagline: {
     fontFamily: "Inter_500Medium",
-    fontSize: 14,
+    fontSize: 11,
     textTransform: "uppercase",
-    letterSpacing: 1.5,
+    letterSpacing: 1.2,
   },
   branchRow: {
     flexDirection: "row",

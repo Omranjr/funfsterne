@@ -16,7 +16,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
 import { queryClient } from "@/lib/query-client";
 import { onNotificationResponse } from "@/hooks/useNotifications";
-import { OnboardingSplash } from "@/components";
+import { OnboardingSplash, BrandedIntroGate } from "@/components";
 import {
   hasSeenOnboarding,
   setHasSeenOnboarding,
@@ -171,7 +171,9 @@ export default function RootLayout() {
             {showOnboarding ? (
               <ThemedOnboarding onComplete={handleOnboardingComplete} />
             ) : (
-              <AppNavigator />
+              <BrandedIntroGate>
+                <AppNavigator />
+              </BrandedIntroGate>
             )}
           </SafeAreaProvider>
         </ThemeProvider>

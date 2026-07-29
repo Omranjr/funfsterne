@@ -6,7 +6,6 @@ import {
   FlatList,
   RefreshControl,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MapPin } from "lucide-react-native";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Card, EmptyState, BranchPillSkeleton } from "@/components";
@@ -25,12 +24,10 @@ export default function BranchesScreen() {
     refetch();
   }, [refetch]);
 
-  const insets = useSafeAreaInsets();
-
   if (isLoading) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
-        <Text style={[styles.title, { color: theme.text, paddingTop: insets.top + 16 }]}>Branches</Text>
+        <Text style={[styles.title, { color: theme.text, paddingTop: 12 }]}>Branches</Text>
         <BranchPillSkeleton count={6} />
       </View>
     );
@@ -53,7 +50,7 @@ export default function BranchesScreen() {
       keyExtractor={(b) => b.id}
       contentContainerStyle={[
         styles.content,
-        { paddingTop: insets.top + 16 },
+        { paddingTop: 12 },
       ]}
       showsVerticalScrollIndicator={false}
       refreshControl={
