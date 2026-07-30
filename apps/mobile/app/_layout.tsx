@@ -21,6 +21,7 @@ import {
   hasSeenOnboarding,
   setHasSeenOnboarding,
 } from "@/lib/onboarding";
+import { hasBeenPrompted } from "@/lib/notification-permission";
 import { useAppFonts } from "@/hooks/useFonts";
 import { Home, ShoppingBag, Tag } from "lucide-react-native";
 
@@ -37,10 +38,23 @@ function NotificationRouter() {
 
   useEffect(() => {
     if (!navState?.key) return;
+
+    let cancelled = false;
+    hasBeenPrompted().then((prompted) => {
+      if (cancelled || prompted !== null) return;
+      // First launch after onboarding (or an existing install that never
+      // saw this screen) — send them through the pre-permission screen,
+      // which self-redirects to /discount-codes once resolved.
+      router.replace("/notifications/permission");
+    });
+
     const unsubscribe = onNotificationResponse(() => {
       router.push("/discount-codes");
     });
-    return unsubscribe;
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, [router, navState?.key]);
 
   return null;
