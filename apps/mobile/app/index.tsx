@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   useWindowDimensions,
+  Linking,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -22,6 +23,8 @@ import {
 } from "@/components";
 import { useProducts, useBranches, useCategoryImages } from "@/hooks/usePublicData";
 import { type ProductCategory, type Branch } from "@funfsterne/shared-types";
+
+const PRIVACY_URL = "https://funfsterne-admin-eight.vercel.app/privacy";
 
 const CATEGORIES: {
   key: ProductCategory;
@@ -47,12 +50,14 @@ export default function HomeScreen() {
     isLoading: branchesLoading,
     refetch: refetchBranches,
     isRefetching: branchesRefetching,
+    error: branchesError,
   } = useBranches();
   const {
     data: products,
     isLoading: productsLoading,
     refetch: refetchProducts,
     isRefetching: productsRefetching,
+    error: productsError,
   } = useProducts({
     branchId: selectedBranchId ?? undefined,
   });
@@ -61,6 +66,7 @@ export default function HomeScreen() {
   const featured = useMemo(() => products?.slice(0, 4) ?? [], [products]);
   const isLoading = branchesLoading || productsLoading;
   const isRefetching = branchesRefetching || productsRefetching;
+  const hasError = Boolean(branchesError || productsError);
 
   const selectedBranch = useMemo(
     () => branches?.find((b) => b.id === selectedBranchId),
@@ -163,6 +169,11 @@ export default function HomeScreen() {
 
         {isLoading ? (
           <ListSkeleton count={4} />
+        ) : hasError ? (
+          <EmptyState
+            title="Could not load products"
+            message="Check your connection and pull down to try again."
+          />
         ) : featured.length ? (
           <FlatList
             data={featured}
@@ -194,6 +205,17 @@ export default function HomeScreen() {
           />
         )}
       </View>
+
+      <TouchableOpacity
+        onPress={() => Linking.openURL(PRIVACY_URL).catch(() => {})}
+        accessibilityRole="button"
+        accessibilityLabel="Privacy Policy"
+        style={styles.privacyLink}
+      >
+        <Text style={[styles.privacyLinkText, { color: theme.textMuted }]}>
+          Privacy Policy
+        </Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -298,5 +320,14 @@ const styles = StyleSheet.create({
   featuredRow: {
     justifyContent: "space-between",
     gap: 12,
+  },
+  privacyLink: {
+    alignItems: "center",
+    paddingVertical: 8,
+  },
+  privacyLinkText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 12,
+    textDecorationLine: "underline",
   },
 });

@@ -49,7 +49,12 @@ export function BranchPicker({
             <Text style={[styles.title, { color: theme.text }]}>
               Select branch
             </Text>
-            <TouchableOpacity onPress={onClose} style={styles.close}>
+            <TouchableOpacity
+              onPress={onClose}
+              style={styles.close}
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+            >
               <X size={22} color={theme.textMuted} />
             </TouchableOpacity>
           </View>

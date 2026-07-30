@@ -66,6 +66,10 @@ export function ProductCard({
     scale.value = withSpring(1, { stiffness: 400, damping: 20 });
   }, [scale]);
 
+  const accessibilityLabel = [name, category, `€${formatPrice(price)}`]
+    .filter(Boolean)
+    .join(", ");
+
   return (
     <AnimatedPressable
       testID={testID}
@@ -74,6 +78,9 @@ export function ProductCard({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       disabled={!onPress}
+      accessible
+      accessibilityRole={onPress ? "button" : undefined}
+      accessibilityLabel={accessibilityLabel}
       style={[
         styles.card,
         {

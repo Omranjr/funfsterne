@@ -34,3 +34,4 @@ export { ScreenWrapper, type ScreenWrapperProps } from "./ScreenWrapper";
 export { ThemeToggle, type ThemeToggleProps } from "./ThemeToggle";
 export { HeroBanner, type HeroBannerProps } from "./HeroBanner";
 export { BranchPicker, type BranchPickerProps } from "./BranchPicker";
+export { ErrorBoundary } from "./ErrorBoundary";

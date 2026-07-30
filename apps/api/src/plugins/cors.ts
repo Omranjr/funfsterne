@@ -2,13 +2,12 @@ import cors from "@fastify/cors";
 import fp from "fastify-plugin";
 import type { FastifyInstance } from "fastify";
 
-function parseOrigins(input: string | undefined): string[] | boolean {
-  if (!input) return true;
-  const origins = input
+function parseOrigins(input: string | undefined): string[] {
+  if (!input) return [];
+  return input
     .split(",")
     .map((o) => o.trim())
     .filter(Boolean);
-  return origins.length > 0 ? origins : true;
 }
 
 // Wrapped with fastify-plugin so the CORS hook is registered on the parent
@@ -18,7 +17,17 @@ function parseOrigins(input: string | undefined): string[] | boolean {
 // header, which causes browsers to mask the real status code behind a
 // "CORS Missing Allow Origin" error.
 export const corsPlugin = fp(async function corsPlugin(app: FastifyInstance) {
-  const allowedOrigins = parseOrigins(process.env.ALLOWED_ORIGINS);
+  // ALLOWED_ORIGINS (comma-separated) is the primary config surface; the
+  // individual ADMIN_ORIGIN/MOBILE_ORIGIN vars from .env.example are folded
+  // in too so either naming convention works. If none of these are set,
+  // fail CLOSED (no origins allowed) rather than reflecting any origin --
+  // this endpoint serves credentialed admin routes, so an unconfigured
+  // deployment must not silently become wide-open.
+  const allowedOrigins = [
+    ...parseOrigins(process.env.ALLOWED_ORIGINS),
+    ...parseOrigins(process.env.ADMIN_ORIGIN),
+    ...parseOrigins(process.env.MOBILE_ORIGIN),
+  ];
 
   await app.register(cors, {
     origin: allowedOrigins,

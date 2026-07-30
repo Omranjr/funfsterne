@@ -61,6 +61,7 @@ export default function ProductsScreen() {
     isLoading: productsLoading,
     refetch: refetchProducts,
     isRefetching: productsRefetching,
+    error: productsError,
   } = useProducts({
     category: category === "ALL" ? undefined : category,
     branchId: branchId ?? undefined,
@@ -152,6 +153,13 @@ export default function ProductsScreen() {
 
       {isLoading ? (
         <ListSkeleton count={viewMode === "grid" ? 4 : 3} />
+      ) : productsError ? (
+        <EmptyState
+          title="Could not load products"
+          message="Check your connection and try again."
+          actionTitle="Retry"
+          onAction={handleRefresh}
+        />
       ) : products?.length ? (
         <FlatList
           key={viewMode}

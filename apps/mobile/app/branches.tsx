@@ -18,6 +18,7 @@ export default function BranchesScreen() {
     isLoading,
     refetch,
     isRefetching,
+    error,
   } = useBranches();
 
   const handleRefresh = useCallback(() => {
@@ -29,6 +30,19 @@ export default function BranchesScreen() {
       <View style={[styles.container, { backgroundColor: theme.background }]}>
         <Text style={[styles.title, { color: theme.text, paddingTop: 12 }]}>Branches</Text>
         <BranchPillSkeleton count={6} />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <EmptyState
+          title="Could not load branches"
+          message="Check your connection and try again."
+          actionTitle="Retry"
+          onAction={handleRefresh}
+        />
       </View>
     );
   }

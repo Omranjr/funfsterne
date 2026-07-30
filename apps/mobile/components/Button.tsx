@@ -83,6 +83,9 @@ export function Button({
     <AnimatedPressable
       testID={testID}
       disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityState={{ disabled }}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       onPress={handlePress}

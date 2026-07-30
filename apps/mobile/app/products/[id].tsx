@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ChevronLeft, Share2, MapPin, MessageCircle } from "lucide-react-native";
 import { useTheme } from "@/contexts/ThemeContext";
-import { Badge, CachedImage, ProductDetailSkeleton } from "@/components";
+import { Badge, CachedImage, EmptyState, ProductDetailSkeleton } from "@/components";
 import { useProduct, useBranches } from "@/hooks/usePublicData";
 import { formatPrice } from "@/lib/format-price";
 
@@ -34,6 +34,7 @@ export default function ProductDetailsScreen() {
     isLoading,
     refetch,
     isRefetching,
+    error,
   } = useProduct(id);
   const { data: branches, refetch: refetchBranches } = useBranches();
 
@@ -76,6 +77,19 @@ export default function ProductDetailsScreen() {
     return (
       <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
         <ProductDetailSkeleton />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
+        <EmptyState
+          title="Could not load this product"
+          message="Check your connection and try again."
+          actionTitle="Retry"
+          onAction={handleRefresh}
+        />
       </View>
     );
   }
