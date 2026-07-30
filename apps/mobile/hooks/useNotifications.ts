@@ -40,7 +40,7 @@ setNotificationHandler({
  * and do not reliably expose `status`, `granted`, or `canAskAgain`. We
  * declare the minimal contract we need and cast at the boundary.
  */
-type PermissionResponseShape = {
+export type PermissionResponseShape = {
   status?: string;
   granted?: boolean;
   canAskAgain?: boolean;
@@ -55,7 +55,7 @@ function readCanAskAgain(response: PermissionResponseShape): boolean {
   return response.status !== Notifications.PermissionStatus.DENIED;
 }
 
-function toStatus(
+export function toStatus(
   response: PermissionResponseShape
 ): NotificationPermissionStatus {
   const granted =

@@ -9,6 +9,32 @@ export const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_BASE_URL ??
   "https://funfsterne-admin.onrender.com";
 
+// Plain fetch() has no default timeout -- on a dropped/stalled connection
+// (backgrounding mid-request, dead wifi handoff, etc.) it can hang
+// indefinitely, which is what left the discount-code "Redeeming…" badge
+// stuck forever with no way for the user to recover. Every call below goes
+// through this so a bad connection surfaces as a normal, retryable error
+// instead of a silent hang.
+const REQUEST_TIMEOUT_MS = 15000;
+
+async function fetchWithTimeout(
+  url: string,
+  init?: RequestInit
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new Error("Request timed out. Please try again.");
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export async function apiFetch<T>(
   path: string,
   init?: RequestInit
@@ -25,7 +51,7 @@ export async function apiFetch<T>(
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     ...init,
     headers,
   });
@@ -101,10 +127,19 @@ async function publicApiFetch<T>(
     ...(init?.headers as Record<string, string>),
   };
 
-  const response = await fetch(url, {
-    ...init,
-    headers,
-  });
+  let response: Response;
+  try {
+    response = await fetchWithTimeout(url, {
+      ...init,
+      headers,
+    });
+  } catch (err) {
+    throw new PublicApiError(
+      0,
+      err instanceof Error ? err.message : "Network request failed",
+      null
+    );
+  }
 
   if (!response.ok) {
     let body: PublicErrorBody = {};

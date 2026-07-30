@@ -13,9 +13,10 @@ import { useRouter, useRootNavigationState, Tabs } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as SplashScreen from "expo-splash-screen";
 import { QueryClientProvider } from "@tanstack/react-query";
+import * as Notifications from "expo-notifications";
 import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
 import { queryClient } from "@/lib/query-client";
-import { onNotificationResponse } from "@/hooks/useNotifications";
+import { onNotificationResponse, toStatus } from "@/hooks/useNotifications";
 import { OnboardingSplash, BrandedIntroGate, ErrorBoundary } from "@/components";
 import {
   hasSeenOnboarding,
@@ -40,13 +41,39 @@ function NotificationRouter() {
     if (!navState?.key) return;
 
     let cancelled = false;
-    hasBeenPrompted().then((prompted) => {
-      if (cancelled || prompted !== null) return;
-      // First launch after onboarding (or an existing install that never
-      // saw this screen) — send them through the pre-permission screen,
-      // which self-redirects to /discount-codes once resolved.
-      router.replace("/notifications/permission");
-    });
+    (async () => {
+      const prompted = await hasBeenPrompted();
+      if (cancelled) return;
+
+      if (prompted === null) {
+        // First launch after onboarding (or an existing install that never
+        // saw this screen) — send them through the pre-permission screen,
+        // which self-redirects to /discount-codes once resolved.
+        router.replace("/notifications/permission");
+        return;
+      }
+
+      if (prompted === "granted" || prompted === "denied") {
+        // Our flag can only be "granted"/"denied" immediately after the
+        // real OS prompt actually returned that same answer, so those two
+        // values should always agree with the OS's live status. If the OS
+        // now reports "undetermined" instead, our stored flag is stale
+        // (e.g. restored from an iCloud/Android backup onto a fresh
+        // install) rather than reflecting reality -- re-run the flow
+        // instead of silently trusting a flag the OS itself disagrees
+        // with. ("pending", from the user tapping "Not now", is left
+        // alone: the OS legitimately stays undetermined in that case too,
+        // since we never showed it the real prompt.)
+        try {
+          const response = await Notifications.getPermissionsAsync();
+          if (!cancelled && toStatus(response) === "undetermined") {
+            router.replace("/notifications/permission");
+          }
+        } catch {
+          // Best-effort cross-check; if it fails just trust the stored flag.
+        }
+      }
+    })();
 
     const unsubscribe = onNotificationResponse(() => {
       router.push("/discount-codes");
@@ -146,7 +173,7 @@ function AppNavigator() {
 
 export default function RootLayout() {
   const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
-  const { fontsLoaded } = useAppFonts();
+  const { fontsLoaded, fontError } = useAppFonts();
 
   useEffect(() => {
     let cancelled = false;
@@ -168,7 +195,12 @@ export default function RootLayout() {
     });
   }, []);
 
-  if (!fontsLoaded || showOnboarding === null) {
+  // If custom font loading ever errors out (corrupted asset, low-memory
+  // eviction, etc.), fontsLoaded would otherwise stay false forever and
+  // strand the user on this spinner permanently. Proceeding on fontError
+  // means custom fontFamily styles silently fall back to the platform
+  // default font instead -- a visual downgrade, not a dead end.
+  if ((!fontsLoaded && !fontError) || showOnboarding === null) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
         <ActivityIndicator />

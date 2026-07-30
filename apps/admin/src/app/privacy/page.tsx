@@ -10,8 +10,9 @@ export default function PrivacyPolicyPage() {
   return (
     <LegalPageShell title="Privacy Policy" updated="29 July 2026">
       <TodoNotice>
-        replace the remaining bracketed placeholders below ([Company legal
-        name], full address, data retention period) with your real details
+        replace the remaining bracketed placeholder below ([Company legal
+        name] — waiting on whether this should be the shop owner or the
+        developer) and the data retention period, with your real details,
         before this page is linked from the App Store listing.
       </TodoNotice>
 
@@ -24,8 +25,9 @@ export default function PrivacyPolicyPage() {
 
       <h2>Who is responsible for this data</h2>
       <p>
-        [Company legal name], [full address], is the data controller for the
-        Fünf Sterne Friseur app. You can reach us at{" "}
+        [Company legal name], Frauenstraße 5, 47574 Goch, Germany, is the
+        data controller for the Fünf Sterne Friseur app. You can reach us
+        at{" "}
         <a href="mailto:funfsternebymido@gmail.com">
           funfsternebymido@gmail.com
         </a>{" "}

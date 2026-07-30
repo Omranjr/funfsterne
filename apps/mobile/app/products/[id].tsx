@@ -20,8 +20,8 @@ import { formatPrice } from "@/lib/format-price";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-const SHOP_INSTAGRAM = "https://instagram.com/funfsterne";
-const SHOP_PHONE = "+492827123456";
+const SHOP_INSTAGRAM = "https://instagram.com/mido.barbar7";
+const SHOP_PHONE = "+4928234198333";
 
 export default function ProductDetailsScreen() {
   const router = useRouter();
@@ -36,7 +36,11 @@ export default function ProductDetailsScreen() {
     isRefetching,
     error,
   } = useProduct(id);
-  const { data: branches, refetch: refetchBranches } = useBranches();
+  const {
+    data: branches,
+    refetch: refetchBranches,
+    error: branchesError,
+  } = useBranches();
 
   const handleRefresh = useCallback(() => {
     refetch();
@@ -73,9 +77,23 @@ export default function ProductDetailsScreen() {
     }
   }, []);
 
+  const backHeader = (
+    <View style={[styles.header, { paddingTop: Math.max(insets.top, 16) }]}>
+      <TouchableOpacity
+        onPress={() => router.back()}
+        style={[styles.iconButton, { backgroundColor: theme.border }]}
+        accessibilityRole="button"
+        accessibilityLabel="Go back"
+      >
+        <ChevronLeft size={24} color={theme.text} />
+      </TouchableOpacity>
+    </View>
+  );
+
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        {backHeader}
         <ProductDetailSkeleton />
       </View>
     );
@@ -83,7 +101,8 @@ export default function ProductDetailsScreen() {
 
   if (error) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        {backHeader}
         <EmptyState
           title="Could not load this product"
           message="Check your connection and try again."
@@ -96,7 +115,8 @@ export default function ProductDetailsScreen() {
 
   if (!product) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.background, paddingTop: insets.top }]}>
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        {backHeader}
         <Text style={[styles.error, { color: theme.text }]} numberOfLines={2}>
           Product not found
         </Text>
@@ -219,7 +239,9 @@ export default function ProductDetailsScreen() {
               </View>
             ) : (
               <Text style={[styles.empty, { color: theme.textMuted }]}>
-                Currently unavailable — check back soon
+                {branchesError
+                  ? "Could not load branch availability — pull down to retry"
+                  : "Currently unavailable — check back soon"}
               </Text>
             )}
           </View>

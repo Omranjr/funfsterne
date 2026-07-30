@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -65,6 +65,12 @@ export default function OffersScreen() {
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [cardStates, setCardStates] = useState<Record<string, CardState>>({});
   const [cardErrors, setCardErrors] = useState<Record<string, ErrorInfo>>({});
+  // Gesture "enabled" is derived from React state (see SwipeableCodeCard's
+  // panGesture), which is recomputed a render after setCardState commits --
+  // a fast release-then-reswipe on the same card can fire performRedeem
+  // again before that commit lands. This ref is checked/set synchronously,
+  // so it closes that gap regardless of render timing.
+  const inFlightRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -96,36 +102,43 @@ export default function OffersScreen() {
 
   const performRedeem = useCallback(
     async (code: ActiveDiscountCode) => {
-      if (!deviceId) {
-        setCardState(code.id, "error");
-        setCardError(code.id, {
-          message: "Could not read device id. Please restart the app.",
-          isAlreadyRedeemed: false,
-        });
-        return;
-      }
-      setCardState(code.id, "redeeming");
-      setCardError(code.id, null);
+      if (inFlightRef.current.has(code.id)) return;
+      inFlightRef.current.add(code.id);
+
       try {
-        await redeemDiscountCode({
-          code: code.code,
-          deviceId,
-          branchId: code.scopeBranchId ?? undefined,
-        });
-        setCardState(code.id, "redeemed");
-      } catch (err) {
-        const isPublic = err instanceof PublicApiError;
-        const isAlreadyRedeemed =
-          isPublic && err.errorCode === "ALREADY_REDEEMED_BY_DEVICE";
-        setCardState(code.id, "error");
-        setCardError(code.id, {
-          message: isAlreadyRedeemed
-            ? "You already redeemed this code on this device."
-            : isPublic
-              ? err.message
-              : "Could not redeem. Please try again.",
-          isAlreadyRedeemed,
-        });
+        if (!deviceId) {
+          setCardState(code.id, "error");
+          setCardError(code.id, {
+            message: "Could not read device id. Please restart the app.",
+            isAlreadyRedeemed: false,
+          });
+          return;
+        }
+        setCardState(code.id, "redeeming");
+        setCardError(code.id, null);
+        try {
+          await redeemDiscountCode({
+            code: code.code,
+            deviceId,
+            branchId: code.scopeBranchId ?? undefined,
+          });
+          setCardState(code.id, "redeemed");
+        } catch (err) {
+          const isPublic = err instanceof PublicApiError;
+          const isAlreadyRedeemed =
+            isPublic && err.errorCode === "ALREADY_REDEEMED_BY_DEVICE";
+          setCardState(code.id, "error");
+          setCardError(code.id, {
+            message: isAlreadyRedeemed
+              ? "You already redeemed this code on this device."
+              : isPublic
+                ? err.message
+                : "Could not redeem. Please try again.",
+            isAlreadyRedeemed,
+          });
+        }
+      } finally {
+        inFlightRef.current.delete(code.id);
       }
     },
     [deviceId, setCardError, setCardState]

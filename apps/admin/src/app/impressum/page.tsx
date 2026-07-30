@@ -10,27 +10,29 @@ export default function ImpressumPage() {
   return (
     <LegalPageShell title="Impressum" updated="29 July 2026">
       <TodoNotice>
-        fill in the remaining bracketed fields below (legal name, address,
-        phone, Vertretung, Handelsregister, USt-IdNr) with your real business
-        details. This page is a legal requirement under German law (§5 TMG)
-        for any commercial app or website operated from Germany — it must be
-        accurate before going live.
+        fill in the remaining bracketed fields below (legal name — waiting on
+        whether this should be the shop owner or the developer — Vertretung,
+        Handelsregister, USt-IdNr) with your real business details. This page
+        is a legal requirement under German law (§5 TMG) for any commercial
+        app or website operated from Germany — it must be accurate before
+        going live.
       </TodoNotice>
 
       <h2>Angaben gemäß § 5 TMG</h2>
       <p>
         [Vollständiger Name des Unternehmens / Inhabers]
         <br />
-        [Straße und Hausnummer]
+        Frauenstraße 5
         <br />
-        [Postleitzahl und Ort]
+        47574 Goch
         <br />
         Deutschland
       </p>
 
       <h2>Kontakt</h2>
       <p>
-        Telefon: [Telefonnummer]
+        Telefon:{" "}
+        <a href="tel:+4928234198333">+49 2823 4198333</a>
         <br />
         E-Mail:{" "}
         <a href="mailto:funfsternebymido@gmail.com">
