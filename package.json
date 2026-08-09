@@ -10,7 +10,8 @@
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "test": "turbo run test",
-    "typecheck": "turbo run typecheck"
+    "typecheck": "turbo run typecheck",
+    "postinstall": "npm run build --workspace=@funfsterne/shared-types"
   },
   "devDependencies": {
     "turbo": "^2.0.0"
