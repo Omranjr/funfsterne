@@ -24,10 +24,8 @@ export {
 } from "./LoadingSkeletons";
 export { EmptyState, type EmptyStateProps } from "./EmptyState";
 export { CachedImage, type CachedImageProps } from "./CachedImage";
-export {
-  OnboardingSplash,
-  type OnboardingSplashProps,
-} from "./OnboardingSplash";
+export { SignUpScreen, type SignUpScreenProps } from "./SignUpScreen";
+export { LogInScreen, type LogInScreenProps } from "./LogInScreen";
 export { AnimatedSplash, type AnimatedSplashProps } from "./AnimatedSplash";
 export { BrandedIntroGate, type BrandedIntroGateProps } from "./BrandedIntroGate";
 export { ScreenWrapper, type ScreenWrapperProps } from "./ScreenWrapper";

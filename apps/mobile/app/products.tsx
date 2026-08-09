@@ -153,7 +153,10 @@ export default function ProductsScreen() {
 
       {isLoading ? (
         <ListSkeleton count={viewMode === "grid" ? 4 : 3} />
-      ) : productsError ? (
+      ) : productsError && !products?.length ? (
+        // A failed background revalidation of cached data still sets
+        // `error` even when stale `products` is available -- only show the
+        // hard error state when there's genuinely nothing to display.
         <EmptyState
           title="Could not load products"
           message="Check your connection and try again."

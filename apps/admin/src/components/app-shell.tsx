@@ -15,6 +15,7 @@ import {
   Menu,
   LogOut,
   Images,
+  Users,
 } from "lucide-react";
 
 const navItems = [
@@ -24,6 +25,7 @@ const navItems = [
   { href: "/branches", label: "Branches", icon: MapPin },
   { href: "/discount-codes", label: "Discount Codes", icon: Ticket },
   { href: "/notifications", label: "Notifications", icon: Bell },
+  { href: "/users", label: "Users", icon: Users },
 ];
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {

@@ -169,7 +169,11 @@ export default function HomeScreen() {
 
         {isLoading ? (
           <ListSkeleton count={4} />
-        ) : hasError ? (
+        ) : hasError && featured.length === 0 ? (
+          // A failed background revalidation of otherwise-cached data still
+          // has `error` set even though `featured` has content -- only
+          // treat this as a hard error state when there's nothing else to
+          // show (e.g. persisted cache is empty on a first-ever launch).
           <EmptyState
             title="Could not load products"
             message="Check your connection and pull down to try again."

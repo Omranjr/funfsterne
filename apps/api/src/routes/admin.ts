@@ -11,11 +11,13 @@ import {
   UpdateProductSchema,
   UpsertCategoryImageSchema,
   UpsertProductBranchAvailabilitySchema,
+  AdminResetConsumerPasswordSchema,
 } from "@funfsterne/shared-types";
 import { z } from "zod";
 import type { FastifyInstance } from "fastify";
 import { adminAuthMiddleware } from "../middleware/admin-auth.js";
 import { sendPushNotifications } from "../services/push.service.js";
+import { resetConsumerPassword } from "../services/consumer-auth.service.js";
 import { serializePrisma } from "../serializers.js";
 
 export async function adminRoutes(app: FastifyInstance) {
@@ -380,4 +382,45 @@ export async function adminRoutes(app: FastifyInstance) {
       redemptions: serializePrisma(redemptions),
     };
   });
+
+  // ── Consumer users ───────────────────────────────────────────────────────
+  // Read + password-reset only. Full visit-history analytics is a separate,
+  // later feature -- this is deliberately just enough to support the
+  // admin-assisted "forgot password" flow (the app collects no email/phone,
+  // so there's no self-service reset path).
+
+  app.get("/consumer-users", async () => {
+    const users = await app.prisma.consumerUser.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        username: true,
+        createdAt: true,
+        updatedAt: true,
+        // passwordHash intentionally excluded
+      },
+    });
+    return serializePrisma(users);
+  });
+
+  app.patch(
+    "/consumer-users/:id/reset-password",
+    async (request, reply) => {
+      const id = (request.params as { id: string }).id;
+      const parse = AdminResetConsumerPasswordSchema.safeParse(request.body);
+      if (!parse.success) {
+        return reply.status(400).send({ error: "Invalid password payload" });
+      }
+
+      const user = await app.prisma.consumerUser.findUnique({ where: { id } });
+      if (!user) {
+        return reply.status(404).send({ error: "User not found" });
+      }
+
+      await resetConsumerPassword(app, id, parse.data.newPassword);
+      return reply.status(204).send();
+    },
+  );
 }

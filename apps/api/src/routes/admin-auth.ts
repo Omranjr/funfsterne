@@ -1,3 +1,4 @@
+import rateLimit from "@fastify/rate-limit";
 import { z } from "zod";
 import type { FastifyInstance } from "fastify";
 import {
@@ -11,6 +12,13 @@ const LoginBodySchema = z.object({
 });
 
 export async function adminAuthRoutes(app: FastifyInstance) {
+  // Same reasoning as consumer-auth.ts: scoped to this plugin so it only
+  // throttles admin login, not the rest of the admin API.
+  await app.register(rateLimit, {
+    max: 10,
+    timeWindow: "5 minutes",
+  });
+
   app.post("/login", async (request, reply) => {
     const parse = LoginBodySchema.safeParse(request.body);
     if (!parse.success) {

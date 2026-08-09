@@ -33,3 +33,24 @@ export async function requireAdmin(
   }
   return payload;
 }
+
+export interface ConsumerJwtPayload {
+  sub: string;
+  username: string;
+  role: "consumer";
+}
+
+// Sharing one @fastify/jwt instance (one secret) with the admin token above
+// is safe: the `role` claim is checked on every guard, so a consumer token
+// can never pass requireAdmin and vice versa -- there's no route that
+// accepts either role interchangeably.
+export async function requireConsumer(
+  request: FastifyRequest,
+): Promise<ConsumerJwtPayload> {
+  await request.jwtVerify();
+  const payload = request.user as ConsumerJwtPayload;
+  if (payload.role !== "consumer") {
+    throw { statusCode: 403, message: "Forbidden" };
+  }
+  return payload;
+}

@@ -160,6 +160,7 @@ export type UpdateDiscountCode = z.infer<typeof UpdateDiscountCodeSchema>;
 export const PushTokenSchema = z.object({
   id: z.string(),
   deviceId: z.string(),
+  userId: z.string().optional(),
   token: z.string(),
   platform: PlatformSchema,
   createdAt: z.coerce.date(),
@@ -170,12 +171,78 @@ export type PushToken = z.infer<typeof PushTokenSchema>;
 export const DiscountCodeRedemptionSchema = z.object({
   id: z.string(),
   deviceId: z.string(),
+  userId: z.string().optional(),
   branchId: z.string().optional(),
   discountCodeId: z.string(),
   redeemedAt: z.coerce.date(),
 });
 
 export type DiscountCodeRedemption = z.infer<typeof DiscountCodeRedemptionSchema>;
+
+// ---------------------------------------------------------------------------
+// Consumer accounts (mobile app). Deliberately no email or phone field
+// anywhere in this group -- only a first/last name and a chosen
+// username/password, per product requirement.
+// ---------------------------------------------------------------------------
+
+// Letters, numbers, underscore, period -- no spaces, no @ (keeps it visually
+// distinct from an email address even though we don't collect one).
+const USERNAME_PATTERN = /^[a-zA-Z0-9._]+$/;
+
+export const UsernameSchema = z
+  .string()
+  .trim()
+  .min(3, "Username must be at least 3 characters")
+  .max(30, "Username must be at most 30 characters")
+  .regex(USERNAME_PATTERN, "Username can only contain letters, numbers, \".\" and \"_\"");
+
+export const PasswordSchema = z
+  .string()
+  .min(8, "Password must be at least 8 characters")
+  .max(200, "Password is too long");
+
+export const NameFieldSchema = z
+  .string()
+  .trim()
+  .min(1, "This field is required")
+  .max(100, "This field is too long");
+
+export const ConsumerUserSchema = z.object({
+  id: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
+  username: z.string(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+});
+
+export type ConsumerUser = z.infer<typeof ConsumerUserSchema>;
+
+export const RegisterConsumerUserSchema = z.object({
+  firstName: NameFieldSchema,
+  lastName: NameFieldSchema,
+  username: UsernameSchema,
+  password: PasswordSchema,
+});
+
+export type RegisterConsumerUser = z.infer<typeof RegisterConsumerUserSchema>;
+
+export const LoginConsumerUserSchema = z.object({
+  username: z.string().min(1),
+  password: z.string().min(1),
+});
+
+export type LoginConsumerUser = z.infer<typeof LoginConsumerUserSchema>;
+
+// Admin-initiated reset: sets a brand new password, never reveals the old
+// one (it's hashed one-way and can't be recovered).
+export const AdminResetConsumerPasswordSchema = z.object({
+  newPassword: PasswordSchema,
+});
+
+export type AdminResetConsumerPassword = z.infer<
+  typeof AdminResetConsumerPasswordSchema
+>;
 
 export const NotificationSchema = z.object({
   id: z.string(),

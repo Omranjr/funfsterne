@@ -125,15 +125,20 @@ export default function OffersScreen() {
           setCardState(code.id, "redeemed");
         } catch (err) {
           const isPublic = err instanceof PublicApiError;
-          const isAlreadyRedeemed =
+          const isAlreadyRedeemedByDevice =
             isPublic && err.errorCode === "ALREADY_REDEEMED_BY_DEVICE";
+          const isAlreadyRedeemedByUser =
+            isPublic && err.errorCode === "ALREADY_REDEEMED_BY_USER";
+          const isAlreadyRedeemed = isAlreadyRedeemedByDevice || isAlreadyRedeemedByUser;
           setCardState(code.id, "error");
           setCardError(code.id, {
-            message: isAlreadyRedeemed
+            message: isAlreadyRedeemedByDevice
               ? "You already redeemed this code on this device."
-              : isPublic
-                ? err.message
-                : "Could not redeem. Please try again.",
+              : isAlreadyRedeemedByUser
+                ? "You already redeemed this code with this account."
+                : isPublic
+                  ? err.message
+                  : "Could not redeem. Please try again.",
             isAlreadyRedeemed,
           });
         }
@@ -156,7 +161,10 @@ export default function OffersScreen() {
     );
   }
 
-  if (error) {
+  if (error && !data?.length) {
+    // A failed background revalidation of cached codes still sets `error`
+    // even when stale `data` is available -- only show the hard error
+    // state when there's genuinely nothing to display.
     return (
       <View
         style={[

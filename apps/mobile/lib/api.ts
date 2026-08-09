@@ -60,24 +60,34 @@ export async function apiFetch<T>(
     throw new Error(`API error: ${response.status} ${response.statusText}`);
   }
 
+  // 204 No Content (e.g. DELETE /public/auth/account) has no body -- calling
+  // .json() on it throws "Unexpected end of JSON input".
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
   return response.json() as Promise<T>;
 }
 
 // ---------------------------------------------------------------------------
-// Public, unauthenticated routes (accountless discount flow).
+// Routes with typed, backend-defined error codes (e.g.
+// ALREADY_REDEEMED_BY_DEVICE) rather than a generic "API error" string.
 //
-// These calls intentionally do NOT call getAuthToken() and do NOT attach an
-// Authorization header. They use a dedicated error class so the UI can show
-// the backend's typed `errorCode` (e.g. ALREADY_REDEEMED_BY_DEVICE) rather
-// than a generic "API error" string.
+// Originally these were all unauthenticated (the accountless discount
+// flow), hence the name -- now that push-token registration and discount
+// redemption require a logged-in consumer, this also attaches the Bearer
+// token when one is stored, same as apiFetch. Register/login stay
+// tokenless since there's nothing to attach yet at that point.
 // ---------------------------------------------------------------------------
 
 export type PublicApiErrorCode =
   | "ALREADY_REDEEMED_BY_DEVICE"
+  | "ALREADY_REDEEMED_BY_USER"
   | "EXPIRED"
   | "MAX_REDEMPTIONS_REACHED"
   | "NOT_FOUND"
-  | "INACTIVE";
+  | "INACTIVE"
+  | "USERNAME_TAKEN";
 
 export class PublicApiError extends Error {
   readonly status: number;
@@ -106,10 +116,12 @@ function asPublicApiErrorCode(
 ): PublicApiErrorCode | null {
   if (
     value === "ALREADY_REDEEMED_BY_DEVICE" ||
+    value === "ALREADY_REDEEMED_BY_USER" ||
     value === "EXPIRED" ||
     value === "MAX_REDEMPTIONS_REACHED" ||
     value === "NOT_FOUND" ||
-    value === "INACTIVE"
+    value === "INACTIVE" ||
+    value === "USERNAME_TAKEN"
   ) {
     return value;
   }
@@ -121,11 +133,16 @@ async function publicApiFetch<T>(
   init?: RequestInit
 ): Promise<T> {
   const url = `${API_BASE_URL}${path}`;
+  const token = await getAuthToken();
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(init?.headers as Record<string, string>),
   };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
 
   let response: Response;
   try {
@@ -243,4 +260,53 @@ export function redeemDiscountCode(args: {
       }),
     }
   );
+}
+
+// ---------------------------------------------------------------------------
+// Consumer accounts. Register/login are unauthenticated (via publicApiFetch,
+// same typed-error pattern as the rest of this file); account deletion goes
+// through apiFetch since it requires the Bearer token this module already
+// attaches automatically once one is stored.
+// ---------------------------------------------------------------------------
+
+export type ConsumerAuthResponse = {
+  token: string;
+  user: ConsumerProfile;
+};
+
+export function registerConsumerUser(args: {
+  firstName: string;
+  lastName: string;
+  username: string;
+  password: string;
+}): Promise<ConsumerAuthResponse> {
+  return publicApiFetch<ConsumerAuthResponse>("/public/auth/register", {
+    method: "POST",
+    body: JSON.stringify(args),
+  });
+}
+
+export function loginConsumerUser(args: {
+  username: string;
+  password: string;
+}): Promise<ConsumerAuthResponse> {
+  return publicApiFetch<ConsumerAuthResponse>("/public/auth/login", {
+    method: "POST",
+    body: JSON.stringify(args),
+  });
+}
+
+export function deleteConsumerAccountRequest(): Promise<void> {
+  return apiFetch<void>("/public/auth/account", { method: "DELETE" });
+}
+
+export type ConsumerProfile = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  username: string;
+};
+
+export function getConsumerProfile(): Promise<ConsumerProfile> {
+  return apiFetch<ConsumerProfile>("/public/auth/me", { method: "GET" });
 }

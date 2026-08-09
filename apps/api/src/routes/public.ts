@@ -6,6 +6,7 @@ import {
 import { z } from "zod";
 import type { FastifyInstance } from "fastify";
 import { serializePrisma } from "../serializers.js";
+import { consumerAuthMiddleware } from "../middleware/consumer-auth.js";
 
 const ProductQuerySchema = z.object({
   category: ProductCategorySchema.optional(),
@@ -81,22 +82,30 @@ export async function publicRoutes(app: FastifyInstance) {
     return serializePrisma(product);
   });
 
-  app.post("/push-tokens", async (request, reply) => {
-    const parse = RegisterPushTokenSchema.safeParse(request.body);
-    if (!parse.success) {
-      return reply.status(400).send({ error: "Invalid push token payload" });
-    }
+  app.post(
+    "/push-tokens",
+    { preHandler: consumerAuthMiddleware },
+    async (request, reply) => {
+      const parse = RegisterPushTokenSchema.safeParse(request.body);
+      if (!parse.success) {
+        return reply.status(400).send({ error: "Invalid push token payload" });
+      }
 
-    const { deviceId, token, platform } = parse.data;
+      const { deviceId, token, platform } = parse.data;
+      // userId always comes from the verified JWT, never the request body --
+      // a client-supplied userId would let anyone attribute a push token to
+      // someone else's account.
+      const userId = request.consumer!.sub;
 
-    const pushToken = await app.prisma.pushToken.upsert({
-      where: { token },
-      create: { deviceId, token, platform },
-      update: { deviceId, platform },
-    });
+      const pushToken = await app.prisma.pushToken.upsert({
+        where: { token },
+        create: { deviceId, userId, token, platform },
+        update: { deviceId, userId, platform },
+      });
 
-    return pushToken;
-  });
+      return pushToken;
+    },
+  );
 
   app.get("/discount-codes/active", async () => {
     const now = new Date();
@@ -113,69 +122,85 @@ export async function publicRoutes(app: FastifyInstance) {
     return serializePrisma(codes);
   });
 
-  app.post("/discount-codes/:code/redeem", async (request, reply) => {
-    const code = (request.params as { code: string }).code;
-    const parse = RedeemDiscountCodeSchema.safeParse(request.body);
-    if (!parse.success) {
-      return reply.status(400).send({ error: "Invalid redemption payload" });
-    }
+  app.post(
+    "/discount-codes/:code/redeem",
+    { preHandler: consumerAuthMiddleware },
+    async (request, reply) => {
+      const code = (request.params as { code: string }).code;
+      const parse = RedeemDiscountCodeSchema.safeParse(request.body);
+      if (!parse.success) {
+        return reply.status(400).send({ error: "Invalid redemption payload" });
+      }
 
-    const { deviceId, branchId } = parse.data;
+      const { deviceId, branchId } = parse.data;
+      // Same reasoning as push-tokens: userId comes from the verified JWT,
+      // never the request body.
+      const userId = request.consumer!.sub;
 
-    const discount = await app.prisma.discountCode.findUnique({
-      where: { code },
-    });
+      const discount = await app.prisma.discountCode.findUnique({
+        where: { code },
+      });
 
-    if (!discount) {
-      return reply.status(404).send({ errorCode: "NOT_FOUND", error: "Discount code not found" });
-    }
+      if (!discount) {
+        return reply.status(404).send({ errorCode: "NOT_FOUND", error: "Discount code not found" });
+      }
 
-    if (!discount.isActive) {
-      return reply.status(400).send({ errorCode: "INACTIVE", error: "Discount code is inactive" });
-    }
+      if (!discount.isActive) {
+        return reply.status(400).send({ errorCode: "INACTIVE", error: "Discount code is inactive" });
+      }
 
-    if (discount.expiresAt && discount.expiresAt < new Date()) {
-      return reply.status(400).send({ errorCode: "EXPIRED", error: "Discount code expired" });
-    }
+      if (discount.expiresAt && discount.expiresAt < new Date()) {
+        return reply.status(400).send({ errorCode: "EXPIRED", error: "Discount code expired" });
+      }
 
-    if (
-      discount.maxRedemptions !== null &&
-      discount.currentRedemptions >= discount.maxRedemptions
-    ) {
-      return reply.status(400).send({ errorCode: "MAX_REDEMPTIONS_REACHED", error: "Discount code fully redeemed" });
-    }
+      if (
+        discount.maxRedemptions !== null &&
+        discount.currentRedemptions >= discount.maxRedemptions
+      ) {
+        return reply.status(400).send({ errorCode: "MAX_REDEMPTIONS_REACHED", error: "Discount code fully redeemed" });
+      }
 
-    const existingRedemption = await app.prisma.discountCodeRedemption.findUnique({
-      where: {
-        deviceId_discountCodeId: {
-          deviceId,
-          discountCodeId: discount.id,
-        },
-      },
-    });
+      const [existingByDevice, existingByUser] = await Promise.all([
+        app.prisma.discountCodeRedemption.findUnique({
+          where: {
+            deviceId_discountCodeId: { deviceId, discountCodeId: discount.id },
+          },
+        }),
+        app.prisma.discountCodeRedemption.findUnique({
+          where: {
+            userId_discountCodeId: { userId, discountCodeId: discount.id },
+          },
+        }),
+      ]);
 
-    if (existingRedemption) {
-      return reply.status(400).send({ errorCode: "ALREADY_REDEEMED_BY_DEVICE", error: "Discount code already redeemed on this device" });
-    }
+      if (existingByDevice) {
+        return reply.status(400).send({ errorCode: "ALREADY_REDEEMED_BY_DEVICE", error: "Discount code already redeemed on this device" });
+      }
 
-    const [updated, redemption] = await app.prisma.$transaction([
-      app.prisma.discountCode.update({
-        where: { id: discount.id },
-        data: { currentRedemptions: { increment: 1 } },
-      }),
-      app.prisma.discountCodeRedemption.create({
-        data: {
-          deviceId,
-          branchId: branchId ?? null,
-          discountCodeId: discount.id,
-        },
-      }),
-    ]);
+      if (existingByUser) {
+        return reply.status(400).send({ errorCode: "ALREADY_REDEEMED_BY_USER", error: "Discount code already redeemed on this account" });
+      }
 
-    return {
-      success: true,
-      discount: serializePrisma(updated),
-      redemption: serializePrisma(redemption),
-    };
-  });
+      const [updated, redemption] = await app.prisma.$transaction([
+        app.prisma.discountCode.update({
+          where: { id: discount.id },
+          data: { currentRedemptions: { increment: 1 } },
+        }),
+        app.prisma.discountCodeRedemption.create({
+          data: {
+            deviceId,
+            userId,
+            branchId: branchId ?? null,
+            discountCodeId: discount.id,
+          },
+        }),
+      ]);
+
+      return {
+        success: true,
+        discount: serializePrisma(updated),
+        redemption: serializePrisma(redemption),
+      };
+    },
+  );
 }

@@ -99,7 +99,10 @@ export default function ProductDetailsScreen() {
     );
   }
 
-  if (error) {
+  if (error && !product) {
+    // A failed background revalidation of a cached product still sets
+    // `error` even when stale `product` data is available -- only show the
+    // hard error state when there's genuinely nothing to display.
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
         {backHeader}

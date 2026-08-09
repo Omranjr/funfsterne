@@ -94,28 +94,40 @@ model DiscountCode {
 }
 
 model PushToken {
-  id        String   @id @default(cuid())
+  id        String        @id @default(cuid())
   deviceId  String
-  token     String   @unique
+  userId    String?
+  user      ConsumerUser? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  token     String        @unique
   platform  Platform
-  createdAt DateTime @default(now())
+  createdAt DateTime      @default(now())
 
   @@unique([deviceId, token])
   @@index([deviceId])
   @@index([platform])
+  @@index([userId])
 }
 
 model DiscountCodeRedemption {
-  id             String       @id @default(cuid())
+  id             String        @id @default(cuid())
   deviceId       String
+  userId         String?
+  user           ConsumerUser? @relation(fields: [userId], references: [id], onDelete: SetNull)
   branchId       String?
   discountCodeId String
-  redeemedAt     DateTime     @default(now())
-  branch         Branch?      @relation(fields: [branchId], references: [id], onDelete: SetNull)
-  discountCode   DiscountCode @relation(fields: [discountCodeId], references: [id], onDelete: Cascade)
+  redeemedAt     DateTime      @default(now())
+  branch         Branch?       @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  discountCode   DiscountCode  @relation(fields: [discountCodeId], references: [id], onDelete: Cascade)
 
   @@unique([deviceId, discountCodeId])
+  // Once a redemption is tied to a real account, block re-redemption across
+  // devices too -- device-only dedup was the best we could do accountless,
+  // but a logged-in user re-redeeming from a second phone should still be
+  // caught. NULL userIds don't collide with each other in a unique index,
+  // so this only bites once userId is actually set.
+  @@unique([userId, discountCodeId])
   @@index([deviceId])
+  @@index([userId])
   @@index([discountCodeId])
   @@index([branchId])
 }
@@ -140,6 +152,23 @@ model AdminUser {
   name         String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+// Mobile consumer accounts. Deliberately no email or phone column -- only a
+// name and a chosen username/password, per product requirement. Password
+// recovery is admin-assisted (a reset, not a lookup: passwordHash is a
+// one-way hash and can't be reversed even by us).
+model ConsumerUser {
+  id           String   @id @default(cuid())
+  firstName    String
+  lastName     String
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  pushTokens  PushToken[]
+  redemptions DiscountCodeRedemption[]
 }
 
 model CategoryImage {

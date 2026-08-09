@@ -1,6 +1,6 @@
 import "react-native-gesture-handler";
 import "../global.css";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import {
   View,
   ActivityIndicator,
@@ -12,19 +12,26 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useRootNavigationState, Tabs } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as SplashScreen from "expo-splash-screen";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import * as Notifications from "expo-notifications";
 import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { queryClient } from "@/lib/query-client";
-import { onNotificationResponse, toStatus } from "@/hooks/useNotifications";
-import { OnboardingSplash, BrandedIntroGate, ErrorBoundary } from "@/components";
 import {
-  hasSeenOnboarding,
-  setHasSeenOnboarding,
-} from "@/lib/onboarding";
+  asyncStoragePersister,
+  PERSIST_BUSTER,
+  PERSIST_MAX_AGE,
+} from "@/lib/persist-client";
+import { onNotificationResponse, toStatus } from "@/hooks/useNotifications";
+import {
+  SignUpScreen,
+  LogInScreen,
+  BrandedIntroGate,
+  ErrorBoundary,
+} from "@/components";
 import { hasBeenPrompted } from "@/lib/notification-permission";
 import { useAppFonts } from "@/hooks/useFonts";
-import { Home, ShoppingBag, Tag } from "lucide-react-native";
+import { Home, ShoppingBag, Tag, User } from "lucide-react-native";
 
 /**
  * expo-router auto-derives deep linking from the file-based routes plus
@@ -46,9 +53,9 @@ function NotificationRouter() {
       if (cancelled) return;
 
       if (prompted === null) {
-        // First launch after onboarding (or an existing install that never
-        // saw this screen) — send them through the pre-permission screen,
-        // which self-redirects to /discount-codes once resolved.
+        // First launch after account creation (or an existing install that
+        // never saw this screen) — send them through the pre-permission
+        // screen, which self-redirects to /discount-codes once resolved.
         router.replace("/notifications/permission");
         return;
       }
@@ -88,7 +95,7 @@ function NotificationRouter() {
 }
 
 // Keep the native splash screen visible until we've decided whether to
-// show the animated onboarding or the main app.
+// show the account flow or the main app.
 SplashScreen.preventAutoHideAsync().catch(() => {
   // ignore
 });
@@ -149,6 +156,15 @@ function AppNavigator() {
           }}
         />
         <Tabs.Screen
+          name="account"
+          options={{
+            title: "Account",
+            tabBarIcon: ({ color, size }) => (
+              <User size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
           name="branches"
           options={{
             href: null,
@@ -171,38 +187,71 @@ function AppNavigator() {
   );
 }
 
-export default function RootLayout() {
-  const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
-  const { fontsLoaded, fontError } = useAppFonts();
+// Decides what to render once fonts are ready: the account flow (sign up /
+// log in) while unauthenticated, or the main app once logged in. Split out
+// from RootLayout because it needs useAuth()/useTheme(), which only work
+// once their providers are mounted -- RootLayout itself renders those
+// providers, so it can't call the hooks they provide.
+function BootSequence() {
+  const { theme } = useTheme();
+  const { isLoading, isAuthenticated } = useAuth();
+  const [authMode, setAuthMode] = useState<"signUp" | "logIn">("signUp");
 
   useEffect(() => {
-    let cancelled = false;
-    hasSeenOnboarding().then((seen) => {
-      if (cancelled) return;
-      setShowOnboarding(!seen);
+    if (!isLoading) {
       SplashScreen.hideAsync().catch(() => {
         // ignore
       });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    }
+  }, [isLoading]);
 
-  const handleOnboardingComplete = useCallback(() => {
-    setHasSeenOnboarding(true).then(() => {
-      setShowOnboarding(false);
-    });
-  }, []);
+  if (isLoading) {
+    return (
+      <View
+        style={[
+          styles.center,
+          { flex: 1, backgroundColor: theme.background },
+        ]}
+      >
+        <ActivityIndicator color={theme.gold} />
+      </View>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <SafeAreaView
+        style={{ flex: 1, backgroundColor: theme.background }}
+        edges={["top", "left", "right"]}
+      >
+        {authMode === "signUp" ? (
+          <SignUpScreen onSwitchToLogIn={() => setAuthMode("logIn")} />
+        ) : (
+          <LogInScreen onSwitchToSignUp={() => setAuthMode("signUp")} />
+        )}
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <BrandedIntroGate>
+      <AppNavigator />
+    </BrandedIntroGate>
+  );
+}
+
+export default function RootLayout() {
+  const { fontsLoaded, fontError } = useAppFonts();
 
   // If custom font loading ever errors out (corrupted asset, low-memory
   // eviction, etc.), fontsLoaded would otherwise stay false forever and
   // strand the user on this spinner permanently. Proceeding on fontError
   // means custom fontFamily styles silently fall back to the platform
-  // default font instead -- a visual downgrade, not a dead end.
-  if ((!fontsLoaded && !fontError) || showOnboarding === null) {
+  // default font instead -- a visual downgrade, not a dead end. This gate
+  // runs before any provider mounts, so it can't use the theme yet.
+  if (!fontsLoaded && !fontError) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+      <View style={styles.center}>
         <ActivityIndicator />
       </View>
     );
@@ -211,33 +260,32 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <QueryClientProvider client={queryClient}>
-          <ThemeProvider>
-            <SafeAreaProvider>
-              <StatusBar style="auto" />
-              {showOnboarding ? (
-                <ThemedOnboarding onComplete={handleOnboardingComplete} />
-              ) : (
-                <BrandedIntroGate>
-                  <AppNavigator />
-                </BrandedIntroGate>
-              )}
-            </SafeAreaProvider>
-          </ThemeProvider>
-        </QueryClientProvider>
+        <PersistQueryClientProvider
+          client={queryClient}
+          persistOptions={{
+            persister: asyncStoragePersister,
+            buster: PERSIST_BUSTER,
+            maxAge: PERSIST_MAX_AGE,
+          }}
+        >
+          <AuthProvider>
+            <ThemeProvider>
+              <SafeAreaProvider>
+                <StatusBar style="auto" />
+                <BootSequence />
+              </SafeAreaProvider>
+            </ThemeProvider>
+          </AuthProvider>
+        </PersistQueryClientProvider>
       </GestureHandlerRootView>
     </ErrorBoundary>
   );
 }
 
-function ThemedOnboarding({ onComplete }: { onComplete: () => void }) {
-  const { theme } = useTheme();
-  return (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: theme.background }}
-      edges={["top", "left", "right"]}
-    >
-      <OnboardingSplash onComplete={onComplete} />
-    </SafeAreaView>
-  );
-}
+const styles = StyleSheet.create({
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});

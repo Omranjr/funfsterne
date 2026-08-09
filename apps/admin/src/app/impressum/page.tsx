@@ -10,17 +10,14 @@ export default function ImpressumPage() {
   return (
     <LegalPageShell title="Impressum" updated="29 July 2026">
       <TodoNotice>
-        fill in the remaining bracketed fields below (legal name — waiting on
-        whether this should be the shop owner or the developer — Vertretung,
-        Handelsregister, USt-IdNr) with your real business details. This page
-        is a legal requirement under German law (§5 TMG) for any commercial
-        app or website operated from Germany — it must be accurate before
-        going live.
+        fill in the remaining bracketed fields below (Handelsregister,
+        USt-IdNr — only if either actually applies to you) before this page
+        goes live. Everything else on this page is filled in.
       </TodoNotice>
 
       <h2>Angaben gemäß § 5 TMG</h2>
       <p>
-        [Vollständiger Name des Unternehmens / Inhabers]
+        Mohamed Gamal Elsayed Mahmoud
         <br />
         Frauenstraße 5
         <br />
@@ -41,7 +38,7 @@ export default function ImpressumPage() {
       </p>
 
       <h2>Vertreten durch</h2>
-      <p>[Name der vertretungsberechtigten Person, z. B. Geschäftsführer]</p>
+      <p>Mohamed Gamal Elsayed Mahmoud</p>
 
       <h2>Registereintrag</h2>
       <p>
@@ -57,9 +54,7 @@ export default function ImpressumPage() {
       </p>
 
       <h2>Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV</h2>
-      <p>
-        [Name und Anschrift, sofern abweichend von oben]
-      </p>
+      <p>Mohamed Gamal Elsayed Mahmoud (Anschrift wie oben)</p>
 
       <h2>EU-Streitschlichtung</h2>
       <p>
