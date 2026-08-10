@@ -205,37 +205,37 @@ function BootSequence() {
     }
   }, [isLoading]);
 
-  if (isLoading) {
-    return (
-      <View
-        style={[
-          styles.center,
-          { flex: 1, backgroundColor: theme.background },
-        ]}
-      >
-        <ActivityIndicator color={theme.gold} />
-      </View>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <SafeAreaView
-        style={{ flex: 1, backgroundColor: theme.background }}
-        edges={["top", "left", "right"]}
-      >
-        {authMode === "signUp" ? (
-          <SignUpScreen onSwitchToLogIn={() => setAuthMode("logIn")} />
-        ) : (
-          <LogInScreen onSwitchToSignUp={() => setAuthMode("signUp")} />
-        )}
-      </SafeAreaView>
-    );
-  }
-
+  // BrandedIntroGate now wraps every path (auth screens included, not just
+  // the post-login app) so the branded loading animation always plays
+  // before the very first thing the user sees, whether that's sign-up or
+  // the home screen. It renders `children` immediately underneath its own
+  // overlay, so whichever branch below is "ready" first just waits
+  // invisibly for the gate's timing to finish before it's revealed.
   return (
     <BrandedIntroGate>
-      <AppNavigator />
+      {isLoading ? (
+        <View
+          style={[
+            styles.center,
+            { flex: 1, backgroundColor: theme.background },
+          ]}
+        >
+          <ActivityIndicator color={theme.gold} />
+        </View>
+      ) : !isAuthenticated ? (
+        <SafeAreaView
+          style={{ flex: 1, backgroundColor: theme.background }}
+          edges={["top", "left", "right"]}
+        >
+          {authMode === "signUp" ? (
+            <SignUpScreen onSwitchToLogIn={() => setAuthMode("logIn")} />
+          ) : (
+            <LogInScreen onSwitchToSignUp={() => setAuthMode("signUp")} />
+          )}
+        </SafeAreaView>
+      ) : (
+        <AppNavigator />
+      )}
     </BrandedIntroGate>
   );
 }

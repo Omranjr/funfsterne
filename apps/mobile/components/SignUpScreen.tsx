@@ -8,8 +8,13 @@ import {
   Platform,
   Pressable,
 } from "react-native";
+import Animated, { FadeInRight, FadeOutLeft } from "react-native-reanimated";
 import { Image } from "expo-image";
-import { RegisterConsumerUserSchema } from "@funfsterne/shared-types";
+import { ChevronLeft } from "lucide-react-native";
+import {
+  NameFieldSchema,
+  RegisterConsumerUserSchema,
+} from "@funfsterne/shared-types";
 import { Input } from "./Input";
 import { Button } from "./Button";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -20,10 +25,14 @@ export interface SignUpScreenProps {
   testID?: string;
 }
 
+type Step = 1 | 2;
+const TOTAL_STEPS = 2;
+
 export function SignUpScreen({ onSwitchToLogIn, testID }: SignUpScreenProps) {
   const { theme } = useTheme();
   const { register } = useAuth();
 
+  const [step, setStep] = useState<Step>(1);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [username, setUsername] = useState("");
@@ -32,6 +41,28 @@ export function SignUpScreen({ onSwitchToLogIn, testID }: SignUpScreenProps) {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const handleContinue = useCallback(() => {
+    const errors: Record<string, string> = {};
+    const first = NameFieldSchema.safeParse(firstName);
+    const last = NameFieldSchema.safeParse(lastName);
+    if (!first.success) errors.firstName = "Enter your first name";
+    if (!last.success) errors.lastName = "Enter your last name";
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
+
+    setFieldErrors({});
+    setStep(2);
+  }, [firstName, lastName]);
+
+  const handleBack = useCallback(() => {
+    setFieldErrors({});
+    setFormError(null);
+    setStep(1);
+  }, []);
 
   const handleSubmit = useCallback(async () => {
     setFormError(null);
@@ -84,107 +115,169 @@ export function SignUpScreen({ onSwitchToLogIn, testID }: SignUpScreenProps) {
         showsVerticalScrollIndicator={false}
         testID={testID}
       >
-        <View style={styles.header}>
-          <Image
-            source={require("../assets/icon.png")}
-            style={styles.logo}
-            contentFit="contain"
-            cachePolicy="memory"
-          />
-          <Text style={[styles.title, { color: theme.gold }]}>
-            Create your account
-          </Text>
-          <Text style={[styles.subtitle, { color: theme.textMuted }]}>
-            Just your name and a login — no email, no phone.
-          </Text>
-        </View>
+        <View style={styles.topRow}>
+          {step === 2 ? (
+            <Pressable
+              onPress={handleBack}
+              accessibilityRole="button"
+              accessibilityLabel="Back"
+              style={[styles.backButton, { backgroundColor: theme.border }]}
+            >
+              <ChevronLeft size={22} color={theme.text} />
+            </Pressable>
+          ) : (
+            <View style={styles.backButton} />
+          )}
 
-        <View style={styles.form}>
-          <View style={styles.row}>
-            <Input
-              label="First name"
-              value={firstName}
-              onChangeText={setFirstName}
-              autoCapitalize="words"
-              textContentType="givenName"
-              autoComplete="given-name"
-              returnKeyType="next"
-              error={fieldErrors.firstName}
-              containerStyle={styles.rowItem}
-            />
-            <Input
-              label="Last name"
-              value={lastName}
-              onChangeText={setLastName}
-              autoCapitalize="words"
-              textContentType="familyName"
-              autoComplete="family-name"
-              returnKeyType="next"
-              error={fieldErrors.lastName}
-              containerStyle={styles.rowItem}
-            />
+          <View style={styles.dots}>
+            {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.dot,
+                  {
+                    backgroundColor: i + 1 === step ? theme.gold : theme.muted,
+                    width: i + 1 === step ? 20 : 8,
+                  },
+                ]}
+              />
+            ))}
           </View>
 
-          <Input
-            label="Username"
-            value={username}
-            onChangeText={setUsername}
-            autoCapitalize="none"
-            autoCorrect={false}
-            textContentType="username"
-            autoComplete="username-new"
-            returnKeyType="next"
-            error={fieldErrors.username}
-          />
-
-          <Input
-            label="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            textContentType="newPassword"
-            autoComplete="new-password"
-            passwordRules="minlength: 8;"
-            returnKeyType="next"
-            error={fieldErrors.password}
-          />
-
-          <Input
-            label="Confirm password"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-            textContentType="newPassword"
-            autoComplete="new-password"
-            returnKeyType="done"
-            onSubmitEditing={handleSubmit}
-            error={fieldErrors.confirmPassword}
-          />
-
-          {formError ? (
-            <Text style={styles.formError}>{formError}</Text>
-          ) : null}
-
-          <Button
-            title={submitting ? "Creating account…" : "Create account"}
-            onPress={handleSubmit}
-            disabled={submitting}
-            style={styles.submitButton}
-          />
-
-          <Pressable
-            onPress={onSwitchToLogIn}
-            style={styles.switchLink}
-            accessibilityRole="button"
-          >
-            <Text style={[styles.switchText, { color: theme.textMuted }]}>
-              Already have an account?{" "}
-              <Text style={{ color: theme.gold, fontWeight: "700" }}>
-                Log in
-              </Text>
-            </Text>
-          </Pressable>
+          <View style={styles.backButton} />
         </View>
+
+        {step === 1 ? (
+          <Animated.View
+            key="step1"
+            entering={FadeInRight.duration(250)}
+            exiting={FadeOutLeft.duration(150)}
+            style={styles.stepContent}
+          >
+            <View style={styles.header}>
+              <Image
+                source={require("../assets/icon.png")}
+                style={styles.logo}
+                contentFit="contain"
+                cachePolicy="memory"
+              />
+              <Text style={[styles.title, { color: theme.gold }]}>
+                What&apos;s your name?
+              </Text>
+              <Text style={[styles.subtitle, { color: theme.textMuted }]}>
+                So we know who&apos;s stopping by.
+              </Text>
+            </View>
+
+            <View style={styles.form}>
+              <Input
+                label="First name"
+                value={firstName}
+                onChangeText={setFirstName}
+                autoCapitalize="words"
+                textContentType="givenName"
+                autoComplete="given-name"
+                returnKeyType="next"
+                error={fieldErrors.firstName}
+              />
+              <Input
+                label="Last name"
+                value={lastName}
+                onChangeText={setLastName}
+                autoCapitalize="words"
+                textContentType="familyName"
+                autoComplete="family-name"
+                returnKeyType="done"
+                onSubmitEditing={handleContinue}
+                error={fieldErrors.lastName}
+              />
+
+              <Button
+                title="Continue"
+                onPress={handleContinue}
+                style={styles.submitButton}
+              />
+
+              <Pressable
+                onPress={onSwitchToLogIn}
+                style={styles.switchLink}
+                accessibilityRole="button"
+              >
+                <Text style={[styles.switchText, { color: theme.textMuted }]}>
+                  Already have an account?{" "}
+                  <Text style={{ color: theme.gold, fontWeight: "700" }}>
+                    Log in
+                  </Text>
+                </Text>
+              </Pressable>
+            </View>
+          </Animated.View>
+        ) : (
+          <Animated.View
+            key="step2"
+            entering={FadeInRight.duration(250)}
+            exiting={FadeOutLeft.duration(150)}
+            style={styles.stepContent}
+          >
+            <View style={styles.header}>
+              <Text style={[styles.title, { color: theme.gold }]}>
+                Secure your account
+              </Text>
+              <Text style={[styles.subtitle, { color: theme.textMuted }]}>
+                Pick a username and password only you know.
+              </Text>
+            </View>
+
+            <View style={styles.form}>
+              <Input
+                label="Username"
+                value={username}
+                onChangeText={setUsername}
+                autoCapitalize="none"
+                autoCorrect={false}
+                textContentType="username"
+                autoComplete="username"
+                returnKeyType="next"
+                error={fieldErrors.username}
+              />
+
+              <Input
+                label="Password"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                textContentType="newPassword"
+                autoComplete="new-password"
+                passwordRules="minlength: 8;"
+                returnKeyType="next"
+                error={fieldErrors.password}
+              />
+
+              <Input
+                label="Confirm password"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry
+                textContentType="newPassword"
+                autoComplete="new-password"
+                returnKeyType="done"
+                onSubmitEditing={handleSubmit}
+                error={fieldErrors.confirmPassword}
+              />
+
+              {formError ? (
+                <Text style={styles.formError}>{formError}</Text>
+              ) : null}
+
+              <Button
+                title={submitting ? "Creating account…" : "Create account"}
+                onPress={handleSubmit}
+                disabled={submitting}
+                style={styles.submitButton}
+              />
+            </View>
+          </Animated.View>
+        )}
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -197,8 +290,32 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     padding: 24,
-    paddingTop: 48,
+    paddingTop: 16,
     paddingBottom: 40,
+  },
+  topRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 24,
+  },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dots: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  dot: {
+    height: 8,
+    borderRadius: 4,
+  },
+  stepContent: {
     gap: 32,
   },
   header: {
@@ -222,13 +339,6 @@ const styles = StyleSheet.create({
   },
   form: {
     gap: 16,
-  },
-  row: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  rowItem: {
-    flex: 1,
   },
   formError: {
     fontSize: 13,

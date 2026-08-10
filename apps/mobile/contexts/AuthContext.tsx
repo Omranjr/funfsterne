@@ -6,6 +6,7 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
+import { Keyboard } from "react-native";
 import {
   getAuthToken,
   setAuthToken,
@@ -42,6 +43,20 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+// iOS only offers to save a just-entered password to Keychain if it gets a
+// moment to notice the field was "submitted" -- unmounting the form
+// immediately after a successful register/login (which swapping
+// isAuthenticated to true does, via the boot sequence) can race ahead of
+// that heuristic and silently skip the save-password prompt. Dismissing
+// the keyboard and giving iOS a brief beat before the screen switches away
+// gives it a fair chance to catch it.
+const SAVE_PASSWORD_GRACE_MS = 400;
+
+async function letIosNoticeThePassword(): Promise<void> {
+  Keyboard.dismiss();
+  await new Promise((resolve) => setTimeout(resolve, SAVE_PASSWORD_GRACE_MS));
+}
 
 function describeError(err: unknown): string {
   if (err instanceof PublicApiError) {
@@ -91,6 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const res = await registerConsumerUser(input);
       await setAuthToken(res.token);
+      await letIosNoticeThePassword();
       setUser(res.user);
       return { ok: true };
     } catch (err) {
@@ -102,6 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const res = await loginConsumerUser(input);
       await setAuthToken(res.token);
+      await letIosNoticeThePassword();
       setUser(res.user);
       return { ok: true };
     } catch (err) {

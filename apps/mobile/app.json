@@ -12,7 +12,8 @@
       "bundleIdentifier": "com.funfsterne.mobile",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "associatedDomains": ["webcredentials:funfsterne-admin-eight.vercel.app"]
     },
     "android": {
       "package": "com.funfsterne.mobile",
