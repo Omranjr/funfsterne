@@ -26,6 +26,16 @@ enum Platform {
   ANDROID
 }
 
+enum LoyaltyTransactionType {
+  EARN
+  REDEEM
+}
+
+enum LoyaltyRewardStatus {
+  ACTIVE
+  REDEEMED
+}
+
 model Branch {
   id          String                    @id @default(cuid())
   name        String
@@ -37,6 +47,8 @@ model Branch {
   products    ProductBranchAvailability[]
   discountCodes DiscountCode[]            @relation("DiscountCodeScopeBranch")
   redemptions DiscountCodeRedemption[]
+  loyaltyTransactions LoyaltyTransaction[]
+  loyaltyRewardsRedeemed LoyaltyReward[]
   createdAt   DateTime                  @default(now())
   updatedAt   DateTime                  @updatedAt
 
@@ -164,11 +176,62 @@ model ConsumerUser {
   lastName     String
   username     String   @unique
   passwordHash String
+  // Denormalized running total, kept in sync with LoyaltyTransaction inside
+  // the same DB transaction as every insert -- the ledger is the source of
+  // truth (and gives full history/audit), this is purely so the mobile app
+  // can read a balance without aggregating the whole ledger every time.
+  loyaltyPoints Int     @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  pushTokens  PushToken[]
-  redemptions DiscountCodeRedemption[]
+  pushTokens          PushToken[]
+  redemptions         DiscountCodeRedemption[]
+  loyaltyTransactions LoyaltyTransaction[]
+  loyaltyRewards      LoyaltyReward[]
+}
+
+// One row per point-earning or point-spending event. This is also, for
+// free, the "how often does this customer visit" record the admin
+// analytics dashboard will read from later -- every EARN row is a visit.
+model LoyaltyTransaction {
+  id        String                 @id @default(cuid())
+  // Nullable + SetNull (not Cascade) so deleting an account still preserves
+  // anonymized visit/points-awarded history for aggregate business
+  // analytics, matching PushToken/DiscountCodeRedemption's existing pattern.
+  userId    String?
+  user      ConsumerUser?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  branchId  String?
+  branch    Branch?                @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  points    Int
+  type      LoyaltyTransactionType
+  note      String?
+  createdAt DateTime               @default(now())
+
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@index([branchId])
+  @@index([type])
+}
+
+// An active or spent euro-value voucher, redeemed from accumulated points.
+// Unlike LoyaltyTransaction, this cascades on account deletion: an ACTIVE
+// voucher with no linked account is unredeemable and unverifiable in
+// person anyway (no account to check it against), so keeping it around
+// as an orphaned real-money liability is worse than removing it.
+model LoyaltyReward {
+  id                 String              @id @default(cuid())
+  userId             String
+  user               ConsumerUser        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eurosValue         Decimal             @db.Decimal(10, 2)
+  pointsSpent        Int
+  status             LoyaltyRewardStatus @default(ACTIVE)
+  createdAt          DateTime            @default(now())
+  redeemedAt         DateTime?
+  redeemedByBranchId String?
+  redeemedByBranch   Branch?             @relation(fields: [redeemedByBranchId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([status])
 }
 
 model CategoryImage {

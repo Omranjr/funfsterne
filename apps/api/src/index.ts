@@ -10,6 +10,7 @@ import { adminAuthRoutes } from "./routes/admin-auth.js";
 import { adminRoutes } from "./routes/admin.js";
 import { publicRoutes } from "./routes/public.js";
 import { consumerAuthRoutes } from "./routes/consumer-auth.js";
+import { loyaltyRoutes } from "./routes/loyalty.js";
 import { uploadRoutes } from "./routes/upload.js";
 
 const app = Fastify({
@@ -27,6 +28,7 @@ async function main() {
   await app.register(healthRoutes, { prefix: "/health" });
   await app.register(publicRoutes, { prefix: "/public" });
   await app.register(consumerAuthRoutes, { prefix: "/public/auth" });
+  await app.register(loyaltyRoutes, { prefix: "/public/loyalty" });
 
   // Admin auth + admin-only routes
   await app.register(adminAuthRoutes, { prefix: "/admin/auth" });

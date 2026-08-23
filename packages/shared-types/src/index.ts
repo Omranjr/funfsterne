@@ -290,3 +290,72 @@ export const AdminUserSchema = z.object({
 });
 
 export type AdminUser = z.infer<typeof AdminUserSchema>;
+
+// ---------------------------------------------------------------------------
+// Loyalty program. Points are earned by an admin-scanned visit (10/visit,
+// once per calendar day per customer) and spent on a euro-value voucher
+// (10 points = EUR 1, EUR 10 minimum) redeemable toward products in person.
+// ---------------------------------------------------------------------------
+
+export const LoyaltyTransactionTypeSchema = z.enum(["EARN", "REDEEM"]);
+export type LoyaltyTransactionType = "EARN" | "REDEEM";
+
+export const LoyaltyRewardStatusSchema = z.enum(["ACTIVE", "REDEEMED"]);
+export type LoyaltyRewardStatus = "ACTIVE" | "REDEEMED";
+
+export const POINTS_PER_VISIT = 10;
+export const POINTS_PER_EURO = 10;
+export const MIN_REDEEM_POINTS = 100;
+
+export const LoyaltyTransactionSchema = z.object({
+  id: z.string(),
+  userId: z.string().optional(),
+  branchId: z.string().optional(),
+  points: z.number().int(),
+  type: LoyaltyTransactionTypeSchema,
+  note: z.string().optional(),
+  createdAt: z.coerce.date(),
+});
+
+export type LoyaltyTransaction = z.infer<typeof LoyaltyTransactionSchema>;
+
+export const LoyaltyRewardSchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  eurosValue: z.number().nonnegative(),
+  pointsSpent: z.number().int().nonnegative(),
+  status: LoyaltyRewardStatusSchema,
+  createdAt: z.coerce.date(),
+  redeemedAt: z.coerce.date().optional(),
+  redeemedByBranchId: z.string().optional(),
+});
+
+export type LoyaltyReward = z.infer<typeof LoyaltyRewardSchema>;
+
+// POST /admin/loyalty/scan
+export const LoyaltyScanSchema = z.object({
+  userId: z.string().min(1),
+  branchId: z.string().min(1),
+});
+
+export type LoyaltyScan = z.infer<typeof LoyaltyScanSchema>;
+
+// POST /public/loyalty/redeem
+export const LoyaltyRedeemSchema = z.object({
+  points: z
+    .number()
+    .int()
+    .min(MIN_REDEEM_POINTS, `Redeem at least ${MIN_REDEEM_POINTS} points`)
+    .refine((p) => p % POINTS_PER_EURO === 0, {
+      message: `Points must be a multiple of ${POINTS_PER_EURO}`,
+    }),
+});
+
+export type LoyaltyRedeem = z.infer<typeof LoyaltyRedeemSchema>;
+
+// POST /admin/loyalty/rewards/:id/redeem
+export const LoyaltyRewardRedeemSchema = z.object({
+  branchId: z.string().min(1),
+});
+
+export type LoyaltyRewardRedeem = z.infer<typeof LoyaltyRewardRedeemSchema>;

@@ -12,12 +12,18 @@ import {
   UpsertCategoryImageSchema,
   UpsertProductBranchAvailabilitySchema,
   AdminResetConsumerPasswordSchema,
+  LoyaltyScanSchema,
+  LoyaltyRewardRedeemSchema,
 } from "@funfsterne/shared-types";
 import { z } from "zod";
 import type { FastifyInstance } from "fastify";
 import { adminAuthMiddleware } from "../middleware/admin-auth.js";
 import { sendPushNotifications } from "../services/push.service.js";
 import { resetConsumerPassword } from "../services/consumer-auth.service.js";
+import {
+  awardLoyaltyPoints,
+  redeemLoyaltyReward,
+} from "../services/loyalty.service.js";
 import { serializePrisma } from "../serializers.js";
 
 export async function adminRoutes(app: FastifyInstance) {
@@ -420,6 +426,65 @@ export async function adminRoutes(app: FastifyInstance) {
       }
 
       await resetConsumerPassword(app, id, parse.data.newPassword);
+      return reply.status(204).send();
+    },
+  );
+
+  // ── Loyalty program ──────────────────────────────────────────────────────
+
+  app.post("/loyalty/scan", async (request, reply) => {
+    const parse = LoyaltyScanSchema.safeParse(request.body);
+    if (!parse.success) {
+      return reply.status(400).send({ error: "Invalid scan payload" });
+    }
+
+    const result = await awardLoyaltyPoints(app, parse.data);
+    if (!result.ok) {
+      const status = result.errorCode === "USER_NOT_FOUND" ? 404 : 409;
+      return reply
+        .status(status)
+        .send({ error: "Could not award points", errorCode: result.errorCode });
+    }
+
+    const [user, activeRewards] = await Promise.all([
+      app.prisma.consumerUser.findUnique({
+        where: { id: parse.data.userId },
+        select: { firstName: true, lastName: true },
+      }),
+      app.prisma.loyaltyReward.findMany({
+        where: { userId: parse.data.userId, status: "ACTIVE" },
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
+
+    return {
+      customer: user,
+      balance: result.balance,
+      activeRewards: serializePrisma(activeRewards),
+    };
+  });
+
+  app.post(
+    "/loyalty/rewards/:id/redeem",
+    async (request, reply) => {
+      const id = (request.params as { id: string }).id;
+      const parse = LoyaltyRewardRedeemSchema.safeParse(request.body);
+      if (!parse.success) {
+        return reply.status(400).send({ error: "Invalid redeem payload" });
+      }
+
+      const result = await redeemLoyaltyReward(app, {
+        rewardId: id,
+        branchId: parse.data.branchId,
+      });
+
+      if (!result.ok) {
+        const status = result.errorCode === "NOT_FOUND" ? 404 : 409;
+        return reply
+          .status(status)
+          .send({ error: "Could not redeem reward", errorCode: result.errorCode });
+      }
+
       return reply.status(204).send();
     },
   );

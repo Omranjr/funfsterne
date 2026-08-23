@@ -49,9 +49,18 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 // immediately after a successful register/login (which swapping
 // isAuthenticated to true does, via the boot sequence) can race ahead of
 // that heuristic and silently skip the save-password prompt. Dismissing
-// the keyboard and giving iOS a brief beat before the screen switches away
-// gives it a fair chance to catch it.
-const SAVE_PASSWORD_GRACE_MS = 400;
+// the keyboard and giving iOS a beat before the screen switches away gives
+// it a fair chance to catch it.
+//
+// Deliberately NOT doing this via a per-field ref.blur() call: an earlier
+// attempt at that froze the app on real devices, almost certainly from
+// forcing a field to resign first responder while iOS's own "suggest a
+// strong password" QuickType bar was still anchored to it -- interfering
+// with system-owned UI mid-interaction is a known class of native hang,
+// and it won't show up as a catchable JS error. Keyboard.dismiss() is the
+// safe, already-verified-stable way to ask iOS to close that UI itself
+// rather than us reaching in and doing it by force.
+const SAVE_PASSWORD_GRACE_MS = 800;
 
 async function letIosNoticeThePassword(): Promise<void> {
   Keyboard.dismiss();

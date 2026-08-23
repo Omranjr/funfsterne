@@ -31,7 +31,7 @@ import {
 } from "@/components";
 import { hasBeenPrompted } from "@/lib/notification-permission";
 import { useAppFonts } from "@/hooks/useFonts";
-import { Home, ShoppingBag, Tag, User } from "lucide-react-native";
+import { Home, ShoppingBag, Tag, User, Gift } from "lucide-react-native";
 
 /**
  * expo-router auto-derives deep linking from the file-based routes plus
@@ -152,6 +152,15 @@ function AppNavigator() {
             title: "Offers",
             tabBarIcon: ({ color, size }) => (
               <Tag size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="loyalty"
+          options={{
+            title: "Rewards",
+            tabBarIcon: ({ color, size }) => (
+              <Gift size={size} color={color} />
             ),
           }}
         />

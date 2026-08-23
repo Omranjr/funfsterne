@@ -87,7 +87,8 @@ export type PublicApiErrorCode =
   | "MAX_REDEMPTIONS_REACHED"
   | "NOT_FOUND"
   | "INACTIVE"
-  | "USERNAME_TAKEN";
+  | "USERNAME_TAKEN"
+  | "INSUFFICIENT_POINTS";
 
 export class PublicApiError extends Error {
   readonly status: number;
@@ -121,7 +122,8 @@ function asPublicApiErrorCode(
     value === "MAX_REDEMPTIONS_REACHED" ||
     value === "NOT_FOUND" ||
     value === "INACTIVE" ||
-    value === "USERNAME_TAKEN"
+    value === "USERNAME_TAKEN" ||
+    value === "INSUFFICIENT_POINTS"
   ) {
     return value;
   }
@@ -309,4 +311,58 @@ export type ConsumerProfile = {
 
 export function getConsumerProfile(): Promise<ConsumerProfile> {
   return apiFetch<ConsumerProfile>("/public/auth/me", { method: "GET" });
+}
+
+// ---------------------------------------------------------------------------
+// Loyalty program. All three routes require the consumer to be logged in,
+// so they go through publicApiFetch (same typed-error handling as the rest
+// of this file, and it already attaches the Bearer token when one exists).
+// ---------------------------------------------------------------------------
+
+export type LoyaltyTransactionType = "EARN" | "REDEEM";
+
+export type LoyaltyTransaction = {
+  id: string;
+  points: number;
+  type: LoyaltyTransactionType;
+  note: string | null;
+  createdAt: string;
+  branch?: { name: string } | null;
+};
+
+export type LoyaltyRewardStatus = "ACTIVE" | "REDEEMED";
+
+export type LoyaltyReward = {
+  id: string;
+  eurosValue: string;
+  pointsSpent: number;
+  status: LoyaltyRewardStatus;
+  createdAt: string;
+  redeemedAt: string | null;
+};
+
+export type LoyaltyMeResponse = {
+  balance: number;
+  transactions: LoyaltyTransaction[];
+  rewards: LoyaltyReward[];
+};
+
+export function getLoyaltyMe(): Promise<LoyaltyMeResponse> {
+  return publicApiFetch<LoyaltyMeResponse>("/public/loyalty/me", {
+    method: "GET",
+  });
+}
+
+export type RedeemLoyaltyResponse = {
+  reward: { id: string; eurosValue: string };
+  balance: number;
+};
+
+export function redeemLoyaltyPoints(
+  points: number
+): Promise<RedeemLoyaltyResponse> {
+  return publicApiFetch<RedeemLoyaltyResponse>("/public/loyalty/redeem", {
+    method: "POST",
+    body: JSON.stringify({ points }),
+  });
 }

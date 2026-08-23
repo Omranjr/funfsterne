@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { apiFetch, getActiveDiscountCodes } from "@/lib/api";
+import { apiFetch, getActiveDiscountCodes, getLoyaltyMe } from "@/lib/api";
 import {
   type Product,
   type Branch,
@@ -45,6 +45,20 @@ export function useDiscountCodes() {
   return useQuery({
     queryKey: ["discount-codes", "active"],
     queryFn: () => getActiveDiscountCodes(),
+  });
+}
+
+// Points can change the moment a staff member scans the customer's code on
+// a different device, with no push notification to tell this app that
+// happened -- so unlike the rest of this file, this is never treated as
+// "fresh enough to skip a refetch." Screens using this should also refetch
+// on focus/pull-to-refresh; staleTime: 0 only guarantees a mount always hits
+// the network, not that it re-runs while already mounted and idle.
+export function useLoyaltyMe() {
+  return useQuery({
+    queryKey: ["loyalty", "me"],
+    queryFn: () => getLoyaltyMe(),
+    staleTime: 0,
   });
 }
 
