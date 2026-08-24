@@ -53,6 +53,19 @@ export default function LoyaltyScreen() {
   const { data, isLoading, isRefetching, refetch, error } = useLoyaltyMe();
   const [redeeming, setRedeeming] = useState(false);
 
+  // Derived from `data`, and referenced by the hooks below -- declared here
+  // (rather than after the early-return branches further down) so they're
+  // always available regardless of loading/error state, and so the effects
+  // that depend on them aren't reading a not-yet-declared variable.
+  const balance = data?.balance ?? 0;
+  const redeemablePoints = Math.floor(balance / POINTS_PER_EURO) * POINTS_PER_EURO;
+  const canRedeem = redeemablePoints >= MIN_REDEEM_POINTS;
+  const progressToNext = balance % MIN_REDEEM_POINTS;
+  const progressPct = Math.min(100, Math.round((progressToNext / MIN_REDEEM_POINTS) * 100));
+  const qrValue = user ? `${QR_PREFIX}${user.id}` : "";
+  const activeRewards = data?.rewards.filter((r) => r.status === "ACTIVE") ?? [];
+  const pastRewards = data?.rewards.filter((r) => r.status === "REDEEMED") ?? [];
+
   // Detects points earned since the last time this screen had fresh data,
   // so a staff scan that happened while the app was backgrounded (or on
   // another tab) still gets celebrated the next time the customer looks.
@@ -60,19 +73,27 @@ export default function LoyaltyScreen() {
   // null so the very first load never counts as "an increase."
   const lastBalanceRef = useRef<number | null>(null);
   const [celebration, setCelebration] = useState<number | null>(null);
-  const celebrationScale = useSharedValue(0);
+  // Starts at 1 (not 0) -- this drives the balance card's scale transform,
+  // and a shared value only ever gets updated by the celebration effect
+  // below. Starting at 0 left the card invisible on every first load, only
+  // becoming visible once a celebration animation happened to run and left
+  // it parked at 1.
+  const celebrationScale = useSharedValue(1);
   const progressWidth = useSharedValue(0);
 
   useEffect(() => {
     if (data === undefined) return;
     const prev = lastBalanceRef.current;
-    if (prev !== null && data.balance > prev) {
+    const justIncreased = prev !== null && data.balance > prev;
+
+    if (justIncreased) {
       const gained = data.balance - prev;
       setCelebration(gained);
       celebrationScale.value = withSequence(
         withSpring(1.15, { stiffness: 300, damping: 12 }),
         withSpring(1, { stiffness: 300, damping: 14 })
       );
+      progressWidth.value = withTiming(progressPct / 100, { duration: 600 });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {
         // ignore
       });
@@ -80,15 +101,15 @@ export default function LoyaltyScreen() {
       lastBalanceRef.current = data.balance;
       return () => clearTimeout(timeout);
     }
-    lastBalanceRef.current = data.balance;
-  }, [data, celebrationScale]);
 
-  // Animate the progress bar whenever the target percentage changes.
-  useEffect(() => {
-    progressWidth.value = withTiming(progressPct / 100, {
-      duration: 600,
-    });
-  }, [progressPct, progressWidth]);
+    // First load, a no-op refetch, or a redemption (balance went down) --
+    // snap straight to the correct position instead of animating, so the
+    // bar never opens with a misleading fill-from-empty flash. Motion is
+    // reserved for the one moment it actually means something: a fresh
+    // scan raised the balance.
+    progressWidth.value = progressPct / 100;
+    lastBalanceRef.current = data.balance;
+  }, [data, progressPct, celebrationScale, progressWidth]);
 
   useFocusEffect(
     useCallback(() => {
@@ -151,16 +172,6 @@ export default function LoyaltyScreen() {
       </View>
     );
   }
-
-  const balance = data?.balance ?? 0;
-  const redeemablePoints = Math.floor(balance / POINTS_PER_EURO) * POINTS_PER_EURO;
-  const canRedeem = redeemablePoints >= MIN_REDEEM_POINTS;
-  const progressToNext = balance % MIN_REDEEM_POINTS;
-  const progressPct = Math.min(100, Math.round((progressToNext / MIN_REDEEM_POINTS) * 100));
-  const qrValue = user ? `${QR_PREFIX}${user.id}` : "";
-
-  const activeRewards = data?.rewards.filter((r) => r.status === "ACTIVE") ?? [];
-  const pastRewards = data?.rewards.filter((r) => r.status === "REDEEMED") ?? [];
 
   return (
     <ScrollView
