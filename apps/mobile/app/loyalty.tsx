@@ -61,6 +61,7 @@ export default function LoyaltyScreen() {
   const lastBalanceRef = useRef<number | null>(null);
   const [celebration, setCelebration] = useState<number | null>(null);
   const celebrationScale = useSharedValue(0);
+  const progressWidth = useSharedValue(0);
 
   useEffect(() => {
     if (data === undefined) return;
@@ -82,6 +83,13 @@ export default function LoyaltyScreen() {
     lastBalanceRef.current = data.balance;
   }, [data, celebrationScale]);
 
+  // Animate the progress bar whenever the target percentage changes.
+  useEffect(() => {
+    progressWidth.value = withTiming(progressPct / 100, {
+      duration: 600,
+    });
+  }, [progressPct, progressWidth]);
+
   useFocusEffect(
     useCallback(() => {
       refetch();
@@ -90,6 +98,10 @@ export default function LoyaltyScreen() {
 
   const celebrationStyle = useAnimatedStyle(() => ({
     transform: [{ scale: celebrationScale.value }],
+  }));
+
+  const progressFillStyle = useAnimatedStyle(() => ({
+    width: `${progressWidth.value * 100}%`,
   }));
 
   const handleRedeem = useCallback(
@@ -185,10 +197,11 @@ export default function LoyaltyScreen() {
           <Text style={[styles.balanceValue, { color: theme.gold }]}>{balance}</Text>
 
           <View style={[styles.progressTrack, { backgroundColor: theme.muted }]}>
-            <View
+            <Animated.View
               style={[
                 styles.progressFill,
-                { width: `${progressPct}%`, backgroundColor: theme.gold },
+                { backgroundColor: theme.gold },
+                progressFillStyle,
               ]}
             />
           </View>

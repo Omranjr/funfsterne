@@ -32,16 +32,20 @@ export async function awardLoyaltyPoints(
     return { ok: false, errorCode: "USER_NOT_FOUND" };
   }
 
-  const lastEarn = await app.prisma.loyaltyTransaction.findFirst({
-    where: { userId: args.userId, type: "EARN" },
-    orderBy: { createdAt: "desc" },
-    select: { createdAt: true },
-  });
-
-  const now = new Date();
-  if (lastEarn && businessDateKey(lastEarn.createdAt) === businessDateKey(now)) {
-    return { ok: false, errorCode: "ALREADY_SCANNED_TODAY" };
-  }
+  // Daily scan limit is temporarily disabled for testing so staff can
+  // award points repeatedly during QA / demos. Re-enable by uncommenting
+  // the block below once testing is complete.
+  //
+  // const lastEarn = await app.prisma.loyaltyTransaction.findFirst({
+  //   where: { userId: args.userId, type: "EARN" },
+  //   orderBy: { createdAt: "desc" },
+  //   select: { createdAt: true },
+  // });
+  //
+  // const now = new Date();
+  // if (lastEarn && businessDateKey(lastEarn.createdAt) === businessDateKey(now)) {
+  //   return { ok: false, errorCode: "ALREADY_SCANNED_TODAY" };
+  // }
 
   const [, updated] = await app.prisma.$transaction([
     app.prisma.loyaltyTransaction.create({
