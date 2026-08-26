@@ -23,6 +23,8 @@ import { resetConsumerPassword } from "../services/consumer-auth.service.js";
 import {
   awardLoyaltyPoints,
   redeemLoyaltyReward,
+  getLoyaltyVisitStats,
+  type VisitStatsGranularity,
 } from "../services/loyalty.service.js";
 import { serializePrisma } from "../serializers.js";
 
@@ -488,4 +490,17 @@ export async function adminRoutes(app: FastifyInstance) {
       return reply.status(204).send();
     },
   );
+
+  app.get("/loyalty/stats", async (request) => {
+    const query = request.query as { granularity?: string; userId?: string };
+    const granularity: VisitStatsGranularity =
+      query.granularity === "month" || query.granularity === "year"
+        ? query.granularity
+        : "day";
+
+    return getLoyaltyVisitStats(app, {
+      granularity,
+      userId: query.userId || undefined,
+    });
+  });
 }

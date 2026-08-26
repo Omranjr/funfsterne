@@ -116,6 +116,131 @@ export async function redeemLoyaltyPoints(
   });
 }
 
+export type VisitStatsGranularity = "day" | "month" | "year";
+
+export type VisitStatsBucket = {
+  bucket: string;
+  label: string;
+  visits: number;
+};
+
+export type VisitStatsResult = {
+  granularity: VisitStatsGranularity;
+  series: VisitStatsBucket[];
+  totalVisits: number;
+  uniqueCustomers: number;
+};
+
+// How far back each granularity looks by default -- chosen so the chart
+// always shows a reasonable number of bars (about 30/12/6) rather than
+// requiring a date-range picker the admin UI doesn't have yet.
+const GRANULARITY_WINDOW_DAYS: Record<VisitStatsGranularity, number> = {
+  day: 30,
+  month: 365,
+  year: 365 * 5,
+};
+
+function bucketKeyAndLabel(
+  date: Date,
+  granularity: VisitStatsGranularity,
+): { bucket: string; label: string } {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: BUSINESS_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const year = parts.find((p) => p.type === "year")!.value;
+  const month = parts.find((p) => p.type === "month")!.value;
+  const day = parts.find((p) => p.type === "day")!.value;
+
+  if (granularity === "year") {
+    return { bucket: year, label: year };
+  }
+  if (granularity === "month") {
+    const label = new Date(Number(year), Number(month) - 1, 1).toLocaleDateString("en-US", {
+      month: "short",
+      year: "numeric",
+    });
+    return { bucket: `${year}-${month}`, label };
+  }
+  const label = new Date(Number(year), Number(month) - 1, Number(day)).toLocaleDateString(
+    "en-US",
+    { month: "short", day: "numeric" },
+  );
+  return { bucket: `${year}-${month}-${day}`, label };
+}
+
+// Builds every bucket in [from, now] up front, zero-filled, so the chart
+// always renders a continuous, evenly-spaced timeline -- a bar chart that
+// only plots buckets with activity would silently compress "no visits that
+// week" into a gap that reads as a shorter time span, not a real zero.
+function enumerateBuckets(
+  from: Date,
+  granularity: VisitStatsGranularity,
+): { bucket: string; label: string }[] {
+  const buckets: { bucket: string; label: string }[] = [];
+  const now = new Date();
+
+  if (granularity === "day") {
+    const cursor = new Date(from);
+    while (cursor <= now) {
+      buckets.push(bucketKeyAndLabel(cursor, "day"));
+      cursor.setDate(cursor.getDate() + 1);
+    }
+  } else if (granularity === "month") {
+    const cursor = new Date(from.getFullYear(), from.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth(), 1);
+    while (cursor <= end) {
+      buckets.push(bucketKeyAndLabel(cursor, "month"));
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
+  } else {
+    const cursor = new Date(from.getFullYear(), 0, 1);
+    const end = new Date(now.getFullYear(), 0, 1);
+    while (cursor <= end) {
+      buckets.push(bucketKeyAndLabel(cursor, "year"));
+      cursor.setFullYear(cursor.getFullYear() + 1);
+    }
+  }
+  return buckets;
+}
+
+export async function getLoyaltyVisitStats(
+  app: FastifyInstance,
+  args: { granularity: VisitStatsGranularity; userId?: string },
+): Promise<VisitStatsResult> {
+  const from = new Date(Date.now() - GRANULARITY_WINDOW_DAYS[args.granularity] * 86_400_000);
+
+  const transactions = await app.prisma.loyaltyTransaction.findMany({
+    where: {
+      type: "EARN",
+      createdAt: { gte: from },
+      ...(args.userId ? { userId: args.userId } : {}),
+    },
+    select: { createdAt: true, userId: true },
+  });
+
+  const buckets = new Map<string, VisitStatsBucket>(
+    enumerateBuckets(from, args.granularity).map((b) => [b.bucket, { ...b, visits: 0 }]),
+  );
+  const uniqueCustomers = new Set<string>();
+
+  for (const tx of transactions) {
+    const { bucket } = bucketKeyAndLabel(tx.createdAt, args.granularity);
+    const entry = buckets.get(bucket);
+    if (entry) entry.visits += 1;
+    if (tx.userId) uniqueCustomers.add(tx.userId);
+  }
+
+  return {
+    granularity: args.granularity,
+    series: Array.from(buckets.values()),
+    totalVisits: transactions.length,
+    uniqueCustomers: uniqueCustomers.size,
+  };
+}
+
 export type RedeemRewardResult =
   | { ok: true }
   | { ok: false; errorCode: "NOT_FOUND" | "ALREADY_REDEEMED" };

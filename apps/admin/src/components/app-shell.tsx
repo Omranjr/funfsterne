@@ -17,6 +17,7 @@ import {
   Images,
   Users,
   ScanLine,
+  BarChart3,
 } from "lucide-react";
 
 const navItems = [
@@ -28,6 +29,7 @@ const navItems = [
   { href: "/notifications", label: "Notifications", icon: Bell },
   { href: "/users", label: "Users", icon: Users },
   { href: "/loyalty", label: "Loyalty Scan", icon: ScanLine },
+  { href: "/analytics", label: "Analytics", icon: BarChart3 },
 ];
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {

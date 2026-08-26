@@ -202,40 +202,36 @@ export default function LoyaltyScreen() {
         </Animated.View>
       ) : null}
 
-      <Animated.View style={celebrationStyle}>
-        <Card style={styles.balanceCard}>
-          <Text style={[styles.balanceLabel, { color: theme.textMuted }]}>Your points</Text>
-          <Text style={[styles.balanceValue, { color: theme.gold }]}>{balance}</Text>
+      <Card style={styles.balanceCard}>
+        <Text style={[styles.balanceLabel, { color: theme.textMuted }]}>Your points</Text>
+        <Animated.Text style={[styles.balanceValue, { color: theme.gold }, celebrationStyle]}>
+          {balance}
+        </Animated.Text>
 
-          <View style={[styles.progressTrack, { backgroundColor: theme.muted }]}>
-            <Animated.View
-              style={[
-                styles.progressFill,
-                { backgroundColor: theme.gold },
-                progressFillStyle,
-              ]}
-            />
-          </View>
-          <Text style={[styles.progressLabel, { color: theme.textMuted }]}>
-            {canRedeem
-              ? `${redeemablePoints} points ready to redeem`
-              : `${MIN_REDEEM_POINTS - progressToNext} points to your first reward`}
-          </Text>
+        <View style={[styles.progressTrack, { backgroundColor: theme.muted }]}>
+          <Animated.View
+            style={[styles.progressFill, { backgroundColor: theme.gold }, progressFillStyle]}
+          />
+        </View>
+        <Text style={[styles.progressLabel, { color: theme.textMuted }]}>
+          {canRedeem
+            ? `${redeemablePoints} points ready to redeem`
+            : `${MIN_REDEEM_POINTS - progressToNext} points to your first reward`}
+        </Text>
 
-          {canRedeem ? (
-            <Button
-              title={
-                redeeming
-                  ? "Redeeming…"
-                  : `Redeem ${redeemablePoints} points for €${redeemablePoints / POINTS_PER_EURO}`
-              }
-              onPress={() => handleRedeem(redeemablePoints)}
-              disabled={redeeming}
-              style={styles.redeemButton}
-            />
-          ) : null}
-        </Card>
-      </Animated.View>
+        {canRedeem ? (
+          <Button
+            title={
+              redeeming
+                ? "Redeeming…"
+                : `Redeem ${redeemablePoints} points for €${redeemablePoints / POINTS_PER_EURO}`
+            }
+            onPress={() => handleRedeem(redeemablePoints)}
+            disabled={redeeming}
+            style={styles.redeemButton}
+          />
+        ) : null}
+      </Card>
 
       <Card style={styles.qrCard}>
         <Text style={[styles.qrLabel, { color: theme.text }]}>My code</Text>
