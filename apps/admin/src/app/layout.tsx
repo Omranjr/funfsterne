@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Inter } from "next/font/google";
+import { Inter, Playfair_Display } from "next/font/google";
+import { ThemeProvider } from "next-themes";
+import { Toaster } from "sonner";
 import { cn } from "@/lib/utils";
 import { AuthProvider } from "@/lib/auth";
 import { AuthGate } from "@/components/auth-gate";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
+const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-heading" });
 
 export const metadata: Metadata = {
   title: "FünfSterne Admin",
@@ -18,11 +21,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn("font-sans", inter.variable)}>
+    <html
+      lang="en"
+      className={cn("font-sans", inter.variable, playfair.variable)}
+      suppressHydrationWarning
+    >
       <body className="antialiased">
-        <AuthProvider>
-          <AuthGate>{children}</AuthGate>
-        </AuthProvider>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+          <AuthProvider>
+            <AuthGate>{children}</AuthGate>
+          </AuthProvider>
+          <Toaster richColors position="top-right" />
+        </ThemeProvider>
       </body>
     </html>
   );

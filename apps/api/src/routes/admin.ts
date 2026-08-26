@@ -312,6 +312,13 @@ export async function adminRoutes(app: FastifyInstance) {
     return serializePrisma(notifications);
   });
 
+  // Lets the admin see how many devices a broadcast will actually reach
+  // before confirming send, rather than sending blind.
+  app.get("/notifications/recipient-count", async () => {
+    const count = await app.prisma.pushToken.count();
+    return { count };
+  });
+
   app.post("/notifications", async (request, reply) => {
     const parse = CreateNotificationSchema.safeParse(request.body);
     if (!parse.success) {

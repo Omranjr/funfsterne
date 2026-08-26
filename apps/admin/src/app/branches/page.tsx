@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,29 +22,35 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/page-header";
 import { type Branch, CreateBranchSchema } from "@funfsterne/shared-types";
-import { Pencil, Plus } from "lucide-react";
+import { Pencil, Plus, RefreshCw } from "lucide-react";
 
 export default function BranchesPage() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<Branch | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
+    setFailed(false);
     const res = await apiFetch("/admin/branches");
     if (res.ok) {
-      const data = (await res.json()) as Branch[];
-      setBranches(data);
+      setBranches((await res.json()) as Branch[]);
+    } else {
+      setFailed(true);
+      toast.error("Could not load branches", { description: "Please try again." });
     }
     setLoading(false);
-  }
+  }, []);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   const filtered = useMemo(() => {
     return branches.filter(
@@ -62,6 +69,9 @@ export default function BranchesPage() {
     if (res.ok) {
       const updated = (await res.json()) as Branch;
       setBranches((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
+      toast.success(updated.isActive ? `${updated.name} is now active` : `${updated.name} is now inactive`);
+    } else {
+      toast.error("Could not update branch", { description: "Please try again." });
     }
   }
 
@@ -73,45 +83,48 @@ export default function BranchesPage() {
       }
       return [saved, ...prev];
     });
+    toast.success(editing ? "Branch updated" : "Branch created");
     setDialogOpen(false);
     setEditing(null);
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Branches</h1>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger
-            render={
-              <Button
-                onClick={() => {
-                  setEditing(null);
-                  setDialogOpen(true);
-                }}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add Branch
-              </Button>
-            }
-          />
-          <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editing ? "Edit Branch" : "Create Branch"}
-              </DialogTitle>
-            </DialogHeader>
-            <BranchForm
-              branch={editing}
-              onSaved={handleSaved}
-              onCancel={() => {
-                setDialogOpen(false);
-                setEditing(null);
-              }}
+      <PageHeader
+        title="Branches"
+        action={
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger
+              render={
+                <Button
+                  onClick={() => {
+                    setEditing(null);
+                    setDialogOpen(true);
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Branch
+                </Button>
+              }
             />
-          </DialogContent>
-        </Dialog>
-      </div>
+            <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  {editing ? "Edit Branch" : "Create Branch"}
+                </DialogTitle>
+              </DialogHeader>
+              <BranchForm
+                branch={editing}
+                onSaved={handleSaved}
+                onCancel={() => {
+                  setDialogOpen(false);
+                  setEditing(null);
+                }}
+              />
+            </DialogContent>
+          </Dialog>
+        }
+      />
 
       <Input
         placeholder="Search branches..."
@@ -121,7 +134,19 @@ export default function BranchesPage() {
       />
 
       {loading ? (
-        <p className="text-muted-foreground">Loading branches...</p>
+        <div className="space-y-2 rounded-md border p-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-10 w-full" />
+          ))}
+        </div>
+      ) : failed ? (
+        <div className="flex flex-col items-center gap-3 rounded-md border py-12 text-center">
+          <p className="text-sm text-muted-foreground">Something went wrong loading branches.</p>
+          <Button variant="outline" size="sm" onClick={load}>
+            <RefreshCw className="h-4 w-4" />
+            Try again
+          </Button>
+        </div>
       ) : (
         <div className="rounded-md border">
           <Table>

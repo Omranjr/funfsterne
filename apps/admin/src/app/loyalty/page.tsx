@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BrowserQRCodeReader, type IScannerControls } from "@zxing/browser";
+import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -12,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PageHeader } from "@/components/page-header";
 import { type Branch, POINTS_PER_VISIT } from "@funfsterne/shared-types";
 import { CheckCircle2, Gift, ScanLine, XCircle } from "lucide-react";
 
@@ -165,10 +167,17 @@ export default function LoyaltyScanPage() {
       });
       setRedeemingId(null);
 
-      if (res.ok && result.status === "success") {
-        setResult({
-          ...result,
-          activeRewards: result.activeRewards.filter((r) => r.id !== rewardId),
+      if (res.ok) {
+        toast.success("Reward marked as used");
+        if (result.status === "success") {
+          setResult({
+            ...result,
+            activeRewards: result.activeRewards.filter((r) => r.id !== rewardId),
+          });
+        }
+      } else {
+        toast.error("Could not mark reward as used", {
+          description: "Please try again.",
         });
       }
     },
@@ -177,12 +186,10 @@ export default function LoyaltyScanPage() {
 
   return (
     <div className="mx-auto max-w-md space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Loyalty Scan</h1>
-        <p className="text-sm text-muted-foreground">
-          Scan a customer&apos;s code to award {POINTS_PER_VISIT} points for today&apos;s visit.
-        </p>
-      </div>
+      <PageHeader
+        title="Loyalty Scan"
+        description={`Scan a customer's code to award ${POINTS_PER_VISIT} points for today's visit.`}
+      />
 
       <div className="space-y-2">
         <label className="text-sm font-medium">Branch</label>
@@ -204,7 +211,9 @@ export default function LoyaltyScanPage() {
         <Card className="items-center justify-center gap-4 p-6">
           <video
             ref={videoRef}
-            className="aspect-square w-full rounded-lg bg-black object-cover"
+            className={`aspect-square w-full rounded-lg bg-black object-cover transition-shadow ${
+              scanning ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""
+            }`}
             muted
             playsInline
           />
@@ -226,7 +235,7 @@ export default function LoyaltyScanPage() {
 
       {result.status === "success" && (
         <Card className="items-center gap-4 p-6 text-center">
-          <CheckCircle2 className="h-12 w-12 text-green-600" />
+          <CheckCircle2 className="h-12 w-12 text-green-600 dark:text-green-400" />
           <div>
             <p className="text-lg font-semibold">
               {result.customer

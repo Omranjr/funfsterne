@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,29 +20,35 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/page-header";
 import { type ConsumerUser, PasswordSchema } from "@funfsterne/shared-types";
-import { KeyRound } from "lucide-react";
+import { KeyRound, RefreshCw, Users as UsersIcon } from "lucide-react";
 
 export default function UsersPage() {
   const [users, setUsers] = useState<ConsumerUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
   const [search, setSearch] = useState("");
   const [resetTarget, setResetTarget] = useState<ConsumerUser | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
+    setFailed(false);
     const res = await apiFetch("/admin/consumer-users");
     if (res.ok) {
-      const data = (await res.json()) as ConsumerUser[];
-      setUsers(data);
+      setUsers((await res.json()) as ConsumerUser[]);
+    } else {
+      setFailed(true);
+      toast.error("Could not load users", { description: "Please try again." });
     }
     setLoading(false);
-  }
+  }, []);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -55,14 +62,10 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Users</h1>
-        <p className="text-sm text-muted-foreground">
-          Registered app accounts. There is no self-service password
-          recovery in the app (no email or phone is collected) — reset a
-          customer’s password here when they ask in person.
-        </p>
-      </div>
+      <PageHeader
+        title="Users"
+        description="Registered app accounts. There is no self-service password recovery in the app (no email or phone is collected) — reset a customer’s password here when they ask in person."
+      />
 
       <Input
         placeholder="Search by name or username..."
@@ -72,7 +75,24 @@ export default function UsersPage() {
       />
 
       {loading ? (
-        <p className="text-muted-foreground">Loading users...</p>
+        <div className="space-y-2 rounded-md border p-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-10 w-full" />
+          ))}
+        </div>
+      ) : failed ? (
+        <div className="flex flex-col items-center gap-3 rounded-md border py-12 text-center">
+          <p className="text-sm text-muted-foreground">Something went wrong loading users.</p>
+          <Button variant="outline" size="sm" onClick={load}>
+            <RefreshCw className="h-4 w-4" />
+            Try again
+          </Button>
+        </div>
+      ) : filtered.length === 0 && users.length === 0 ? (
+        <div className="flex flex-col items-center gap-2 rounded-md border py-16 text-center">
+          <UsersIcon className="h-8 w-8 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">No customers have signed up yet.</p>
+        </div>
       ) : (
         <div className="rounded-md border">
           <Table>
@@ -112,7 +132,7 @@ export default function UsersPage() {
               {filtered.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center text-muted-foreground">
-                    No users found.
+                    No users match “{search}”.
                   </TableCell>
                 </TableRow>
               ) : null}
@@ -176,6 +196,7 @@ function ResetPasswordForm({
       return;
     }
 
+    toast.success(`Password reset for ${user.username}`);
     onDone();
   }
 

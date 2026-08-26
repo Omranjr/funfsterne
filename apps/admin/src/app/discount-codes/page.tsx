@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,12 +29,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/page-header";
 import {
   DiscountCodeTypeSchema,
   type Branch,
   type DiscountCode,
 } from "@funfsterne/shared-types";
-import { Pencil, Plus } from "lucide-react";
+import { Pencil, Plus, RefreshCw } from "lucide-react";
 
 const types = DiscountCodeTypeSchema.options;
 
@@ -41,30 +44,35 @@ export default function DiscountCodesPage() {
   const [codes, setCodes] = useState<DiscountCode[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<DiscountCode | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
+    setFailed(false);
     const [codesRes, branchesRes] = await Promise.all([
       apiFetch("/admin/discount-codes"),
       apiFetch("/admin/branches"),
     ]);
     if (codesRes.ok) {
-      const data = (await codesRes.json()) as DiscountCode[];
-      setCodes(data);
+      setCodes((await codesRes.json()) as DiscountCode[]);
+    } else {
+      setFailed(true);
     }
     if (branchesRes.ok) {
-      const data = (await branchesRes.json()) as Branch[];
-      setBranches(data);
+      setBranches((await branchesRes.json()) as Branch[]);
+    }
+    if (!codesRes.ok) {
+      toast.error("Could not load discount codes", { description: "Please try again." });
     }
     setLoading(false);
-  }
+  }, []);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   const filtered = useMemo(() => {
     return codes.filter((c) =>
@@ -80,6 +88,9 @@ export default function DiscountCodesPage() {
     if (res.ok) {
       const updated = (await res.json()) as DiscountCode;
       setCodes((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+      toast.success(updated.isActive ? `${updated.code} is now active` : `${updated.code} is now inactive`);
+    } else {
+      toast.error("Could not update discount code", { description: "Please try again." });
     }
   }
 
@@ -91,46 +102,49 @@ export default function DiscountCodesPage() {
       }
       return [saved, ...prev];
     });
+    toast.success(editing ? "Discount code updated" : "Discount code created");
     setDialogOpen(false);
     setEditing(null);
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Discount Codes</h1>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger
-            render={
-              <Button
-                onClick={() => {
-                  setEditing(null);
-                  setDialogOpen(true);
-                }}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add Code
-              </Button>
-            }
-          />
-          <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editing ? "Edit Discount Code" : "Create Discount Code"}
-              </DialogTitle>
-            </DialogHeader>
-            <DiscountCodeForm
-              code={editing}
-              branches={branches}
-              onSaved={handleSaved}
-              onCancel={() => {
-                setDialogOpen(false);
-                setEditing(null);
-              }}
+      <PageHeader
+        title="Discount Codes"
+        action={
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger
+              render={
+                <Button
+                  onClick={() => {
+                    setEditing(null);
+                    setDialogOpen(true);
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Code
+                </Button>
+              }
             />
-          </DialogContent>
-        </Dialog>
-      </div>
+            <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  {editing ? "Edit Discount Code" : "Create Discount Code"}
+                </DialogTitle>
+              </DialogHeader>
+              <DiscountCodeForm
+                code={editing}
+                branches={branches}
+                onSaved={handleSaved}
+                onCancel={() => {
+                  setDialogOpen(false);
+                  setEditing(null);
+                }}
+              />
+            </DialogContent>
+          </Dialog>
+        }
+      />
 
       <Input
         placeholder="Search codes..."
@@ -140,7 +154,21 @@ export default function DiscountCodesPage() {
       />
 
       {loading ? (
-        <p className="text-muted-foreground">Loading codes...</p>
+        <div className="space-y-2 rounded-md border p-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-10 w-full" />
+          ))}
+        </div>
+      ) : failed ? (
+        <div className="flex flex-col items-center gap-3 rounded-md border py-12 text-center">
+          <p className="text-sm text-muted-foreground">
+            Something went wrong loading discount codes.
+          </p>
+          <Button variant="outline" size="sm" onClick={load}>
+            <RefreshCw className="h-4 w-4" />
+            Try again
+          </Button>
+        </div>
       ) : (
         <div className="rounded-md border">
           <Table>

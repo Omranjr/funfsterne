@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -32,6 +33,17 @@ const navItems = [
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
 ];
 
+function Wordmark() {
+  return (
+    <div className="flex items-center gap-2 px-2">
+      <span className="h-2 w-2 rounded-full bg-sidebar-primary" />
+      <span className="font-heading text-lg font-semibold tracking-tight text-sidebar-foreground">
+        Fünf Sterne
+      </span>
+    </div>
+  );
+}
+
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
 
@@ -45,10 +57,10 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
             href={href}
             onClick={onNavigate}
             className={cn(
-              "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
               active
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             )}
           >
             <Icon className="h-4 w-4" />
@@ -64,17 +76,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { logout } = useAuth();
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen bg-background">
       {/* Desktop sidebar */}
-      <aside className="hidden w-64 flex-col border-r bg-background p-4 lg:flex">
-        <div className="mb-6 flex items-center gap-2 px-2 text-lg font-bold">
-          FünfSterne Admin
+      <aside className="hidden w-64 flex-col border-r border-sidebar-border bg-sidebar p-4 lg:flex">
+        <div className="mb-6 flex items-center justify-between">
+          <Wordmark />
         </div>
         <NavLinks />
-        <div className="mt-auto">
+        <div className="mt-auto space-y-1 border-t border-sidebar-border pt-3">
+          <div className="flex items-center justify-between px-1">
+            <span className="text-xs font-medium text-sidebar-foreground/50">Appearance</span>
+            <ThemeToggle />
+          </div>
           <Button
             variant="ghost"
-            className="w-full justify-start gap-3"
+            className="w-full justify-start gap-3 text-sidebar-foreground/70 hover:text-sidebar-accent-foreground"
             onClick={logout}
           >
             <LogOut className="h-4 w-4" />
@@ -85,28 +101,37 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Mobile header */}
       <div className="flex flex-1 flex-col">
-        <header className="flex items-center justify-between border-b bg-background p-4 lg:hidden">
-          <span className="font-bold">FünfSterne Admin</span>
-          <Sheet>
-            <SheetTrigger render={<Button variant="ghost" size="icon">
-              <Menu className="h-5 w-5" />
-              <span className="sr-only">Open menu</span>
-            </Button>} />
-            <SheetContent side="left" className="w-64 p-4">
-              <div className="mb-6 text-lg font-bold">FünfSterne Admin</div>
-              <NavLinks />
-              <div className="mt-6">
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start gap-3"
-                  onClick={logout}
-                >
-                  <LogOut className="h-4 w-4" />
-                  Sign out
-                </Button>
-              </div>
-            </SheetContent>
-          </Sheet>
+        <header className="flex items-center justify-between border-b bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/75 lg:hidden">
+          <Wordmark />
+          <div className="flex items-center gap-1">
+            <ThemeToggle />
+            <Sheet>
+              <SheetTrigger
+                render={
+                  <Button variant="ghost" size="icon">
+                    <Menu className="h-5 w-5" />
+                    <span className="sr-only">Open menu</span>
+                  </Button>
+                }
+              />
+              <SheetContent side="left" className="w-64 bg-sidebar p-4 text-sidebar-foreground">
+                <div className="mb-6">
+                  <Wordmark />
+                </div>
+                <NavLinks />
+                <div className="mt-6 border-t border-sidebar-border pt-3">
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start gap-3 text-sidebar-foreground/70"
+                    onClick={logout}
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Sign out
+                  </Button>
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
         </header>
 
         <main className="flex-1 p-4 lg:p-8">{children}</main>

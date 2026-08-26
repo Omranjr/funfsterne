@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 import {
   ProductCategoryLabel,
   ProductCategorySchema,
@@ -9,6 +10,8 @@ import {
 } from "@funfsterne/shared-types";
 import { apiFetch } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/page-header";
 import { ImageUploader } from "@/components/image-uploader";
 import {
   Loader2,
@@ -47,6 +50,7 @@ export default function CategoriesPage() {
         setErrors({
           _global: `Failed to load category images (${res.status})`,
         });
+        toast.error("Could not load category images", { description: "Please try again." });
       }
     } finally {
       setLoading(false);
@@ -94,6 +98,9 @@ export default function CategoriesPage() {
             // not JSON
           }
           setErrors((prev) => ({ ...prev, [category]: detail }));
+          toast.error(`Could not save ${ProductCategoryLabel[category]} image`, {
+            description: detail,
+          });
           // Reload the row so the UI reverts to the persisted state (otherwise
           // the ImageUploader keeps showing the URL we just optimistically
           // added, but the DB doesn't have it).
@@ -137,14 +144,10 @@ export default function CategoriesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Category Images</h1>
-        <p className="text-sm text-muted-foreground">
-          The home screen shows one tile per product category. Upload an image
-          here to replace the default coloured placeholder. Leave a category
-          empty to keep the placeholder.
-        </p>
-      </div>
+      <PageHeader
+        title="Category Images"
+        description="The home screen shows one tile per product category. Upload an image here to replace the default coloured placeholder. Leave a category empty to keep the placeholder."
+      />
 
       {errors._global && (
         <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
@@ -154,9 +157,17 @@ export default function CategoriesPage() {
       )}
 
       {loading ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Loading categories…
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {CATEGORIES.map((category) => (
+            <Card key={category}>
+              <CardHeader className="pb-3">
+                <Skeleton className="h-5 w-32" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-32 w-full" />
+              </CardContent>
+            </Card>
+          ))}
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

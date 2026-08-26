@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,14 +30,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/page-header";
 import { type DiscountCode, type Notification } from "@funfsterne/shared-types";
-import { Send } from "lucide-react";
+import { RefreshCw, Send } from "lucide-react";
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [codes, setCodes] = useState<DiscountCode[]>([]);
-  const [recipientCount, setRecipientCount] = useState(0);
+  const [recipientCount, setRecipientCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
 
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -44,34 +49,32 @@ export default function NotificationsPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [sending, setSending] = useState(false);
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
-    const [notificationsRes, codesRes] = await Promise.all([
+    setFailed(false);
+    const [notificationsRes, codesRes, countRes] = await Promise.all([
       apiFetch("/admin/notifications"),
       apiFetch("/admin/discount-codes"),
+      apiFetch("/admin/notifications/recipient-count"),
     ]);
     if (notificationsRes.ok) {
       setNotifications((await notificationsRes.json()) as Notification[]);
+    } else {
+      setFailed(true);
+      toast.error("Could not load notification history", { description: "Please try again." });
     }
     if (codesRes.ok) {
       setCodes((await codesRes.json()) as DiscountCode[]);
     }
-    // API does not expose token count yet; show 0 until backend supports it
-    setRecipientCount(0);
+    if (countRes.ok) {
+      setRecipientCount(((await countRes.json()) as { count: number }).count);
+    }
     setLoading(false);
-  }
+  }, []);
 
   useEffect(() => {
     load();
-  }, []);
-
-  async function refreshRecipientCount() {
-    const res = await apiFetch("/admin/discount-codes");
-    if (res.ok) {
-      // API does not expose token count yet; show 0 until backend supports it
-      setRecipientCount(0);
-    }
-  }
+  }, [load]);
 
   async function handleSend() {
     setSending(true);
@@ -86,74 +89,78 @@ export default function NotificationsPage() {
     });
 
     if (res.ok) {
-      const data = (await res.json()) as { notification: Notification };
+      const data = (await res.json()) as { notification: Notification; sent: number };
       setNotifications((prev) => [data.notification, ...prev]);
       setTitle("");
       setBody("");
-      setDiscountCodeId("");
+      setDiscountCodeId(null);
+      setConfirmOpen(false);
+      toast.success(`Notification sent to ${data.sent} device${data.sent === 1 ? "" : "s"}`);
+    } else {
+      toast.error("Could not send notification", {
+        description: "The dialog is staying open so you can try again.",
+      });
     }
 
-    setConfirmOpen(false);
     setSending(false);
   }
 
   return (
     <div className="space-y-8">
-      <div className="space-y-4">
-        <h1 className="text-2xl font-bold">Send Notification</h1>
+      <PageHeader
+        title="Send Notification"
+        description="Broadcast a push notification to every device with the app installed."
+      />
 
-        <div className="space-y-2">
-          <Label htmlFor="title">Title</Label>
-          <Input
-            id="title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Neue Aktion"
-          />
-        </div>
+      <Card>
+        <CardContent className="space-y-4 pt-6">
+          <div className="space-y-2">
+            <Label htmlFor="title">Title</Label>
+            <Input
+              id="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Neue Aktion"
+            />
+          </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="body">Body</Label>
-          <Textarea
-            id="body"
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            placeholder="20% Rabatt auf alle Haarprodukte!"
-            rows={4}
-          />
-        </div>
+          <div className="space-y-2">
+            <Label htmlFor="body">Body</Label>
+            <Textarea
+              id="body"
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              placeholder="20% Rabatt auf alle Haarprodukte!"
+              rows={4}
+            />
+          </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="discountCode">Attach Discount Code (optional)</Label>
-          <Select
-            value={discountCodeId || "none"}
-            onValueChange={(v) => setDiscountCodeId(v === "none" ? null : v)}
-          >
-            <SelectTrigger id="discountCode">
-              <SelectValue placeholder="Select a discount code" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">None</SelectItem>
-              {codes.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.code} ({c.type === "PERCENTAGE" ? `${c.value}%` : `€${c.value}`})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+          <div className="space-y-2">
+            <Label htmlFor="discountCode">Attach Discount Code (optional)</Label>
+            <Select
+              value={discountCodeId || "none"}
+              onValueChange={(v) => setDiscountCodeId(v === "none" ? null : v)}
+            >
+              <SelectTrigger id="discountCode">
+                <SelectValue placeholder="Select a discount code" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {codes.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.code} ({c.type === "PERCENTAGE" ? `${c.value}%` : `€${c.value}`})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        <Button
-          onClick={() => {
-            refreshRecipientCount();
-            setConfirmOpen(true);
-          }}
-          disabled={!title || !body || sending}
-        >
-          <Send className="mr-2 h-4 w-4" />
-          Send Now
-        </Button>
-      </div>
+          <Button onClick={() => setConfirmOpen(true)} disabled={!title || !body || sending}>
+            <Send className="h-4 w-4" />
+            Send Now
+          </Button>
+        </CardContent>
+      </Card>
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent>
@@ -161,7 +168,7 @@ export default function NotificationsPage() {
             <DialogTitle>Confirm Send</DialogTitle>
             <DialogDescription>
               You are about to send a push notification to all users.
-              {recipientCount > 0 && (
+              {recipientCount !== null && (
                 <> Estimated recipients: <strong>{recipientCount}</strong>.</>
               )}
             </DialogDescription>
@@ -177,7 +184,7 @@ export default function NotificationsPage() {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmOpen(false)}>
+            <Button variant="outline" onClick={() => setConfirmOpen(false)} disabled={sending}>
               Cancel
             </Button>
             <Button onClick={handleSend} disabled={sending}>
@@ -188,9 +195,27 @@ export default function NotificationsPage() {
       </Dialog>
 
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold">History</h2>
+        <h2 className="font-heading text-xl font-semibold">History</h2>
         {loading ? (
-          <p className="text-muted-foreground">Loading history...</p>
+          <div className="space-y-2 rounded-md border p-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-10 w-full" />
+            ))}
+          </div>
+        ) : failed ? (
+          <div className="flex flex-col items-center gap-3 rounded-md border py-12 text-center">
+            <p className="text-sm text-muted-foreground">
+              Something went wrong loading notification history.
+            </p>
+            <Button variant="outline" size="sm" onClick={load}>
+              <RefreshCw className="h-4 w-4" />
+              Try again
+            </Button>
+          </div>
+        ) : notifications.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 rounded-md border py-16 text-center">
+            <p className="text-sm text-muted-foreground">No notifications sent yet.</p>
+          </div>
         ) : (
           <div className="rounded-md border">
             <Table>
@@ -216,7 +241,7 @@ export default function NotificationsPage() {
                         ? codes.find((c) => c.id === n.discountCodeId)?.code ?? "—"
                         : "—"}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right tabular-nums">
                       {n.sentToCount}
                     </TableCell>
                   </TableRow>

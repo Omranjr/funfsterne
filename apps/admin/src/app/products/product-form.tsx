@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,6 +63,8 @@ export function ProductForm({
       if (res.ok) {
         const data = (await res.json()) as Branch[];
         setBranches(data);
+      } else {
+        toast.error("Could not load branches for availability settings");
       }
     }
     loadBranches();
@@ -119,16 +122,26 @@ export function ProductForm({
 
     const saved = (await res.json()) as Product;
 
+    const availabilityFailures: string[] = [];
     for (const branchId of Object.keys(availability)) {
       const a = availability[branchId];
       if (!a) continue;
-      await apiFetch(`/admin/products/${saved.id}/availability`, {
+      const availRes = await apiFetch(`/admin/products/${saved.id}/availability`, {
         method: "PUT",
         body: JSON.stringify({
           branchId,
           inStock: a.inStock,
           priceOverride: a.priceOverride ? Number(a.priceOverride) : undefined,
         }),
+      });
+      if (!availRes.ok) {
+        const branchName = branches.find((b) => b.id === branchId)?.name ?? branchId;
+        availabilityFailures.push(branchName);
+      }
+    }
+    if (availabilityFailures.length > 0) {
+      toast.error("Some branch availability didn't save", {
+        description: `Please retry for: ${availabilityFailures.join(", ")}`,
       });
     }
 

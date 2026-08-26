@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -10,11 +10,15 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/page-header";
 import { type ConsumerUser } from "@funfsterne/shared-types";
+import { RefreshCw } from "lucide-react";
 
 type Granularity = "day" | "month" | "year";
 
@@ -49,6 +53,7 @@ export default function AnalyticsPage() {
   const [granularity, setGranularity] = useState<Granularity>("day");
   const [stats, setStats] = useState<VisitStatsResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
 
   const [users, setUsers] = useState<ConsumerUser[]>([]);
   const [search, setSearch] = useState("");
@@ -61,22 +66,36 @@ export default function AnalyticsPage() {
     });
   }, []);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     let cancelled = false;
     setLoading(true);
+    setFailed(false);
     const params = new URLSearchParams({ granularity });
     if (selectedUser) params.set("userId", selectedUser.id);
 
-    apiFetch(`/admin/loyalty/stats?${params.toString()}`).then(async (res) => {
-      if (cancelled) return;
-      if (res.ok) setStats((await res.json()) as VisitStatsResponse);
-      setLoading(false);
-    });
+    apiFetch(`/admin/loyalty/stats?${params.toString()}`)
+      .then(async (res) => {
+        if (cancelled) return;
+        if (!res.ok) throw new Error("Failed to load visit stats");
+        setStats((await res.json()) as VisitStatsResponse);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setFailed(true);
+        toast.error("Could not load visit statistics", {
+          description: "Check your connection and try again.",
+        });
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
 
     return () => {
       cancelled = true;
     };
   }, [granularity, selectedUser]);
+
+  useEffect(load, [load]);
 
   const suggestions = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -100,12 +119,10 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Analytics</h1>
-        <p className="text-sm text-muted-foreground">
-          Customer visits over time, tracked from loyalty scans at checkout.
-        </p>
-      </div>
+      <PageHeader
+        title="Analytics"
+        description="Customer visits over time, tracked from loyalty scans at checkout."
+      />
 
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex gap-1 rounded-md border p-1">
@@ -181,7 +198,13 @@ export default function AnalyticsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{stats ? stats.totalVisits : "—"}</p>
+            {loading ? (
+              <Skeleton className="h-8 w-16" />
+            ) : (
+              <p className="text-3xl font-bold tabular-nums">
+                {stats ? stats.totalVisits : "—"}
+              </p>
+            )}
           </CardContent>
         </Card>
         {!selectedUser ? (
@@ -192,7 +215,13 @@ export default function AnalyticsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold">{stats ? stats.uniqueCustomers : "—"}</p>
+              {loading ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                <p className="text-3xl font-bold tabular-nums">
+                  {stats ? stats.uniqueCustomers : "—"}
+                </p>
+              )}
             </CardContent>
           </Card>
         ) : null}
@@ -208,9 +237,19 @@ export default function AnalyticsPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <p className="py-12 text-center text-muted-foreground">Loading...</p>
+            <Skeleton className="h-80 w-full" />
+          ) : failed ? (
+            <div className="flex flex-col items-center gap-3 py-16 text-center">
+              <p className="text-sm text-muted-foreground">
+                Something went wrong loading this chart.
+              </p>
+              <Button variant="outline" size="sm" onClick={load}>
+                <RefreshCw className="h-4 w-4" />
+                Try again
+              </Button>
+            </div>
           ) : !hasData ? (
-            <p className="py-12 text-center text-muted-foreground">
+            <p className="py-16 text-center text-muted-foreground">
               No visits in this period.
             </p>
           ) : (

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,33 +28,39 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/page-header";
 import { ProductCategorySchema, type Product } from "@funfsterne/shared-types";
 import { ProductForm } from "./product-form";
-import { Pencil, Plus } from "lucide-react";
+import { Pencil, Plus, RefreshCw } from "lucide-react";
 
 const categories = ProductCategorySchema.options;
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<"all" | (typeof categories)[number]>("all");
   const [editing, setEditing] = useState<Product | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
+    setFailed(false);
     const res = await apiFetch("/admin/products");
     if (res.ok) {
-      const data = (await res.json()) as Product[];
-      setProducts(data);
+      setProducts((await res.json()) as Product[]);
+    } else {
+      setFailed(true);
+      toast.error("Could not load products", { description: "Please try again." });
     }
     setLoading(false);
-  }
+  }, []);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   const filtered = useMemo(() => {
     return products.filter((p) => {
@@ -77,6 +84,9 @@ export default function ProductsPage() {
       setProducts((prev) =>
         prev.map((p) => (p.id === updated.id ? updated : p)),
       );
+      toast.success(updated.isActive ? `${updated.name} is now active` : `${updated.name} is now inactive`);
+    } else {
+      toast.error("Could not update product", { description: "Please try again." });
     }
   }
 
@@ -88,45 +98,48 @@ export default function ProductsPage() {
       }
       return [saved, ...prev];
     });
+    toast.success(editing ? "Product updated" : "Product created");
     setDialogOpen(false);
     setEditing(null);
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Products</h1>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger
-            render={
-              <Button
-                onClick={() => {
-                  setEditing(null);
-                  setDialogOpen(true);
-                }}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add Product
-              </Button>
-            }
-          />
-          <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editing ? "Edit Product" : "Create Product"}
-              </DialogTitle>
-            </DialogHeader>
-            <ProductForm
-              product={editing}
-              onSaved={handleSaved}
-              onCancel={() => {
-                setDialogOpen(false);
-                setEditing(null);
-              }}
+      <PageHeader
+        title="Products"
+        action={
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger
+              render={
+                <Button
+                  onClick={() => {
+                    setEditing(null);
+                    setDialogOpen(true);
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Product
+                </Button>
+              }
             />
-          </DialogContent>
-        </Dialog>
-      </div>
+            <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  {editing ? "Edit Product" : "Create Product"}
+                </DialogTitle>
+              </DialogHeader>
+              <ProductForm
+                product={editing}
+                onSaved={handleSaved}
+                onCancel={() => {
+                  setDialogOpen(false);
+                  setEditing(null);
+                }}
+              />
+            </DialogContent>
+          </Dialog>
+        }
+      />
 
       <div className="flex flex-col gap-4 sm:flex-row">
         <Input
@@ -154,7 +167,19 @@ export default function ProductsPage() {
       </div>
 
       {loading ? (
-        <p className="text-muted-foreground">Loading products...</p>
+        <div className="space-y-2 rounded-md border p-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-10 w-full" />
+          ))}
+        </div>
+      ) : failed ? (
+        <div className="flex flex-col items-center gap-3 rounded-md border py-12 text-center">
+          <p className="text-sm text-muted-foreground">Something went wrong loading products.</p>
+          <Button variant="outline" size="sm" onClick={load}>
+            <RefreshCw className="h-4 w-4" />
+            Try again
+          </Button>
+        </div>
       ) : (
         <div className="rounded-md border">
           <Table>
