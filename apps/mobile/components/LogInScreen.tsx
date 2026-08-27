@@ -9,6 +9,7 @@ import {
   Pressable,
 } from "react-native";
 import { Image } from "expo-image";
+import { useTranslation } from "react-i18next";
 import { Input } from "./Input";
 import { Button } from "./Button";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -22,6 +23,7 @@ export interface LogInScreenProps {
 export function LogInScreen({ onSwitchToSignUp, testID }: LogInScreenProps) {
   const { theme } = useTheme();
   const { login } = useAuth();
+  const { t } = useTranslation();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -32,7 +34,7 @@ export function LogInScreen({ onSwitchToSignUp, testID }: LogInScreenProps) {
     setFormError(null);
 
     if (!username.trim() || !password) {
-      setFormError("Enter your username and password.");
+      setFormError(t("auth.logIn.errorMissingFields"));
       return;
     }
 
@@ -43,7 +45,7 @@ export function LogInScreen({ onSwitchToSignUp, testID }: LogInScreenProps) {
     if (!result.ok) {
       setFormError(result.error);
     }
-  }, [username, password, login]);
+  }, [username, password, login, t]);
 
   return (
     <KeyboardAvoidingView
@@ -64,15 +66,15 @@ export function LogInScreen({ onSwitchToSignUp, testID }: LogInScreenProps) {
             contentFit="contain"
             cachePolicy="memory"
           />
-          <Text style={[styles.title, { color: theme.gold }]}>Welcome back</Text>
+          <Text style={[styles.title, { color: theme.gold }]}>{t("auth.logIn.title")}</Text>
           <Text style={[styles.subtitle, { color: theme.textMuted }]}>
-            Log in with your username and password.
+            {t("auth.logIn.subtitle")}
           </Text>
         </View>
 
         <View style={styles.form}>
           <Input
-            label="Username"
+            label={t("auth.logIn.username")}
             value={username}
             onChangeText={setUsername}
             autoCapitalize="none"
@@ -83,7 +85,7 @@ export function LogInScreen({ onSwitchToSignUp, testID }: LogInScreenProps) {
           />
 
           <Input
-            label="Password"
+            label={t("auth.logIn.password")}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -98,7 +100,7 @@ export function LogInScreen({ onSwitchToSignUp, testID }: LogInScreenProps) {
           ) : null}
 
           <Button
-            title={submitting ? "Logging in…" : "Log in"}
+            title={submitting ? t("auth.logIn.loggingIn") : t("auth.logIn.logIn")}
             onPress={handleSubmit}
             disabled={submitting}
             style={styles.submitButton}
@@ -110,16 +112,15 @@ export function LogInScreen({ onSwitchToSignUp, testID }: LogInScreenProps) {
             accessibilityRole="button"
           >
             <Text style={[styles.switchText, { color: theme.textMuted }]}>
-              New here?{" "}
+              {t("auth.logIn.newHere")}{" "}
               <Text style={{ color: theme.gold, fontWeight: "700" }}>
-                Create an account
+                {t("auth.logIn.createAccount")}
               </Text>
             </Text>
           </Pressable>
 
           <Text style={[styles.recoveryHint, { color: theme.textMuted }]}>
-            Forgot your password? Ask a staff member at your next visit —
-            we can reset it for you in-store.
+            {t("auth.logIn.recoveryHint")}
           </Text>
         </View>
       </ScrollView>

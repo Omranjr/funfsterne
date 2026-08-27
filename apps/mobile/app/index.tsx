@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/contexts/ThemeContext";
 import {
   ProductCard,
@@ -26,21 +27,18 @@ import { type ProductCategory, type Branch } from "@funfsterne/shared-types";
 
 const PRIVACY_URL = "https://funfsterne-admin-eight.vercel.app/privacy";
 
-const CATEGORIES: {
-  key: ProductCategory;
-  label: string;
-  imageUrl?: string;
-}[] = [
-  { key: "HAIR", label: "Hair" },
-  { key: "SKIN_CARE", label: "Skin Care" },
-  { key: "BEARD", label: "Beard" },
-  { key: "TOOLS", label: "Tools" },
-  { key: "OTHER", label: "Other" },
+const CATEGORIES: { key: ProductCategory; imageUrl?: string }[] = [
+  { key: "HAIR" },
+  { key: "SKIN_CARE" },
+  { key: "BEARD" },
+  { key: "TOOLS" },
+  { key: "OTHER" },
 ];
 
 export default function HomeScreen() {
   const router = useRouter();
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -100,7 +98,7 @@ export default function HomeScreen() {
     >
       <CachedCategoryImage
         imageUrl={categoryImages?.[item.key]}
-        label={item.label}
+        label={t(`categories.${item.key}`)}
       />
     </TouchableOpacity>
   );
@@ -136,7 +134,7 @@ export default function HomeScreen() {
 
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { color: theme.text }]}>
-          Shop by Category
+          {t("home.shopByCategory")}
         </Text>
         <FlatList
           data={CATEGORIES}
@@ -152,7 +150,7 @@ export default function HomeScreen() {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>
-            Featured Products
+            {t("home.featuredProducts")}
           </Text>
           <TouchableOpacity
             activeOpacity={0.7}
@@ -163,7 +161,7 @@ export default function HomeScreen() {
               })
             }
           >
-            <Text style={[styles.seeAll, { color: theme.gold }]}>See all ›</Text>
+            <Text style={[styles.seeAll, { color: theme.gold }]}>{t("home.seeAll")}</Text>
           </TouchableOpacity>
         </View>
 
@@ -175,8 +173,8 @@ export default function HomeScreen() {
           // treat this as a hard error state when there's nothing else to
           // show (e.g. persisted cache is empty on a first-ever launch).
           <EmptyState
-            title="Could not load products"
-            message="Check your connection and pull down to try again."
+            title={t("home.errorTitle")}
+            message={t("home.errorMessage")}
           />
         ) : featured.length ? (
           <FlatList
@@ -191,7 +189,7 @@ export default function HomeScreen() {
                 name={item.name}
                 imageUrl={item.images[0] ?? null}
                 price={item.basePrice}
-                category={item.category}
+                category={t(`categories.${item.category}`)}
                 onPress={() => router.push(`/products/${item.id}`)}
                 style={{
                   width: (width - 48) / 2,
@@ -204,8 +202,8 @@ export default function HomeScreen() {
           />
         ) : (
           <EmptyState
-            title="Products coming soon"
-            message="Check back soon for our premium selection."
+            title={t("home.emptyTitle")}
+            message={t("home.emptyMessage")}
           />
         )}
       </View>
@@ -213,11 +211,11 @@ export default function HomeScreen() {
       <TouchableOpacity
         onPress={() => Linking.openURL(PRIVACY_URL).catch(() => {})}
         accessibilityRole="button"
-        accessibilityLabel="Privacy Policy"
+        accessibilityLabel={t("home.privacyPolicy")}
         style={styles.privacyLink}
       >
         <Text style={[styles.privacyLinkText, { color: theme.textMuted }]}>
-          Privacy Policy
+          {t("home.privacyPolicy")}
         </Text>
       </TouchableOpacity>
     </ScrollView>

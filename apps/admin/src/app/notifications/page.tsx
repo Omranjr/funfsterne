@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +38,7 @@ import { type DiscountCode, type Notification } from "@funfsterne/shared-types";
 import { RefreshCw, Send } from "lucide-react";
 
 export default function NotificationsPage() {
+  const { t } = useTranslation();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [codes, setCodes] = useState<DiscountCode[]>([]);
   const [recipientCount, setRecipientCount] = useState<number | null>(null);
@@ -61,7 +63,7 @@ export default function NotificationsPage() {
       setNotifications((await notificationsRes.json()) as Notification[]);
     } else {
       setFailed(true);
-      toast.error("Could not load notification history", { description: "Please try again." });
+      toast.error(t("notifications.loadError"), { description: t("common.tryAgain") });
     }
     if (codesRes.ok) {
       setCodes((await codesRes.json()) as DiscountCode[]);
@@ -70,7 +72,7 @@ export default function NotificationsPage() {
       setRecipientCount(((await countRes.json()) as { count: number }).count);
     }
     setLoading(false);
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     load();
@@ -95,10 +97,14 @@ export default function NotificationsPage() {
       setBody("");
       setDiscountCodeId(null);
       setConfirmOpen(false);
-      toast.success(`Notification sent to ${data.sent} device${data.sent === 1 ? "" : "s"}`);
+      toast.success(
+        data.sent === 1
+          ? t("notifications.notificationSent", { count: data.sent })
+          : t("notifications.notificationSentPlural", { count: data.sent }),
+      );
     } else {
-      toast.error("Could not send notification", {
-        description: "The dialog is staying open so you can try again.",
+      toast.error(t("notifications.couldNotSend"), {
+        description: t("notifications.dialogStaysOpen"),
       });
     }
 
@@ -107,15 +113,12 @@ export default function NotificationsPage() {
 
   return (
     <div className="space-y-8">
-      <PageHeader
-        title="Send Notification"
-        description="Broadcast a push notification to every device with the app installed."
-      />
+      <PageHeader title={t("notifications.title")} description={t("notifications.description")} />
 
       <Card>
         <CardContent className="space-y-4 pt-6">
           <div className="space-y-2">
-            <Label htmlFor="title">Title</Label>
+            <Label htmlFor="title">{t("notifications.notificationTitle")}</Label>
             <Input
               id="title"
               value={title}
@@ -125,7 +128,7 @@ export default function NotificationsPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="body">Body</Label>
+            <Label htmlFor="body">{t("notifications.body")}</Label>
             <Textarea
               id="body"
               value={body}
@@ -136,16 +139,16 @@ export default function NotificationsPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="discountCode">Attach Discount Code (optional)</Label>
+            <Label htmlFor="discountCode">{t("notifications.attachDiscountCode")}</Label>
             <Select
               value={discountCodeId || "none"}
               onValueChange={(v) => setDiscountCodeId(v === "none" ? null : v)}
             >
               <SelectTrigger id="discountCode">
-                <SelectValue placeholder="Select a discount code" />
+                <SelectValue placeholder={t("notifications.selectDiscountCode")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">None</SelectItem>
+                <SelectItem value="none">{t("notifications.none")}</SelectItem>
                 {codes.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.code} ({c.type === "PERCENTAGE" ? `${c.value}%` : `€${c.value}`})
@@ -157,7 +160,7 @@ export default function NotificationsPage() {
 
           <Button onClick={() => setConfirmOpen(true)} disabled={!title || !body || sending}>
             <Send className="h-4 w-4" />
-            Send Now
+            {t("notifications.sendNow")}
           </Button>
         </CardContent>
       </Card>
@@ -165,11 +168,11 @@ export default function NotificationsPage() {
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirm Send</DialogTitle>
+            <DialogTitle>{t("notifications.confirmSend")}</DialogTitle>
             <DialogDescription>
-              You are about to send a push notification to all users.
+              {t("notifications.confirmSendDescription")}
               {recipientCount !== null && (
-                <> Estimated recipients: <strong>{recipientCount}</strong>.</>
+                <> {t("notifications.estimatedRecipients", { count: recipientCount })}</>
               )}
             </DialogDescription>
           </DialogHeader>
@@ -178,24 +181,24 @@ export default function NotificationsPage() {
             <p className="text-muted-foreground">{body}</p>
             {discountCodeId && (
               <p className="mt-2 text-xs text-muted-foreground">
-                Discount code attached:{" "}
+                {t("notifications.discountCodeAttached")}{" "}
                 {codes.find((c) => c.id === discountCodeId)?.code ?? "—"}
               </p>
             )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmOpen(false)} disabled={sending}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button onClick={handleSend} disabled={sending}>
-              {sending ? "Sending..." : "Confirm Send"}
+              {sending ? t("notifications.sending") : t("notifications.confirmSend")}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <div className="space-y-4">
-        <h2 className="font-heading text-xl font-semibold">History</h2>
+        <h2 className="font-heading text-xl font-semibold">{t("notifications.history")}</h2>
         {loading ? (
           <div className="space-y-2 rounded-md border p-4">
             {Array.from({ length: 4 }).map((_, i) => (
@@ -204,28 +207,26 @@ export default function NotificationsPage() {
           </div>
         ) : failed ? (
           <div className="flex flex-col items-center gap-3 rounded-md border py-12 text-center">
-            <p className="text-sm text-muted-foreground">
-              Something went wrong loading notification history.
-            </p>
+            <p className="text-sm text-muted-foreground">{t("notifications.loadError")}</p>
             <Button variant="outline" size="sm" onClick={load}>
               <RefreshCw className="h-4 w-4" />
-              Try again
+              {t("common.tryAgain")}
             </Button>
           </div>
         ) : notifications.length === 0 ? (
           <div className="flex flex-col items-center gap-2 rounded-md border py-16 text-center">
-            <p className="text-sm text-muted-foreground">No notifications sent yet.</p>
+            <p className="text-sm text-muted-foreground">{t("notifications.noNotifications")}</p>
           </div>
         ) : (
           <div className="rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Sent At</TableHead>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Body</TableHead>
-                  <TableHead>Discount Code</TableHead>
-                  <TableHead className="text-right">Sent To</TableHead>
+                  <TableHead>{t("notifications.sentAt")}</TableHead>
+                  <TableHead>{t("notifications.notificationTitle")}</TableHead>
+                  <TableHead>{t("notifications.body")}</TableHead>
+                  <TableHead>{t("notifications.discountCode")}</TableHead>
+                  <TableHead className="text-right">{t("notifications.sentTo")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

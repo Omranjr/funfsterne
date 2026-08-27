@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +27,7 @@ import { type ConsumerUser, PasswordSchema } from "@funfsterne/shared-types";
 import { KeyRound, RefreshCw, Users as UsersIcon } from "lucide-react";
 
 export default function UsersPage() {
+  const { t } = useTranslation();
   const [users, setUsers] = useState<ConsumerUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -41,10 +43,10 @@ export default function UsersPage() {
       setUsers((await res.json()) as ConsumerUser[]);
     } else {
       setFailed(true);
-      toast.error("Could not load users", { description: "Please try again." });
+      toast.error(t("users.loadError"), { description: t("common.tryAgain") });
     }
     setLoading(false);
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     load();
@@ -62,13 +64,10 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Users"
-        description="Registered app accounts. There is no self-service password recovery in the app (no email or phone is collected) — reset a customer’s password here when they ask in person."
-      />
+      <PageHeader title={t("users.title")} description={t("users.description")} />
 
       <Input
-        placeholder="Search by name or username..."
+        placeholder={t("users.searchPlaceholder")}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="sm:w-80"
@@ -82,26 +81,26 @@ export default function UsersPage() {
         </div>
       ) : failed ? (
         <div className="flex flex-col items-center gap-3 rounded-md border py-12 text-center">
-          <p className="text-sm text-muted-foreground">Something went wrong loading users.</p>
+          <p className="text-sm text-muted-foreground">{t("common.somethingWrong")}</p>
           <Button variant="outline" size="sm" onClick={load}>
             <RefreshCw className="h-4 w-4" />
-            Try again
+            {t("common.tryAgain")}
           </Button>
         </div>
       ) : filtered.length === 0 && users.length === 0 ? (
         <div className="flex flex-col items-center gap-2 rounded-md border py-16 text-center">
           <UsersIcon className="h-8 w-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">No customers have signed up yet.</p>
+          <p className="text-sm text-muted-foreground">{t("users.noCustomers")}</p>
         </div>
       ) : (
         <div className="rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Username</TableHead>
-                <TableHead>Joined</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t("common.name")}</TableHead>
+                <TableHead>{t("users.username")}</TableHead>
+                <TableHead>{t("users.joined")}</TableHead>
+                <TableHead className="text-right">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -118,7 +117,7 @@ export default function UsersPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      title="Reset password"
+                      title={t("users.resetPassword")}
                       onClick={() => {
                         setResetTarget(user);
                         setDialogOpen(true);
@@ -132,7 +131,7 @@ export default function UsersPage() {
               {filtered.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center text-muted-foreground">
-                    No users match “{search}”.
+                    {t("users.noMatch", { query: search })}
                   </TableCell>
                 </TableRow>
               ) : null}
@@ -145,7 +144,9 @@ export default function UsersPage() {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>
-              Reset password{resetTarget ? ` — ${resetTarget.username}` : ""}
+              {resetTarget
+                ? t("users.resetPasswordTitle", { username: resetTarget.username })
+                : t("users.resetPassword")}
             </DialogTitle>
           </DialogHeader>
           {resetTarget ? (
@@ -170,6 +171,7 @@ function ResetPasswordForm({
   user: ConsumerUser;
   onDone: () => void;
 }) {
+  const { t } = useTranslation();
   const [newPassword, setNewPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -180,7 +182,7 @@ function ResetPasswordForm({
 
     const parse = PasswordSchema.safeParse(newPassword);
     if (!parse.success) {
-      setError(parse.error.issues[0]?.message ?? "Invalid password.");
+      setError(parse.error.issues[0]?.message ?? t("users.invalidPassword"));
       return;
     }
 
@@ -192,25 +194,24 @@ function ResetPasswordForm({
     setLoading(false);
 
     if (!res.ok) {
-      setError("Failed to reset password.");
+      setError(t("users.failedToReset"));
       return;
     }
 
-    toast.success(`Password reset for ${user.username}`);
+    toast.success(t("users.passwordResetFor", { username: user.username }));
     onDone();
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Tell {user.firstName} their new password once you’ve set it — this
-        can’t be undone or looked up later.
+        {t("users.resetPasswordHint", { firstName: user.firstName })}
       </p>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       <div className="space-y-2">
-        <Label htmlFor="newPassword">New password</Label>
+        <Label htmlFor="newPassword">{t("users.newPassword")}</Label>
         <Input
           id="newPassword"
           type="text"
@@ -223,10 +224,10 @@ function ResetPasswordForm({
 
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onDone}>
-          Cancel
+          {t("common.cancel")}
         </Button>
         <Button type="submit" disabled={loading}>
-          {loading ? "Resetting..." : "Reset password"}
+          {loading ? t("users.resetting") : t("users.resetPassword")}
         </Button>
       </div>
     </form>

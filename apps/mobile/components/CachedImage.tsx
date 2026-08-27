@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { Image, type ImageSource } from "expo-image";
 import { ImageIcon } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/contexts/ThemeContext";
 
 export interface CachedImageProps {
@@ -30,12 +31,14 @@ export function CachedImage({
   contentFit = "cover",
   transitionDuration = 300,
   placeholder,
-  fallbackText = "No Image",
+  fallbackText,
   cachePolicy = "memory-disk",
   testID,
 }: CachedImageProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const [hasError, setHasError] = useState(false);
+  const resolvedFallbackText = fallbackText ?? t("common.noImage");
 
   const resolvedSource: ImageSource | null =
     typeof source === "string"
@@ -60,9 +63,9 @@ export function CachedImage({
         {placeholder ?? (
           <View style={styles.fallback}>
             <ImageIcon size={28} color={theme.textMuted} />
-            {fallbackText ? (
+            {resolvedFallbackText ? (
               <Text style={[styles.placeholderText, { color: theme.textMuted }]}>
-                {fallbackText}
+                {resolvedFallbackText}
               </Text>
             ) : null}
           </View>

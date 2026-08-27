@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +29,7 @@ import { type Branch, CreateBranchSchema } from "@funfsterne/shared-types";
 import { Pencil, Plus, RefreshCw } from "lucide-react";
 
 export default function BranchesPage() {
+  const { t } = useTranslation();
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -43,10 +45,10 @@ export default function BranchesPage() {
       setBranches((await res.json()) as Branch[]);
     } else {
       setFailed(true);
-      toast.error("Could not load branches", { description: "Please try again." });
+      toast.error(t("branches.loadError"), { description: t("common.tryAgain") });
     }
     setLoading(false);
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     load();
@@ -69,9 +71,13 @@ export default function BranchesPage() {
     if (res.ok) {
       const updated = (await res.json()) as Branch;
       setBranches((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
-      toast.success(updated.isActive ? `${updated.name} is now active` : `${updated.name} is now inactive`);
+      toast.success(
+        updated.isActive
+          ? t("branches.nowActive", { name: updated.name })
+          : t("branches.nowInactive", { name: updated.name }),
+      );
     } else {
-      toast.error("Could not update branch", { description: "Please try again." });
+      toast.error(t("branches.couldNotUpdate"), { description: t("common.tryAgain") });
     }
   }
 
@@ -83,7 +89,7 @@ export default function BranchesPage() {
       }
       return [saved, ...prev];
     });
-    toast.success(editing ? "Branch updated" : "Branch created");
+    toast.success(editing ? t("branches.branchUpdated") : t("branches.branchCreated"));
     setDialogOpen(false);
     setEditing(null);
   }
@@ -91,7 +97,7 @@ export default function BranchesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Branches"
+        title={t("branches.title")}
         action={
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger
@@ -103,14 +109,14 @@ export default function BranchesPage() {
                   }}
                 >
                   <Plus className="h-4 w-4" />
-                  Add Branch
+                  {t("branches.addBranch")}
                 </Button>
               }
             />
             <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
-                  {editing ? "Edit Branch" : "Create Branch"}
+                  {editing ? t("branches.editBranch") : t("branches.createBranch")}
                 </DialogTitle>
               </DialogHeader>
               <BranchForm
@@ -127,7 +133,7 @@ export default function BranchesPage() {
       />
 
       <Input
-        placeholder="Search branches..."
+        placeholder={t("branches.searchPlaceholder")}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="sm:w-80"
@@ -141,10 +147,10 @@ export default function BranchesPage() {
         </div>
       ) : failed ? (
         <div className="flex flex-col items-center gap-3 rounded-md border py-12 text-center">
-          <p className="text-sm text-muted-foreground">Something went wrong loading branches.</p>
+          <p className="text-sm text-muted-foreground">{t("branches.loadError")}</p>
           <Button variant="outline" size="sm" onClick={load}>
             <RefreshCw className="h-4 w-4" />
-            Try again
+            {t("common.tryAgain")}
           </Button>
         </div>
       ) : (
@@ -152,11 +158,11 @@ export default function BranchesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>City</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Active</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t("common.name")}</TableHead>
+                <TableHead>{t("branches.city")}</TableHead>
+                <TableHead>{t("branches.phone")}</TableHead>
+                <TableHead>{t("common.active")}</TableHead>
+                <TableHead className="text-right">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -202,6 +208,7 @@ function BranchForm({
   onSaved: (branch: Branch) => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   const [name, setName] = useState(branch?.name ?? "");
   const [address, setAddress] = useState(branch?.address ?? "");
   const [city, setCity] = useState(branch?.city ?? "");
@@ -226,7 +233,7 @@ function BranchForm({
     });
 
     if (!parse.success) {
-      setError("Please check the form values.");
+      setError(t("common.checkFormValues"));
       setLoading(false);
       return;
     }
@@ -242,7 +249,7 @@ function BranchForm({
         });
 
     if (!res.ok) {
-      setError("Failed to save branch.");
+      setError(t("branches.failedToSave"));
       setLoading(false);
       return;
     }
@@ -257,7 +264,7 @@ function BranchForm({
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       <div className="space-y-2">
-        <Label htmlFor="name">Name</Label>
+        <Label htmlFor="name">{t("common.name")}</Label>
         <Input
           id="name"
           value={name}
@@ -267,7 +274,7 @@ function BranchForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="address">Address</Label>
+        <Label htmlFor="address">{t("branches.address")}</Label>
         <Input
           id="address"
           value={address}
@@ -278,7 +285,7 @@ function BranchForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="city">City</Label>
+          <Label htmlFor="city">{t("branches.city")}</Label>
           <Input
             id="city"
             value={city}
@@ -287,7 +294,7 @@ function BranchForm({
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="postalCode">Postal Code</Label>
+          <Label htmlFor="postalCode">{t("branches.postalCode")}</Label>
           <Input
             id="postalCode"
             value={postalCode}
@@ -298,7 +305,7 @@ function BranchForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="phone">Phone</Label>
+        <Label htmlFor="phone">{t("branches.phone")}</Label>
         <Input
           id="phone"
           value={phone}
@@ -312,15 +319,15 @@ function BranchForm({
           checked={isActive}
           onCheckedChange={setIsActive}
         />
-        <Label htmlFor="isActive">Active</Label>
+        <Label htmlFor="isActive">{t("common.active")}</Label>
       </div>
 
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
+          {t("common.cancel")}
         </Button>
         <Button type="submit" disabled={loading}>
-          {loading ? "Saving..." : branch ? "Save Changes" : "Create Branch"}
+          {loading ? t("common.saving") : branch ? t("branches.saveChanges") : t("branches.createBranch")}
         </Button>
       </div>
     </form>

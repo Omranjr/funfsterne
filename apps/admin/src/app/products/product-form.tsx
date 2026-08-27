@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +40,7 @@ export function ProductForm({
   onSaved: (product: Product) => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   const [name, setName] = useState(product?.name ?? "");
   const [description, setDescription] = useState(product?.description ?? "");
   const [category, setCategory] = useState(product?.category ?? categories[0]);
@@ -64,11 +66,11 @@ export function ProductForm({
         const data = (await res.json()) as Branch[];
         setBranches(data);
       } else {
-        toast.error("Could not load branches for availability settings");
+        toast.error(t("products.couldNotLoadBranches"));
       }
     }
     loadBranches();
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (product?.availabilities) {
@@ -98,7 +100,7 @@ export function ProductForm({
     });
 
     if (!parse.success) {
-      setError("Please check the form values.");
+      setError(t("common.checkFormValues"));
       setLoading(false);
       return;
     }
@@ -115,7 +117,7 @@ export function ProductForm({
         });
 
     if (!res.ok) {
-      setError("Failed to save product.");
+      setError(t("products.failedToSave"));
       setLoading(false);
       return;
     }
@@ -140,8 +142,8 @@ export function ProductForm({
       }
     }
     if (availabilityFailures.length > 0) {
-      toast.error("Some branch availability didn't save", {
-        description: `Please retry for: ${availabilityFailures.join(", ")}`,
+      toast.error(t("products.someAvailabilityFailed"), {
+        description: t("products.pleaseRetryFor", { branches: availabilityFailures.join(", ") }),
       });
     }
 
@@ -176,7 +178,7 @@ export function ProductForm({
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       <div className="space-y-2">
-        <Label htmlFor="name">Name</Label>
+        <Label htmlFor="name">{t("common.name")}</Label>
         <Input
           id="name"
           value={name}
@@ -186,7 +188,7 @@ export function ProductForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
+        <Label htmlFor="description">{t("products.description")}</Label>
         <Textarea
           id="description"
           value={description}
@@ -197,7 +199,7 @@ export function ProductForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="category">Category</Label>
+          <Label htmlFor="category">{t("products.category")}</Label>
           <Select value={category} onValueChange={(v) => setCategory(v as typeof category)}>
             <SelectTrigger id="category">
               <SelectValue />
@@ -205,7 +207,7 @@ export function ProductForm({
             <SelectContent>
               {categories.map((c) => (
                 <SelectItem key={c} value={c}>
-                  {c.replace("_", " ")}
+                  {t(`productCategories.${c}`)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -213,7 +215,7 @@ export function ProductForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="basePrice">Base Price (€)</Label>
+          <Label htmlFor="basePrice">{t("products.basePrice")}</Label>
           <Input
             id="basePrice"
             type="number"
@@ -232,18 +234,18 @@ export function ProductForm({
           checked={isActive}
           onCheckedChange={setIsActive}
         />
-        <Label htmlFor="isActive">Active</Label>
+        <Label htmlFor="isActive">{t("common.active")}</Label>
       </div>
 
       <div className="space-y-2">
-        <Label>Images</Label>
+        <Label>{t("products.images")}</Label>
         <ImageUploader images={images} onChange={setImages} />
       </div>
 
       <div className="space-y-3">
-        <Label>Branch Availability &amp; Price Overrides</Label>
+        <Label>{t("products.branchAvailability")}</Label>
         {branches.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No branches available.</p>
+          <p className="text-sm text-muted-foreground">{t("products.noBranchesAvailable")}</p>
         ) : (
           <div className="space-y-3">
             {branches.map((branch) => (
@@ -259,13 +261,13 @@ export function ProductForm({
                       updateAvailability(branch.id, "inStock", v)
                     }
                   />
-                  <span className="text-sm text-muted-foreground">In stock</span>
+                  <span className="text-sm text-muted-foreground">{t("products.inStock")}</span>
                 </div>
                 <Input
                   type="number"
                   step="0.01"
                   min="0"
-                  placeholder="Price override"
+                  placeholder={t("products.priceOverride")}
                   value={availability[branch.id]?.priceOverride ?? ""}
                   onChange={(e) =>
                     updateAvailability(branch.id, "priceOverride", e.target.value)
@@ -280,10 +282,14 @@ export function ProductForm({
 
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
+          {t("common.cancel")}
         </Button>
         <Button type="submit" disabled={loading}>
-          {loading ? "Saving..." : product ? "Save Changes" : "Create Product"}
+          {loading
+            ? t("common.saving")
+            : product
+              ? t("products.saveChanges")
+              : t("products.createProduct")}
         </Button>
       </div>
     </form>

@@ -10,6 +10,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { Grid3X3, List as ListIcon } from "lucide-react-native";
 import { useTheme } from "@/contexts/ThemeContext";
 import {
@@ -22,14 +23,7 @@ import {
 import { useProducts, useBranches } from "@/hooks/usePublicData";
 import { type ProductCategory } from "@funfsterne/shared-types";
 
-const CATEGORIES: { key: string; label: string }[] = [
-  { key: "ALL", label: "All" },
-  { key: "HAIR", label: "Hair" },
-  { key: "SKIN_CARE", label: "Skin Care" },
-  { key: "BEARD", label: "Beard" },
-  { key: "TOOLS", label: "Tools" },
-  { key: "OTHER", label: "Other" },
-];
+const CATEGORY_KEYS = ["ALL", "HAIR", "SKIN_CARE", "BEARD", "TOOLS", "OTHER"] as const;
 
 type ViewMode = "grid" | "list";
 
@@ -41,6 +35,7 @@ export default function ProductsScreen() {
   }>();
   const { width } = useWindowDimensions();
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [category, setCategory] = useState<ProductCategory | "ALL">(
@@ -80,7 +75,7 @@ export default function ProductsScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.header, { paddingTop: 12 }]}>
-        <Text style={[styles.title, { color: theme.text }]}>Products</Text>
+        <Text style={[styles.title, { color: theme.text }]}>{t("products.title")}</Text>
         <View style={[styles.toggle, { backgroundColor: theme.surface }]}>
           <TouchableOpacity
             style={[
@@ -119,12 +114,12 @@ export default function ProductsScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterList}
         >
-          {CATEGORIES.map((item) => (
+          {CATEGORY_KEYS.map((key) => (
             <BranchPill
-              key={item.key}
-              name={item.label}
-              selected={category === item.key}
-              onPress={() => setCategory(item.key as ProductCategory | "ALL")}
+              key={key}
+              name={t(`categories.${key}`)}
+              selected={category === key}
+              onPress={() => setCategory(key as ProductCategory | "ALL")}
             />
           ))}
         </ScrollView>
@@ -158,9 +153,9 @@ export default function ProductsScreen() {
         // `error` even when stale `products` is available -- only show the
         // hard error state when there's genuinely nothing to display.
         <EmptyState
-          title="Could not load products"
-          message="Check your connection and try again."
-          actionTitle="Retry"
+          title={t("products.errorTitle")}
+          message={t("products.errorMessage")}
+          actionTitle={t("common.retry")}
           onAction={handleRefresh}
         />
       ) : products?.length ? (
@@ -189,7 +184,7 @@ export default function ProductsScreen() {
                 description={item.description}
                 price={item.basePrice}
                 imageUrl={item.images[0]}
-                category={item.category}
+                category={t(`categories.${item.category}`)}
                 onPress={() => router.push(`/products/${item.id}`)}
               />
             </View>
@@ -197,9 +192,9 @@ export default function ProductsScreen() {
         />
       ) : (
         <EmptyState
-          title="No products found"
-          message="Try changing filters or check back later."
-          actionTitle="Clear filters"
+          title={t("products.emptyTitle")}
+          message={t("products.emptyMessage")}
+          actionTitle={t("products.clearFilters")}
           onAction={() => {
             setCategory("ALL");
             setBranchId(null);

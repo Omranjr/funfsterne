@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -22,16 +24,16 @@ import {
 } from "lucide-react";
 
 const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/products", label: "Products", icon: Package },
-  { href: "/categories", label: "Category Images", icon: Images },
-  { href: "/branches", label: "Branches", icon: MapPin },
-  { href: "/discount-codes", label: "Discount Codes", icon: Ticket },
-  { href: "/notifications", label: "Notifications", icon: Bell },
-  { href: "/users", label: "Users", icon: Users },
-  { href: "/loyalty", label: "Loyalty Scan", icon: ScanLine },
-  { href: "/analytics", label: "Analytics", icon: BarChart3 },
-];
+  { href: "/", labelKey: "nav.dashboard", icon: LayoutDashboard },
+  { href: "/products", labelKey: "nav.products", icon: Package },
+  { href: "/categories", labelKey: "nav.categoryImages", icon: Images },
+  { href: "/branches", labelKey: "nav.branches", icon: MapPin },
+  { href: "/discount-codes", labelKey: "nav.discountCodes", icon: Ticket },
+  { href: "/notifications", labelKey: "nav.notifications", icon: Bell },
+  { href: "/users", labelKey: "nav.users", icon: Users },
+  { href: "/loyalty", labelKey: "nav.loyaltyScan", icon: ScanLine },
+  { href: "/analytics", labelKey: "nav.analytics", icon: BarChart3 },
+] as const;
 
 function Wordmark() {
   return (
@@ -46,10 +48,11 @@ function Wordmark() {
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const { t } = useTranslation();
 
   return (
     <nav className="flex flex-col gap-1">
-      {navItems.map(({ href, label, icon: Icon }) => {
+      {navItems.map(({ href, labelKey, icon: Icon }) => {
         const active = pathname === href;
         return (
           <Link
@@ -64,7 +67,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
             )}
           >
             <Icon className="h-4 w-4" />
-            {label}
+            {t(labelKey)}
           </Link>
         );
       })}
@@ -74,19 +77,28 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { logout } = useAuth();
+  const { t } = useTranslation();
 
   return (
     <div className="flex min-h-screen bg-background">
       {/* Desktop sidebar */}
-      <aside className="hidden w-64 flex-col border-r border-sidebar-border bg-sidebar p-4 lg:flex">
+      <aside className="hidden w-64 flex-col border-e border-sidebar-border bg-sidebar p-4 lg:flex">
         <div className="mb-6 flex items-center justify-between">
           <Wordmark />
         </div>
         <NavLinks />
         <div className="mt-auto space-y-1 border-t border-sidebar-border pt-3">
           <div className="flex items-center justify-between px-1">
-            <span className="text-xs font-medium text-sidebar-foreground/50">Appearance</span>
+            <span className="text-xs font-medium text-sidebar-foreground/50">
+              {t("common.appearance")}
+            </span>
             <ThemeToggle />
+          </div>
+          <div className="flex items-center justify-between px-1">
+            <span className="text-xs font-medium text-sidebar-foreground/50">
+              {t("common.language")}
+            </span>
+            <LanguageSwitcher />
           </div>
           <Button
             variant="ghost"
@@ -94,7 +106,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             onClick={logout}
           >
             <LogOut className="h-4 w-4" />
-            Sign out
+            {t("common.signOut")}
           </Button>
         </div>
       </aside>
@@ -105,6 +117,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Wordmark />
           <div className="flex items-center gap-1">
             <ThemeToggle />
+            <LanguageSwitcher />
             <Sheet>
               <SheetTrigger
                 render={
@@ -126,7 +139,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     onClick={logout}
                   >
                     <LogOut className="h-4 w-4" />
-                    Sign out
+                    {t("common.signOut")}
                   </Button>
                 </div>
               </SheetContent>

@@ -1,47 +1,51 @@
 import { useCallback, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Alert, Linking } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Alert, Linking, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { User } from "lucide-react-native";
+import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
+import { User, ChevronRight } from "lucide-react-native";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, Button } from "@/components";
+import { SUPPORTED_LANGUAGES } from "@/lib/i18n";
 
 const PRIVACY_URL = "https://funfsterne-admin-eight.vercel.app/privacy";
 
 export default function AccountScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const { t, i18n } = useTranslation();
   const { user, logout, deleteAccount } = useAuth();
   const [deleting, setDeleting] = useState(false);
 
+  const currentLanguage =
+    SUPPORTED_LANGUAGES.find((l) => l.code === i18n.language) ?? SUPPORTED_LANGUAGES[0];
+
   const handleLogout = useCallback(() => {
-    Alert.alert("Log out?", "You can log back in any time with your username and password.", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Log out", style: "destructive", onPress: () => logout() },
+    Alert.alert(t("account.logOutConfirmTitle"), t("account.logOutConfirmMessage"), [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: t("account.logOut"), style: "destructive", onPress: () => logout() },
     ]);
-  }, [logout]);
+  }, [logout, t]);
 
   const confirmDelete = useCallback(async () => {
     setDeleting(true);
     const result = await deleteAccount();
     setDeleting(false);
     if (!result.ok) {
-      Alert.alert("Couldn't delete account", result.error);
+      Alert.alert(t("account.deleteErrorTitle"), result.error);
     }
     // On success, isAuthenticated flips false and the root layout's boot
     // sequence sends the user back to sign-up/log-in on its own.
-  }, [deleteAccount]);
+  }, [deleteAccount, t]);
 
   const handleDeleteAccount = useCallback(() => {
-    Alert.alert(
-      "Delete your account?",
-      "This permanently removes your name, username, and password. It can't be undone.",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Delete account", style: "destructive", onPress: confirmDelete },
-      ]
-    );
-  }, [confirmDelete]);
+    Alert.alert(t("account.deleteConfirmTitle"), t("account.deleteConfirmMessage"), [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: t("account.deleteAccount"), style: "destructive", onPress: confirmDelete },
+    ]);
+  }, [confirmDelete, t]);
 
   return (
     <ScrollView
@@ -49,7 +53,7 @@ export default function AccountScreen() {
       contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 24) }]}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={[styles.title, { color: theme.text }]}>Account</Text>
+      <Text style={[styles.title, { color: theme.text }]}>{t("account.title")}</Text>
 
       <Card style={styles.profileCard}>
         <View style={[styles.avatar, { backgroundColor: theme.muted }]}>
@@ -65,15 +69,28 @@ export default function AccountScreen() {
         </View>
       </Card>
 
+      <Pressable onPress={() => router.push("/language")}>
+        <Card style={styles.settingRow}>
+          <Text style={styles.settingFlag}>{currentLanguage.flag}</Text>
+          <Text style={[styles.settingLabel, { color: theme.text }]}>
+            {t("account.language")}
+          </Text>
+          <Text style={[styles.settingValue, { color: theme.textMuted }]}>
+            {currentLanguage.label}
+          </Text>
+          <ChevronRight size={18} color={theme.textMuted} />
+        </Card>
+      </Pressable>
+
       <View style={styles.actions}>
         <Button
-          title="Log out"
+          title={t("account.logOut")}
           variant="secondary"
           onPress={handleLogout}
           style={styles.actionButton}
         />
         <Button
-          title={deleting ? "Deleting…" : "Delete account"}
+          title={deleting ? t("account.deleting") : t("account.deleteAccount")}
           variant="secondary"
           onPress={handleDeleteAccount}
           disabled={deleting}
@@ -87,7 +104,7 @@ export default function AccountScreen() {
         accessibilityRole="link"
         style={[styles.privacyLink, { color: theme.textMuted }]}
       >
-        Privacy Policy
+        {t("account.privacyPolicy")}
       </Text>
     </ScrollView>
   );
@@ -127,6 +144,22 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   username: {
+    fontSize: 14,
+  },
+  settingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  settingFlag: {
+    fontSize: 20,
+  },
+  settingLabel: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  settingValue: {
     fontSize: 14,
   },
   actions: {

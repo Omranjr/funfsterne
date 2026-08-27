@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { ChevronLeft, Share2, MapPin, MessageCircle } from "lucide-react-native";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Badge, CachedImage, EmptyState, ProductDetailSkeleton } from "@/components";
@@ -26,6 +27,7 @@ const SHOP_PHONE = "+4928234198333";
 export default function ProductDetailsScreen() {
   const router = useRouter();
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
 
@@ -83,7 +85,7 @@ export default function ProductDetailsScreen() {
         onPress={() => router.back()}
         style={[styles.iconButton, { backgroundColor: theme.border }]}
         accessibilityRole="button"
-        accessibilityLabel="Go back"
+        accessibilityLabel={t("productDetail.goBack")}
       >
         <ChevronLeft size={24} color={theme.text} />
       </TouchableOpacity>
@@ -107,9 +109,9 @@ export default function ProductDetailsScreen() {
       <View style={[styles.container, { backgroundColor: theme.background }]}>
         {backHeader}
         <EmptyState
-          title="Could not load this product"
-          message="Check your connection and try again."
-          actionTitle="Retry"
+          title={t("productDetail.errorTitle")}
+          message={t("productDetail.errorMessage")}
+          actionTitle={t("common.retry")}
           onAction={handleRefresh}
         />
       </View>
@@ -121,7 +123,7 @@ export default function ProductDetailsScreen() {
       <View style={[styles.container, { backgroundColor: theme.background }]}>
         {backHeader}
         <Text style={[styles.error, { color: theme.text }]} numberOfLines={2}>
-          Product not found
+          {t("productDetail.notFound")}
         </Text>
       </View>
     );
@@ -136,7 +138,7 @@ export default function ProductDetailsScreen() {
             styles.iconButton,
             { backgroundColor: theme.border },
           ]}
-          accessibilityLabel="Go back"
+          accessibilityLabel={t("productDetail.goBack")}
         >
           <ChevronLeft size={24} color={theme.text} />
         </TouchableOpacity>
@@ -146,7 +148,7 @@ export default function ProductDetailsScreen() {
             styles.iconButton,
             { backgroundColor: theme.border },
           ]}
-          accessibilityLabel="Share product"
+          accessibilityLabel={t("productDetail.shareProduct")}
         >
           <Share2 size={20} color={theme.text} />
         </TouchableOpacity>
@@ -171,7 +173,7 @@ export default function ProductDetailsScreen() {
             style={styles.image}
             contentFit="cover"
             cachePolicy="memory-disk"
-            fallbackText="No image yet"
+            fallbackText={t("productDetail.noImage")}
           />
         </View>
 
@@ -184,7 +186,7 @@ export default function ProductDetailsScreen() {
               {product.name}
             </Text>
             <Badge
-              label={product.category}
+              label={t(`categories.${product.category}`)}
               variant="primary"
               style={{ alignSelf: "flex-start" }}
             />
@@ -202,7 +204,7 @@ export default function ProductDetailsScreen() {
 
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>
-              Available at
+              {t("productDetail.availableAt")}
             </Text>
             {availableBranches.length ? (
               <View style={styles.branchList}>
@@ -243,8 +245,8 @@ export default function ProductDetailsScreen() {
             ) : (
               <Text style={[styles.empty, { color: theme.textMuted }]}>
                 {branchesError
-                  ? "Could not load branch availability — pull down to retry"
-                  : "Currently unavailable — check back soon"}
+                  ? t("productDetail.unavailableError")
+                  : t("productDetail.unavailable")}
               </Text>
             )}
           </View>
@@ -259,7 +261,7 @@ export default function ProductDetailsScreen() {
           >
             <MessageCircle size={18} color={theme.background} />
             <Text style={[styles.ctaText, { color: theme.background }]}>
-              Ask about this product
+              {t("productDetail.askAboutProduct")}
             </Text>
           </TouchableOpacity>
         </View>

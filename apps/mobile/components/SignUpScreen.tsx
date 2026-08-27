@@ -11,6 +11,7 @@ import {
 import Animated, { FadeInRight, FadeOutLeft } from "react-native-reanimated";
 import { Image } from "expo-image";
 import { ChevronLeft } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 import {
   NameFieldSchema,
   RegisterConsumerUserSchema,
@@ -31,6 +32,7 @@ const TOTAL_STEPS = 2;
 export function SignUpScreen({ onSwitchToLogIn, testID }: SignUpScreenProps) {
   const { theme } = useTheme();
   const { register } = useAuth();
+  const { t } = useTranslation();
 
   const [step, setStep] = useState<Step>(1);
   const [firstName, setFirstName] = useState("");
@@ -46,8 +48,8 @@ export function SignUpScreen({ onSwitchToLogIn, testID }: SignUpScreenProps) {
     const errors: Record<string, string> = {};
     const first = NameFieldSchema.safeParse(firstName);
     const last = NameFieldSchema.safeParse(lastName);
-    if (!first.success) errors.firstName = "Enter your first name";
-    if (!last.success) errors.lastName = "Enter your last name";
+    if (!first.success) errors.firstName = t("auth.signUp.errorFirstName");
+    if (!last.success) errors.lastName = t("auth.signUp.errorLastName");
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
@@ -56,7 +58,7 @@ export function SignUpScreen({ onSwitchToLogIn, testID }: SignUpScreenProps) {
 
     setFieldErrors({});
     setStep(2);
-  }, [firstName, lastName]);
+  }, [firstName, lastName, t]);
 
   const handleBack = useCallback(() => {
     setFieldErrors({});
@@ -68,7 +70,7 @@ export function SignUpScreen({ onSwitchToLogIn, testID }: SignUpScreenProps) {
     setFormError(null);
 
     if (password !== confirmPassword) {
-      setFieldErrors({ confirmPassword: "Passwords don't match" });
+      setFieldErrors({ confirmPassword: t("auth.signUp.errorPasswordMismatch") });
       return;
     }
 
@@ -101,7 +103,7 @@ export function SignUpScreen({ onSwitchToLogIn, testID }: SignUpScreenProps) {
     }
     // On success, AuthContext's isAuthenticated flips true and the root
     // layout's boot sequence advances past this screen on its own.
-  }, [firstName, lastName, username, password, confirmPassword, register]);
+  }, [firstName, lastName, username, password, confirmPassword, register, t]);
 
   return (
     <KeyboardAvoidingView
@@ -120,7 +122,7 @@ export function SignUpScreen({ onSwitchToLogIn, testID }: SignUpScreenProps) {
             <Pressable
               onPress={handleBack}
               accessibilityRole="button"
-              accessibilityLabel="Back"
+              accessibilityLabel={t("auth.signUp.back")}
               style={[styles.backButton, { backgroundColor: theme.border }]}
             >
               <ChevronLeft size={22} color={theme.text} />
@@ -162,16 +164,16 @@ export function SignUpScreen({ onSwitchToLogIn, testID }: SignUpScreenProps) {
                 cachePolicy="memory"
               />
               <Text style={[styles.title, { color: theme.gold }]}>
-                What&apos;s your name?
+                {t("auth.signUp.step1Title")}
               </Text>
               <Text style={[styles.subtitle, { color: theme.textMuted }]}>
-                So we know who&apos;s stopping by.
+                {t("auth.signUp.step1Subtitle")}
               </Text>
             </View>
 
             <View style={styles.form}>
               <Input
-                label="First name"
+                label={t("auth.signUp.firstName")}
                 value={firstName}
                 onChangeText={setFirstName}
                 autoCapitalize="words"
@@ -181,7 +183,7 @@ export function SignUpScreen({ onSwitchToLogIn, testID }: SignUpScreenProps) {
                 error={fieldErrors.firstName}
               />
               <Input
-                label="Last name"
+                label={t("auth.signUp.lastName")}
                 value={lastName}
                 onChangeText={setLastName}
                 autoCapitalize="words"
@@ -193,7 +195,7 @@ export function SignUpScreen({ onSwitchToLogIn, testID }: SignUpScreenProps) {
               />
 
               <Button
-                title="Continue"
+                title={t("auth.signUp.continue")}
                 onPress={handleContinue}
                 style={styles.submitButton}
               />
@@ -204,9 +206,9 @@ export function SignUpScreen({ onSwitchToLogIn, testID }: SignUpScreenProps) {
                 accessibilityRole="button"
               >
                 <Text style={[styles.switchText, { color: theme.textMuted }]}>
-                  Already have an account?{" "}
+                  {t("auth.signUp.haveAccount")}{" "}
                   <Text style={{ color: theme.gold, fontWeight: "700" }}>
-                    Log in
+                    {t("auth.signUp.logIn")}
                   </Text>
                 </Text>
               </Pressable>
@@ -221,16 +223,16 @@ export function SignUpScreen({ onSwitchToLogIn, testID }: SignUpScreenProps) {
           >
             <View style={styles.header}>
               <Text style={[styles.title, { color: theme.gold }]}>
-                Secure your account
+                {t("auth.signUp.step2Title")}
               </Text>
               <Text style={[styles.subtitle, { color: theme.textMuted }]}>
-                Pick a username and password only you know.
+                {t("auth.signUp.step2Subtitle")}
               </Text>
             </View>
 
             <View style={styles.form}>
               <Input
-                label="Username"
+                label={t("auth.signUp.username")}
                 value={username}
                 onChangeText={setUsername}
                 autoCapitalize="none"
@@ -242,7 +244,7 @@ export function SignUpScreen({ onSwitchToLogIn, testID }: SignUpScreenProps) {
               />
 
               <Input
-                label="Password"
+                label={t("auth.signUp.password")}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
@@ -254,7 +256,7 @@ export function SignUpScreen({ onSwitchToLogIn, testID }: SignUpScreenProps) {
               />
 
               <Input
-                label="Confirm password"
+                label={t("auth.signUp.confirmPassword")}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 secureTextEntry
@@ -270,7 +272,7 @@ export function SignUpScreen({ onSwitchToLogIn, testID }: SignUpScreenProps) {
               ) : null}
 
               <Button
-                title={submitting ? "Creating account…" : "Create account"}
+                title={submitting ? t("auth.signUp.creatingAccount") : t("auth.signUp.createAccount")}
                 onPress={handleSubmit}
                 disabled={submitting}
                 style={styles.submitButton}

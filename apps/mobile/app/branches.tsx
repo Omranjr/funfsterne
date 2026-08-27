@@ -7,12 +7,14 @@ import {
   RefreshControl,
 } from "react-native";
 import { MapPin } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Card, EmptyState, BranchPillSkeleton } from "@/components";
 import { useBranches } from "@/hooks/usePublicData";
 
 export default function BranchesScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const {
     data: branches,
     isLoading,
@@ -28,7 +30,9 @@ export default function BranchesScreen() {
   if (isLoading) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
-        <Text style={[styles.title, { color: theme.text, paddingTop: 12 }]}>Branches</Text>
+        <Text style={[styles.title, { color: theme.text, paddingTop: 12 }]}>
+          {t("branches.title")}
+        </Text>
         <BranchPillSkeleton count={6} />
       </View>
     );
@@ -38,9 +42,9 @@ export default function BranchesScreen() {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
         <EmptyState
-          title="Could not load branches"
-          message="Check your connection and try again."
-          actionTitle="Retry"
+          title={t("branches.errorTitle")}
+          message={t("branches.errorMessage")}
+          actionTitle={t("common.retry")}
           onAction={handleRefresh}
         />
       </View>
@@ -51,8 +55,8 @@ export default function BranchesScreen() {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
         <EmptyState
-          title="No branches"
-          message="We couldn't find any branches right now."
+          title={t("branches.emptyTitle")}
+          message={t("branches.emptyMessage")}
         />
       </View>
     );
@@ -76,7 +80,7 @@ export default function BranchesScreen() {
         />
       }
       ListHeaderComponent={
-        <Text style={[styles.title, { color: theme.text }]}>Our Branches</Text>
+        <Text style={[styles.title, { color: theme.text }]}>{t("branches.ourBranches")}</Text>
       }
       renderItem={({ item }) => (
         <Card style={styles.card}>

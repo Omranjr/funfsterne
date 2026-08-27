@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import { Keyboard } from "react-native";
+import i18n from "@/lib/i18n";
 import {
   getAuthToken,
   setAuthToken,
@@ -70,11 +71,11 @@ async function letIosNoticeThePassword(): Promise<void> {
 function describeError(err: unknown): string {
   if (err instanceof PublicApiError) {
     if (err.errorCode === "USERNAME_TAKEN") {
-      return "That username is already taken.";
+      return i18n.t("auth.errors.usernameTaken");
     }
     return err.message;
   }
-  return "Something went wrong. Please try again.";
+  return i18n.t("auth.errors.generic");
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {

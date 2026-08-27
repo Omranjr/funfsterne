@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +42,7 @@ import { Pencil, Plus, RefreshCw } from "lucide-react";
 const types = DiscountCodeTypeSchema.options;
 
 export default function DiscountCodesPage() {
+  const { t } = useTranslation();
   const [codes, setCodes] = useState<DiscountCode[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,10 +67,10 @@ export default function DiscountCodesPage() {
       setBranches((await branchesRes.json()) as Branch[]);
     }
     if (!codesRes.ok) {
-      toast.error("Could not load discount codes", { description: "Please try again." });
+      toast.error(t("discountCodes.loadError"), { description: t("common.tryAgain") });
     }
     setLoading(false);
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     load();
@@ -88,9 +90,13 @@ export default function DiscountCodesPage() {
     if (res.ok) {
       const updated = (await res.json()) as DiscountCode;
       setCodes((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
-      toast.success(updated.isActive ? `${updated.code} is now active` : `${updated.code} is now inactive`);
+      toast.success(
+        updated.isActive
+          ? t("discountCodes.nowActive", { code: updated.code })
+          : t("discountCodes.nowInactive", { code: updated.code }),
+      );
     } else {
-      toast.error("Could not update discount code", { description: "Please try again." });
+      toast.error(t("discountCodes.couldNotUpdate"), { description: t("common.tryAgain") });
     }
   }
 
@@ -102,7 +108,7 @@ export default function DiscountCodesPage() {
       }
       return [saved, ...prev];
     });
-    toast.success(editing ? "Discount code updated" : "Discount code created");
+    toast.success(editing ? t("discountCodes.codeUpdated") : t("discountCodes.codeCreated"));
     setDialogOpen(false);
     setEditing(null);
   }
@@ -110,7 +116,7 @@ export default function DiscountCodesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Discount Codes"
+        title={t("discountCodes.title")}
         action={
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger
@@ -122,14 +128,14 @@ export default function DiscountCodesPage() {
                   }}
                 >
                   <Plus className="h-4 w-4" />
-                  Add Code
+                  {t("discountCodes.addCode")}
                 </Button>
               }
             />
             <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
-                  {editing ? "Edit Discount Code" : "Create Discount Code"}
+                  {editing ? t("discountCodes.editCode") : t("discountCodes.createCode")}
                 </DialogTitle>
               </DialogHeader>
               <DiscountCodeForm
@@ -147,7 +153,7 @@ export default function DiscountCodesPage() {
       />
 
       <Input
-        placeholder="Search codes..."
+        placeholder={t("discountCodes.searchPlaceholder")}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="sm:w-80"
@@ -161,12 +167,10 @@ export default function DiscountCodesPage() {
         </div>
       ) : failed ? (
         <div className="flex flex-col items-center gap-3 rounded-md border py-12 text-center">
-          <p className="text-sm text-muted-foreground">
-            Something went wrong loading discount codes.
-          </p>
+          <p className="text-sm text-muted-foreground">{t("discountCodes.loadError")}</p>
           <Button variant="outline" size="sm" onClick={load}>
             <RefreshCw className="h-4 w-4" />
-            Try again
+            {t("common.tryAgain")}
           </Button>
         </div>
       ) : (
@@ -174,20 +178,24 @@ export default function DiscountCodesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Code</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Value</TableHead>
-                <TableHead>Expiry</TableHead>
-                <TableHead>Redemptions</TableHead>
-                <TableHead>Active</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t("discountCodes.code")}</TableHead>
+                <TableHead>{t("discountCodes.type")}</TableHead>
+                <TableHead>{t("discountCodes.value")}</TableHead>
+                <TableHead>{t("discountCodes.expiry")}</TableHead>
+                <TableHead>{t("discountCodes.redemptions")}</TableHead>
+                <TableHead>{t("common.active")}</TableHead>
+                <TableHead className="text-right">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.map((code) => (
                 <TableRow key={code.id}>
                   <TableCell className="font-medium">{code.code}</TableCell>
-                  <TableCell>{code.type}</TableCell>
+                  <TableCell>
+                    {code.type === "PERCENTAGE"
+                      ? t("discountCodes.percentage")
+                      : t("discountCodes.fixed")}
+                  </TableCell>
                   <TableCell>
                     {code.type === "PERCENTAGE"
                       ? `${code.value}%`
@@ -240,6 +248,7 @@ function DiscountCodeForm({
   onSaved: (code: DiscountCode) => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   const [formCode, setFormCode] = useState(code?.code ?? "");
   const [type, setType] = useState<(typeof types)[number]>(
     code?.type ?? "PERCENTAGE"
@@ -286,7 +295,7 @@ function DiscountCodeForm({
         });
 
     if (!res.ok) {
-      setError("Failed to save discount code.");
+      setError(t("discountCodes.failedToSave"));
       setLoading(false);
       return;
     }
@@ -301,7 +310,7 @@ function DiscountCodeForm({
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       <div className="space-y-2">
-        <Label htmlFor="code">Code</Label>
+        <Label htmlFor="code">{t("discountCodes.code")}</Label>
         <Input
           id="code"
           value={formCode}
@@ -312,15 +321,17 @@ function DiscountCodeForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="type">Type</Label>
+          <Label htmlFor="type">{t("discountCodes.type")}</Label>
           <Select value={type} onValueChange={(v) => setType(v as typeof type)}>
             <SelectTrigger id="type">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {types.map((t) => (
-                <SelectItem key={t} value={t}>
-                  {t}
+              {types.map((optionType) => (
+                <SelectItem key={optionType} value={optionType}>
+                  {optionType === "PERCENTAGE"
+                    ? t("discountCodes.percentage")
+                    : t("discountCodes.fixed")}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -328,7 +339,7 @@ function DiscountCodeForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="value">Value</Label>
+          <Label htmlFor="value">{t("discountCodes.value")}</Label>
           <Input
             id="value"
             type="number"
@@ -343,7 +354,7 @@ function DiscountCodeForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="expiresAt">Expiry</Label>
+          <Label htmlFor="expiresAt">{t("discountCodes.expiry")}</Label>
           <Input
             id="expiresAt"
             type="datetime-local"
@@ -353,7 +364,7 @@ function DiscountCodeForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="maxRedemptions">Max Redemptions</Label>
+          <Label htmlFor="maxRedemptions">{t("discountCodes.maxRedemptions")}</Label>
           <Input
             id="maxRedemptions"
             type="number"
@@ -365,7 +376,7 @@ function DiscountCodeForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="scopeBranchId">Scope to Branch (optional)</Label>
+        <Label htmlFor="scopeBranchId">{t("discountCodes.scopeToBranch")}</Label>
         <Select
           value={scopeBranchId || "all"}
           onValueChange={(v) => setScopeBranchId(v === "all" ? null : v)}
@@ -374,7 +385,7 @@ function DiscountCodeForm({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All branches</SelectItem>
+            <SelectItem value="all">{t("discountCodes.allBranches")}</SelectItem>
             {branches.map((b) => (
               <SelectItem key={b.id} value={b.id}>
                 {b.name}
@@ -390,15 +401,19 @@ function DiscountCodeForm({
           checked={isActive}
           onCheckedChange={setIsActive}
         />
-        <Label htmlFor="isActive">Active</Label>
+        <Label htmlFor="isActive">{t("common.active")}</Label>
       </div>
 
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
+          {t("common.cancel")}
         </Button>
         <Button type="submit" disabled={loading}>
-          {loading ? "Saving..." : code ? "Save Changes" : "Create Code"}
+          {loading
+            ? t("common.saving")
+            : code
+              ? t("discountCodes.saveChanges")
+              : t("discountCodes.createCode")}
         </Button>
       </div>
     </form>

@@ -4,6 +4,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { Sun, Moon } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/contexts/ThemeContext";
 
 export interface ThemeToggleProps {
@@ -13,6 +14,7 @@ export interface ThemeToggleProps {
 
 export function ThemeToggle({ size = 20, style }: ThemeToggleProps) {
   const { theme, toggle } = useTheme();
+  const { t } = useTranslation();
   const isDark = theme.mode === "dark";
 
   return (
@@ -24,7 +26,7 @@ export function ThemeToggle({ size = 20, style }: ThemeToggleProps) {
         style,
       ]}
       activeOpacity={0.7}
-      accessibilityLabel={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      accessibilityLabel={isDark ? t("common.switchToLightMode") : t("common.switchToDarkMode")}
       accessibilityRole="button"
     >
       {isDark ? (

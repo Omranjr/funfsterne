@@ -15,6 +15,7 @@ import Animated, {
   withSpring,
   FadeIn,
 } from "react-native-reanimated";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Badge } from "./Badge";
 import { CachedImage } from "./CachedImage";
@@ -52,6 +53,7 @@ export function ProductCard({
   testID,
 }: ProductCardProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -97,11 +99,11 @@ export function ProductCard({
           style={[styles.image, imageStyle]}
           contentFit="cover"
           cachePolicy="memory-disk"
-          fallbackText="No image yet"
+          fallbackText={t("productDetail.noImage")}
         />
         {isNew ? (
           <Badge
-            label="New"
+            label={t("products.newBadge")}
             variant="primary"
             style={styles.badge}
           />

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BrowserQRCodeReader, type IScannerControls } from "@zxing/browser";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -32,6 +33,7 @@ type ScanResult =
   | { status: "error"; message: string };
 
 export default function LoyaltyScanPage() {
+  const { t } = useTranslation();
   const [branches, setBranches] = useState<Branch[]>([]);
   const [branchId, setBranchId] = useState<string>("");
   const [scanning, setScanning] = useState(false);
@@ -71,7 +73,7 @@ export default function LoyaltyScanPage() {
     async (text: string) => {
       if (processingRef.current) return;
       if (!text.startsWith(QR_PREFIX)) {
-        setResult({ status: "error", message: "That's not a Fünf Sterne customer code." });
+        setResult({ status: "error", message: t("loyaltyScan.notFsCode") });
         return;
       }
 
@@ -102,16 +104,16 @@ export default function LoyaltyScanPage() {
         const body = (await res.json().catch(() => ({}))) as { errorCode?: string };
         const message =
           body.errorCode === "ALREADY_SCANNED_TODAY"
-            ? "This customer already earned points today."
+            ? t("loyaltyScan.alreadyScannedToday")
             : body.errorCode === "USER_NOT_FOUND"
-              ? "No account found for this code."
-              : "Could not award points. Please try again.";
+              ? t("loyaltyScan.noAccountFound")
+              : t("loyaltyScan.couldNotAward");
         setResult({ status: "error", message });
       }
 
       processingRef.current = false;
     },
-    [branchId],
+    [branchId, t],
   );
 
   const startScanning = useCallback(async () => {
@@ -135,11 +137,11 @@ export default function LoyaltyScanPage() {
       setScanning(false);
       setCameraError(
         err instanceof Error
-          ? "Could not access the camera: " + err.message
-          : "Could not access the camera.",
+          ? `${t("loyaltyScan.cameraError")}: ${err.message}`
+          : t("loyaltyScan.cameraErrorGeneric"),
       );
     }
-  }, [handleDecoded]);
+  }, [handleDecoded, t]);
 
   const stopScanning = useCallback(() => {
     controlsRef.current?.stop();
@@ -168,7 +170,7 @@ export default function LoyaltyScanPage() {
       setRedeemingId(null);
 
       if (res.ok) {
-        toast.success("Reward marked as used");
+        toast.success(t("loyaltyScan.rewardMarkedUsed"));
         if (result.status === "success") {
           setResult({
             ...result,
@@ -176,26 +178,26 @@ export default function LoyaltyScanPage() {
           });
         }
       } else {
-        toast.error("Could not mark reward as used", {
-          description: "Please try again.",
+        toast.error(t("loyaltyScan.couldNotMarkUsed"), {
+          description: t("loyaltyScan.pleaseTryAgain"),
         });
       }
     },
-    [branchId, result],
+    [branchId, result, t],
   );
 
   return (
     <div className="mx-auto max-w-md space-y-6">
       <PageHeader
-        title="Loyalty Scan"
-        description={`Scan a customer's code to award ${POINTS_PER_VISIT} points for today's visit.`}
+        title={t("loyaltyScan.title")}
+        description={t("loyaltyScan.description", { points: POINTS_PER_VISIT })}
       />
 
       <div className="space-y-2">
-        <label className="text-sm font-medium">Branch</label>
+        <label className="text-sm font-medium">{t("loyaltyScan.branch")}</label>
         <Select value={branchId} onValueChange={handleBranchChange}>
           <SelectTrigger>
-            <SelectValue placeholder="Select a branch" />
+            <SelectValue placeholder={t("loyaltyScan.selectBranch")} />
           </SelectTrigger>
           <SelectContent>
             {branches.map((b) => (
@@ -222,12 +224,12 @@ export default function LoyaltyScanPage() {
           ) : null}
           {scanning ? (
             <Button variant="outline" onClick={stopScanning} className="w-full">
-              Cancel
+              {t("loyaltyScan.cancel")}
             </Button>
           ) : (
             <Button onClick={startScanning} disabled={!branchId} className="w-full">
               <ScanLine className="mr-2 h-4 w-4" />
-              Start scanning
+              {t("loyaltyScan.startScanning")}
             </Button>
           )}
         </Card>
@@ -240,16 +242,16 @@ export default function LoyaltyScanPage() {
             <p className="text-lg font-semibold">
               {result.customer
                 ? `${result.customer.firstName} ${result.customer.lastName}`
-                : "Customer"}
+                : t("loyaltyScan.customer")}
             </p>
             <p className="text-sm text-muted-foreground">
-              New balance: <span className="font-medium">{result.balance} points</span>
+              {t("loyaltyScan.newBalance", { balance: result.balance })}
             </p>
           </div>
 
           {result.activeRewards.length > 0 ? (
             <div className="w-full space-y-2 text-left">
-              <p className="text-sm font-medium">Active rewards</p>
+              <p className="text-sm font-medium">{t("loyaltyScan.activeRewards")}</p>
               {result.activeRewards.map((reward) => (
                 <div
                   key={reward.id}
@@ -257,7 +259,7 @@ export default function LoyaltyScanPage() {
                 >
                   <span className="flex items-center gap-2 text-sm">
                     <Gift className="h-4 w-4 text-muted-foreground" />
-                    €{reward.eurosValue} voucher
+                    {t("loyaltyScan.voucher", { value: reward.eurosValue })}
                   </span>
                   <Button
                     size="sm"
@@ -265,7 +267,9 @@ export default function LoyaltyScanPage() {
                     disabled={redeemingId === reward.id}
                     onClick={() => handleRedeemReward(reward.id)}
                   >
-                    {redeemingId === reward.id ? "Marking used…" : "Mark used"}
+                    {redeemingId === reward.id
+                      ? t("loyaltyScan.markingUsed")
+                      : t("loyaltyScan.markUsed")}
                   </Button>
                 </div>
               ))}
@@ -273,7 +277,7 @@ export default function LoyaltyScanPage() {
           ) : null}
 
           <Button onClick={handleScanNext} className="w-full">
-            Scan next customer
+            {t("loyaltyScan.scanNextCustomer")}
           </Button>
         </Card>
       )}
@@ -283,7 +287,7 @@ export default function LoyaltyScanPage() {
           <XCircle className="h-12 w-12 text-destructive" />
           <p className="text-sm">{result.message}</p>
           <Button onClick={handleScanNext} className="w-full">
-            Try again
+            {t("loyaltyScan.tryAgain")}
           </Button>
         </Card>
       )}

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { apiFetch } from "@/lib/api";
 import { getAdminToken } from "@/lib/auth";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,13 +19,14 @@ type DashboardStats = {
 };
 
 const STAT_CARDS = [
-  { key: "products", title: "Total Products", icon: Package },
-  { key: "branches", title: "Total Branches", icon: MapPin },
-  { key: "activeDiscountCodes", title: "Active Discount Codes", icon: Ticket },
-  { key: "notificationsThisMonth", title: "Notifications This Month", icon: Bell },
+  { key: "products", titleKey: "dashboard.totalProducts", icon: Package },
+  { key: "branches", titleKey: "dashboard.totalBranches", icon: MapPin },
+  { key: "activeDiscountCodes", titleKey: "dashboard.activeDiscountCodes", icon: Ticket },
+  { key: "notificationsThisMonth", titleKey: "dashboard.notificationsThisMonth", icon: Bell },
 ] as const;
 
 export default function DashboardPage() {
+  const { t } = useTranslation();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -68,13 +70,13 @@ export default function DashboardPage() {
       });
     } catch {
       setFailed(true);
-      toast.error("Could not load dashboard stats", {
-        description: "Check your connection and try again.",
+      toast.error(t("dashboard.loadError"), {
+        description: t("dashboard.loadErrorDescription"),
       });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     load();
@@ -82,10 +84,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Dashboard"
-        description="A quick look at how the shop is doing right now."
-      />
+      <PageHeader title={t("dashboard.title")} description={t("dashboard.description")} />
 
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -104,18 +103,18 @@ export default function DashboardPage() {
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
             <p className="text-sm text-muted-foreground">
-              Something went wrong loading your stats.
+              {t("dashboard.somethingWrongStats")}
             </p>
             <Button variant="outline" size="sm" onClick={load}>
               <RefreshCw className="h-4 w-4" />
-              Try again
+              {t("common.tryAgain")}
             </Button>
           </CardContent>
         </Card>
       ) : stats ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {STAT_CARDS.map(({ key, title, icon: Icon }) => (
-            <StatCard key={key} title={title} value={stats[key]} icon={Icon} />
+          {STAT_CARDS.map(({ key, titleKey, icon: Icon }) => (
+            <StatCard key={key} title={t(titleKey)} value={stats[key]} icon={Icon} />
           ))}
         </div>
       ) : null}

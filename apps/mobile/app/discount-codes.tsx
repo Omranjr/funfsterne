@@ -14,6 +14,7 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/contexts/ThemeContext";
 import {
   Badge,
@@ -29,6 +30,7 @@ import {
   PublicApiError,
   type DiscountCode as ActiveDiscountCode,
 } from "@/lib/api";
+import type { TFunction } from "i18next";
 
 type CardState = "idle" | "redeeming" | "redeemed" | "error";
 
@@ -38,6 +40,7 @@ type ErrorInfo = {
 };
 
 function formatDiscountValue(
+  t: TFunction,
   type: ActiveDiscountCode["type"],
   value: ActiveDiscountCode["value"]
 ): string {
@@ -45,20 +48,21 @@ function formatDiscountValue(
     // Percentages are stored as whole numbers (e.g. 10 = 10%). The formatPrice
     // helper still applies its NaN guard so a malformed value renders as "—".
     const pct = formatPrice(value, { fractionDigits: 0 });
-    return `${pct}% off`;
+    return t("offers.percentOff", { value: pct });
   }
-  return `€${formatPrice(value)} off`;
+  return t("offers.euroOff", { value: formatPrice(value) });
 }
 
-function describeExpiry(expiresAt: string | null): string | null {
+function describeExpiry(t: TFunction, expiresAt: string | null): string | null {
   if (!expiresAt) return null;
   const d = new Date(expiresAt);
   if (Number.isNaN(d.getTime())) return null;
-  return `Expires ${d.toLocaleDateString()}`;
+  return t("offers.expires", { date: d.toLocaleDateString() });
 }
 
 export default function OffersScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const { data, isLoading, refetch, isRefetching, error } = useDiscountCodes();
 
@@ -109,7 +113,7 @@ export default function OffersScreen() {
         if (!deviceId) {
           setCardState(code.id, "error");
           setCardError(code.id, {
-            message: "Could not read device id. Please restart the app.",
+            message: t("offers.deviceIdError"),
             isAlreadyRedeemed: false,
           });
           return;
@@ -133,12 +137,12 @@ export default function OffersScreen() {
           setCardState(code.id, "error");
           setCardError(code.id, {
             message: isAlreadyRedeemedByDevice
-              ? "You already redeemed this code on this device."
+              ? t("offers.errorAlreadyRedeemedDevice")
               : isAlreadyRedeemedByUser
-                ? "You already redeemed this code with this account."
+                ? t("offers.errorAlreadyRedeemedUser")
                 : isPublic
                   ? err.message
-                  : "Could not redeem. Please try again.",
+                  : t("offers.errorGeneric"),
             isAlreadyRedeemed,
           });
         }
@@ -146,7 +150,7 @@ export default function OffersScreen() {
         inFlightRef.current.delete(code.id);
       }
     },
-    [deviceId, setCardError, setCardState]
+    [deviceId, setCardError, setCardState, t]
   );
 
   const onRefresh = useCallback(() => {
@@ -174,8 +178,8 @@ export default function OffersScreen() {
         ]}
       >
         <EmptyState
-          title="Could not load offers"
-          message="Please try again in a moment."
+          title={t("offers.errorTitle")}
+          message={t("offers.errorMessage")}
         />
       </View>
     );
@@ -200,15 +204,15 @@ export default function OffersScreen() {
         />
       }
     >
-      <Text style={[styles.title, { color: theme.text }]}>Offers</Text>
+      <Text style={[styles.title, { color: theme.text }]}>{t("offers.title")}</Text>
       <Text style={[styles.subtitle, { color: theme.textMuted }]}>
-        Swipe a card right to redeem the code on this device.
+        {t("offers.subtitle")}
       </Text>
 
       {codes.length === 0 ? (
         <EmptyState
-          title="No offers right now"
-          message="Check back later for exclusive deals."
+          title={t("offers.emptyTitle")}
+          message={t("offers.emptyMessage")}
         />
       ) : (
         codes.map((code) => {
@@ -252,6 +256,7 @@ function SwipeableCodeCard({
   onReset,
 }: SwipeableCodeCardProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   // Travel required to count as a "full swipe".
   const triggerDistance = useMemo(
@@ -333,11 +338,11 @@ function SwipeableCodeCard({
                 {code.code}
               </Text>
               <Text style={[styles.codeValue, { color: theme.text }]}>
-                {formatDiscountValue(code.type, code.value)}
+                {formatDiscountValue(t, code.type, code.value)}
               </Text>
-              {describeExpiry(code.expiresAt) ? (
+              {describeExpiry(t, code.expiresAt) ? (
                 <Text style={[styles.codeExpiry, { color: theme.textMuted }]}>
-                  {describeExpiry(code.expiresAt)}
+                  {describeExpiry(t, code.expiresAt)}
                 </Text>
               ) : null}
               {code.scopeBranch?.name ? (
@@ -348,16 +353,16 @@ function SwipeableCodeCard({
             </View>
             <View style={styles.cardActions}>
               {isRedeeming ? (
-                <Badge label="Redeeming…" variant="primary" />
+                <Badge label={t("offers.redeeming")} variant="primary" />
               ) : isRedeemed ? (
-                <Badge label="Redeemed" variant="success" />
+                <Badge label={t("offers.redeemed")} variant="success" />
               ) : isError ? (
                 <Badge
-                  label={error?.isAlreadyRedeemed ? "Already used" : "Try again"}
+                  label={error?.isAlreadyRedeemed ? t("offers.alreadyUsed") : t("offers.tryAgain")}
                   variant="danger"
                 />
               ) : (
-                <Badge label="Swipe →" variant="default" />
+                <Badge label={t("offers.swipe")} variant="default" />
               )}
             </View>
           </Animated.View>
@@ -377,7 +382,7 @@ function SwipeableCodeCard({
               style={[styles.errorReset, { color: theme.gold }]}
               onPress={onReset}
             >
-              Reset
+              {t("offers.reset")}
             </Text>
           ) : null}
         </Text>

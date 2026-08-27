@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { MapPin, ChevronRight, Store } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/contexts/ThemeContext";
 import { ThemeToggle } from "./ThemeToggle";
 import { type Branch } from "@funfsterne/shared-types";
@@ -25,6 +26,7 @@ export function HeroBanner({
   onOpenBranchPicker,
 }: HeroBannerProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const { width } = useWindowDimensions();
 
   const hasBranches = (branches?.length ?? 0) > 0;
@@ -61,7 +63,7 @@ export function HeroBanner({
             Fünf Sterne
           </Text>
           <Text style={[styles.tagline, { color: theme.textMuted }]} numberOfLines={1}>
-            Premium Barber Products
+            {t("home.tagline")}
           </Text>
         </View>
 
@@ -82,7 +84,7 @@ export function HeroBanner({
                 style={[styles.branchName, { color: theme.text }]}
                 numberOfLines={1}
               >
-                {selectedBranch ? selectedBranch.name : "Select branch"}
+                {selectedBranch ? selectedBranch.name : t("home.selectBranch")}
               </Text>
               {selectedBranch?.address ? (
                 <Text
@@ -107,7 +109,7 @@ export function HeroBanner({
           >
             <Store size={14} color={theme.gold} />
             <Text style={[styles.statusText, { color: theme.textMuted }]}>
-              No branches available yet
+              {t("home.noBranchesAvailable")}
             </Text>
           </View>
         )}

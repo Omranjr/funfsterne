@@ -31,6 +31,8 @@ import {
 } from "@/components";
 import { hasBeenPrompted } from "@/lib/notification-permission";
 import { useAppFonts } from "@/hooks/useFonts";
+import { initI18n } from "@/lib/i18n";
+import { useTranslation } from "react-i18next";
 import { Home, ShoppingBag, Tag, User, Gift } from "lucide-react-native";
 
 /**
@@ -102,6 +104,7 @@ SplashScreen.preventAutoHideAsync().catch(() => {
 
 function AppNavigator() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <SafeAreaView
@@ -131,7 +134,7 @@ function AppNavigator() {
         <Tabs.Screen
           name="index"
           options={{
-            title: "Home",
+            title: t("tabs.home"),
             tabBarIcon: ({ color, size }) => (
               <Home size={size} color={color} />
             ),
@@ -140,7 +143,7 @@ function AppNavigator() {
         <Tabs.Screen
           name="products"
           options={{
-            title: "Shop",
+            title: t("tabs.shop"),
             tabBarIcon: ({ color, size }) => (
               <ShoppingBag size={size} color={color} />
             ),
@@ -149,7 +152,7 @@ function AppNavigator() {
         <Tabs.Screen
           name="discount-codes"
           options={{
-            title: "Offers",
+            title: t("tabs.offers"),
             tabBarIcon: ({ color, size }) => (
               <Tag size={size} color={color} />
             ),
@@ -158,7 +161,7 @@ function AppNavigator() {
         <Tabs.Screen
           name="loyalty"
           options={{
-            title: "Rewards",
+            title: t("tabs.rewards"),
             tabBarIcon: ({ color, size }) => (
               <Gift size={size} color={color} />
             ),
@@ -167,7 +170,7 @@ function AppNavigator() {
         <Tabs.Screen
           name="account"
           options={{
-            title: "Account",
+            title: t("tabs.account"),
             tabBarIcon: ({ color, size }) => (
               <User size={size} color={color} />
             ),
@@ -187,6 +190,12 @@ function AppNavigator() {
         />
         <Tabs.Screen
           name="products/[id]"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="language"
           options={{
             href: null,
           }}
@@ -251,6 +260,22 @@ function BootSequence() {
 
 export default function RootLayout() {
   const { fontsLoaded, fontError } = useAppFonts();
+  const [i18nReady, setI18nReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    initI18n().then(() => {
+      // If initI18n triggered a native RTL mismatch fix, it also calls
+      // Updates.reloadAsync() -- this session is being torn down, so
+      // there's no point flipping i18nReady here (and in the (rare) case
+      // reload isn't available, proceeding with a language whose RTL
+      // flag doesn't yet match the native layout would look broken).
+      if (!cancelled) setI18nReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // If custom font loading ever errors out (corrupted asset, low-memory
   // eviction, etc.), fontsLoaded would otherwise stay false forever and
@@ -258,7 +283,7 @@ export default function RootLayout() {
   // means custom fontFamily styles silently fall back to the platform
   // default font instead -- a visual downgrade, not a dead end. This gate
   // runs before any provider mounts, so it can't use the theme yet.
-  if (!fontsLoaded && !fontError) {
+  if ((!fontsLoaded && !fontError) || !i18nReady) {
     return (
       <View style={styles.center}>
         <ActivityIndicator />

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Bell, Scissors, Tag } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Button, Card } from "@/components";
 import {
@@ -20,6 +21,7 @@ import { hasBeenPrompted, setPrompted } from "@/lib/notification-permission";
 export default function NotificationPermissionScreen() {
   const router = useRouter();
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const { status, canAskAgain, request } = useNotificationPermission();
   const { refresh: refreshPushToken } = useExpoPushToken();
   const register = useRegisterPushToken();
@@ -112,18 +114,20 @@ export default function NotificationPermissionScreen() {
         <Bell size={40} fill={theme.gold} />
       </View>
 
-      <Text style={[styles.title, { color: theme.text }]}>Stay in the loop</Text>
+      <Text style={[styles.title, { color: theme.text }]}>{t("notificationsPermission.title")}</Text>
       <Text style={[styles.subtitle, { color: theme.textMuted }]}>
-        Allow notifications so we can send you timely updates.
+        {t("notificationsPermission.subtitle")}
       </Text>
 
       <Card style={styles.benefits}>
         <View style={styles.benefit}>
           <Scissors size={20} fill={theme.gold} />
           <View style={styles.benefitText}>
-            <Text style={[styles.benefitTitle, { color: theme.text }]}>Haircut reminders</Text>
+            <Text style={[styles.benefitTitle, { color: theme.text }]}>
+              {t("notificationsPermission.haircutRemindersTitle")}
+            </Text>
             <Text style={[styles.benefitDesc, { color: theme.textMuted }]}>
-              Never miss your next appointment.
+              {t("notificationsPermission.haircutRemindersDesc")}
             </Text>
           </View>
         </View>
@@ -131,9 +135,11 @@ export default function NotificationPermissionScreen() {
         <View style={styles.benefit}>
           <Tag size={20} fill={theme.gold} />
           <View style={styles.benefitText}>
-            <Text style={[styles.benefitTitle, { color: theme.text }]}>Exclusive discounts</Text>
+            <Text style={[styles.benefitTitle, { color: theme.text }]}>
+              {t("notificationsPermission.discountsTitle")}
+            </Text>
             <Text style={[styles.benefitDesc, { color: theme.textMuted }]}>
-              Get notified when new promo codes drop.
+              {t("notificationsPermission.discountsDesc")}
             </Text>
           </View>
         </View>
@@ -141,13 +147,13 @@ export default function NotificationPermissionScreen() {
 
       <View style={styles.actions}>
         <Button
-          title="Allow notifications"
+          title={t("notificationsPermission.allow")}
           variant="primary"
           onPress={handleRequest}
           disabled={isResolving}
         />
         <Button
-          title="Not now"
+          title={t("notificationsPermission.notNow")}
           variant="secondary"
           onPress={handleSkip}
           disabled={isResolving}

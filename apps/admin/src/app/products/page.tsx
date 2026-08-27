@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +38,7 @@ import { Pencil, Plus, RefreshCw } from "lucide-react";
 const categories = ProductCategorySchema.options;
 
 export default function ProductsPage() {
+  const { t } = useTranslation();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -53,10 +55,10 @@ export default function ProductsPage() {
       setProducts((await res.json()) as Product[]);
     } else {
       setFailed(true);
-      toast.error("Could not load products", { description: "Please try again." });
+      toast.error(t("products.loadError"), { description: t("common.tryAgain") });
     }
     setLoading(false);
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     load();
@@ -84,9 +86,13 @@ export default function ProductsPage() {
       setProducts((prev) =>
         prev.map((p) => (p.id === updated.id ? updated : p)),
       );
-      toast.success(updated.isActive ? `${updated.name} is now active` : `${updated.name} is now inactive`);
+      toast.success(
+        updated.isActive
+          ? t("products.nowActive", { name: updated.name })
+          : t("products.nowInactive", { name: updated.name }),
+      );
     } else {
-      toast.error("Could not update product", { description: "Please try again." });
+      toast.error(t("products.couldNotUpdate"), { description: t("common.tryAgain") });
     }
   }
 
@@ -98,7 +104,7 @@ export default function ProductsPage() {
       }
       return [saved, ...prev];
     });
-    toast.success(editing ? "Product updated" : "Product created");
+    toast.success(editing ? t("products.productUpdated") : t("products.productCreated"));
     setDialogOpen(false);
     setEditing(null);
   }
@@ -106,7 +112,7 @@ export default function ProductsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Products"
+        title={t("products.title")}
         action={
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger
@@ -118,14 +124,14 @@ export default function ProductsPage() {
                   }}
                 >
                   <Plus className="h-4 w-4" />
-                  Add Product
+                  {t("products.addProduct")}
                 </Button>
               }
             />
             <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
-                  {editing ? "Edit Product" : "Create Product"}
+                  {editing ? t("products.editProduct") : t("products.createProduct")}
                 </DialogTitle>
               </DialogHeader>
               <ProductForm
@@ -143,7 +149,7 @@ export default function ProductsPage() {
 
       <div className="flex flex-col gap-4 sm:flex-row">
         <Input
-          placeholder="Search products..."
+          placeholder={t("products.searchPlaceholder")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="sm:w-80"
@@ -153,13 +159,13 @@ export default function ProductsPage() {
           onValueChange={(v) => setCategoryFilter(v as typeof categoryFilter)}
         >
           <SelectTrigger className="sm:w-56">
-            <SelectValue placeholder="Filter by category" />
+            <SelectValue placeholder={t("products.filterByCategory")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All categories</SelectItem>
+            <SelectItem value="all">{t("products.allCategories")}</SelectItem>
             {categories.map((c) => (
               <SelectItem key={c} value={c}>
-                {c.replace("_", " ")}
+                {t(`productCategories.${c}`)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -174,10 +180,10 @@ export default function ProductsPage() {
         </div>
       ) : failed ? (
         <div className="flex flex-col items-center gap-3 rounded-md border py-12 text-center">
-          <p className="text-sm text-muted-foreground">Something went wrong loading products.</p>
+          <p className="text-sm text-muted-foreground">{t("products.loadError")}</p>
           <Button variant="outline" size="sm" onClick={load}>
             <RefreshCw className="h-4 w-4" />
-            Try again
+            {t("common.tryAgain")}
           </Button>
         </div>
       ) : (
@@ -185,18 +191,18 @@ export default function ProductsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Active</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t("common.name")}</TableHead>
+                <TableHead>{t("products.category")}</TableHead>
+                <TableHead>{t("products.price")}</TableHead>
+                <TableHead>{t("common.active")}</TableHead>
+                <TableHead className="text-right">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.map((product) => (
                 <TableRow key={product.id}>
                   <TableCell className="font-medium">{product.name}</TableCell>
-                  <TableCell>{product.category.replace("_", " ")}</TableCell>
+                  <TableCell>{t(`productCategories.${product.category}`)}</TableCell>
                   <TableCell>€{Number(product.basePrice).toFixed(2)}</TableCell>
                   <TableCell>
                     <Switch

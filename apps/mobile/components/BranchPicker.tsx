@@ -8,6 +8,7 @@ import {
   Pressable,
 } from "react-native";
 import { X, MapPin } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/contexts/ThemeContext";
 import { type Branch } from "@funfsterne/shared-types";
 
@@ -27,6 +28,7 @@ export function BranchPicker({
   onClose,
 }: BranchPickerProps) {
   const { theme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <Modal
@@ -47,13 +49,13 @@ export function BranchPicker({
         >
           <View style={styles.header}>
             <Text style={[styles.title, { color: theme.text }]}>
-              Select branch
+              {t("home.selectBranch")}
             </Text>
             <TouchableOpacity
               onPress={onClose}
               style={styles.close}
               accessibilityRole="button"
-              accessibilityLabel="Close"
+              accessibilityLabel={t("home.closeBranchPicker")}
             >
               <X size={22} color={theme.textMuted} />
             </TouchableOpacity>

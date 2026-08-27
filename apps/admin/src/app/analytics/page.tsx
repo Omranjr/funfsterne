@@ -11,6 +11,7 @@ import {
   YAxis,
 } from "recharts";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,21 +36,10 @@ type VisitStatsResponse = {
   uniqueCustomers: number;
 };
 
-const GRANULARITY_OPTIONS: { value: Granularity; label: string }[] = [
-  { value: "day", label: "Day" },
-  { value: "month", label: "Month" },
-  { value: "year", label: "Year" },
-];
-
-// How far back each granularity looks -- mirrors the API's own window so
-// the subtitle under the chart accurately describes what's plotted.
-const GRANULARITY_HINT: Record<Granularity, string> = {
-  day: "Last 30 days",
-  month: "Last 12 months",
-  year: "Last 5 years",
-};
+const GRANULARITY_VALUES: Granularity[] = ["day", "month", "year"];
 
 export default function AnalyticsPage() {
+  const { t } = useTranslation();
   const [granularity, setGranularity] = useState<Granularity>("day");
   const [stats, setStats] = useState<VisitStatsResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -82,8 +72,8 @@ export default function AnalyticsPage() {
       .catch(() => {
         if (cancelled) return;
         setFailed(true);
-        toast.error("Could not load visit statistics", {
-          description: "Check your connection and try again.",
+        toast.error(t("analytics.loadError"), {
+          description: t("analytics.loadErrorDescription"),
         });
       })
       .finally(() => {
@@ -93,7 +83,7 @@ export default function AnalyticsPage() {
     return () => {
       cancelled = true;
     };
-  }, [granularity, selectedUser]);
+  }, [granularity, selectedUser, t]);
 
   useEffect(load, [load]);
 
@@ -119,29 +109,26 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Analytics"
-        description="Customer visits over time, tracked from loyalty scans at checkout."
-      />
+      <PageHeader title={t("analytics.title")} description={t("analytics.description")} />
 
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex gap-1 rounded-md border p-1">
-          {GRANULARITY_OPTIONS.map((opt) => (
+          {GRANULARITY_VALUES.map((value) => (
             <Button
-              key={opt.value}
+              key={value}
               type="button"
               size="sm"
-              variant={granularity === opt.value ? "default" : "ghost"}
-              onClick={() => setGranularity(opt.value)}
+              variant={granularity === value ? "default" : "ghost"}
+              onClick={() => setGranularity(value)}
             >
-              {opt.label}
+              {t(`analytics.${value}`)}
             </Button>
           ))}
         </div>
 
         <div className="relative w-64">
           <Input
-            placeholder="Filter by customer name..."
+            placeholder={t("analytics.filterPlaceholder")}
             value={
               selectedUser ? `${selectedUser.firstName} ${selectedUser.lastName}` : search
             }
@@ -185,7 +172,7 @@ export default function AnalyticsPage() {
               setSearch("");
             }}
           >
-            Clear filter
+            {t("analytics.clearFilter")}
           </Button>
         ) : null}
       </div>
@@ -194,7 +181,9 @@ export default function AnalyticsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              {selectedUser ? `Visits by ${selectedUser.firstName}` : "Total visits"}
+              {selectedUser
+                ? t("analytics.visitsBy", { name: selectedUser.firstName })
+                : t("analytics.totalVisits")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -211,7 +200,7 @@ export default function AnalyticsPage() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Unique customers
+                {t("analytics.uniqueCustomers")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -230,28 +219,32 @@ export default function AnalyticsPage() {
       <Card>
         <CardHeader>
           <CardTitle>
-            Visits per {granularity}
+            {t("analytics.visitsPer", { granularity: t(`analytics.${granularity}`) })}
             {selectedUser ? ` — ${selectedUser.firstName} ${selectedUser.lastName}` : ""}
           </CardTitle>
-          <p className="text-sm text-muted-foreground">{GRANULARITY_HINT[granularity]}</p>
+          <p className="text-sm text-muted-foreground">
+            {t(
+              granularity === "day"
+                ? "analytics.last30Days"
+                : granularity === "month"
+                  ? "analytics.last12Months"
+                  : "analytics.last5Years",
+            )}
+          </p>
         </CardHeader>
         <CardContent>
           {loading ? (
             <Skeleton className="h-80 w-full" />
           ) : failed ? (
             <div className="flex flex-col items-center gap-3 py-16 text-center">
-              <p className="text-sm text-muted-foreground">
-                Something went wrong loading this chart.
-              </p>
+              <p className="text-sm text-muted-foreground">{t("analytics.loadError")}</p>
               <Button variant="outline" size="sm" onClick={load}>
                 <RefreshCw className="h-4 w-4" />
-                Try again
+                {t("common.tryAgain")}
               </Button>
             </div>
           ) : !hasData ? (
-            <p className="py-16 text-center text-muted-foreground">
-              No visits in this period.
-            </p>
+            <p className="py-16 text-center text-muted-foreground">{t("analytics.noVisits")}</p>
           ) : (
             <div className="h-80 w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -283,7 +276,7 @@ export default function AnalyticsPage() {
                   />
                   <Bar
                     dataKey="visits"
-                    name="Visits"
+                    name={t("analytics.totalVisits")}
                     fill="var(--primary)"
                     radius={[4, 4, 0, 0]}
                     maxBarSize={24}

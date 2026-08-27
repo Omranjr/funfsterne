@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import {
-  ProductCategoryLabel,
   ProductCategorySchema,
   type ProductCategory,
   type CategoryImage,
@@ -31,6 +31,7 @@ type CategoryImageRow = {
 const CATEGORIES = ProductCategorySchema.options;
 
 export default function CategoriesPage() {
+  const { t } = useTranslation();
   const [rows, setRows] = useState<CategoryImageRow[]>([]);
   const [loading, setLoading] = useState(true);
   // Per-category transient state for the save step (after the upload
@@ -48,9 +49,9 @@ export default function CategoriesPage() {
         setRows(data);
       } else {
         setErrors({
-          _global: `Failed to load category images (${res.status})`,
+          _global: t("categories.loadError", { status: res.status }),
         });
-        toast.error("Could not load category images", { description: "Please try again." });
+        toast.error(t("categories.loadErrorToast"), { description: t("common.tryAgain") });
       }
     } finally {
       setLoading(false);
@@ -98,7 +99,7 @@ export default function CategoriesPage() {
             // not JSON
           }
           setErrors((prev) => ({ ...prev, [category]: detail }));
-          toast.error(`Could not save ${ProductCategoryLabel[category]} image`, {
+          toast.error(t("categories.couldNotSave", { category: t(`productCategories.${category}`) }), {
             description: detail,
           });
           // Reload the row so the UI reverts to the persisted state (otherwise
@@ -139,15 +140,12 @@ export default function CategoriesPage() {
         setSaving((prev) => ({ ...prev, [category]: false }));
       }
     },
-    [],
+    [t],
   );
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Category Images"
-        description="The home screen shows one tile per product category. Upload an image here to replace the default coloured placeholder. Leave a category empty to keep the placeholder."
-      />
+      <PageHeader title={t("categories.title")} description={t("categories.description")} />
 
       {errors._global && (
         <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
@@ -179,17 +177,17 @@ export default function CategoriesPage() {
               <Card key={category}>
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center justify-between text-base">
-                    <span>{ProductCategoryLabel[category]}</span>
+                    <span>{t(`productCategories.${category}`)}</span>
                     {saving[category] && (
                       <span className="flex items-center gap-1 text-xs font-normal text-muted-foreground">
                         <Loader2 className="h-3 w-3 animate-spin" />
-                        Saving…
+                        {t("categories.saving")}
                       </span>
                     )}
                     {!saving[category] && savedTick[category] && !errors[category] && (
                       <span className="flex items-center gap-1 text-xs font-normal text-emerald-600">
                         <CheckCircle2 className="h-3 w-3" />
-                        Saved
+                        {t("categories.saved")}
                       </span>
                     )}
                   </CardTitle>

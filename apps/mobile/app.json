@@ -13,7 +13,9 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
-      "associatedDomains": ["webcredentials:funfsterne-admin-eight.vercel.app"]
+      "associatedDomains": [
+        "webcredentials:funfsterne-admin-eight.vercel.app"
+      ]
     },
     "android": {
       "package": "com.funfsterne.mobile",
@@ -48,7 +50,8 @@
           "color": "#C9A84C"
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-localization"
     ],
     "extra": {
       "router": {

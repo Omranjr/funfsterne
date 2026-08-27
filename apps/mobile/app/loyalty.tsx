@@ -22,6 +22,8 @@ import Animated, {
 import * as Haptics from "expo-haptics";
 import QRCode from "react-native-qrcode-svg";
 import { Gift, Sparkles } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import {
   MIN_REDEEM_POINTS,
   POINTS_PER_EURO,
@@ -35,9 +37,13 @@ import { queryClient } from "@/lib/query-client";
 
 const QR_PREFIX = "funfsterne:loyalty:";
 
-function describeTransaction(note: string | null, branch?: { name: string } | null): string {
-  if (branch?.name) return `Visit at ${branch.name}`;
-  return note ?? "Visit";
+function describeTransaction(
+  t: TFunction,
+  note: string | null,
+  branch?: { name: string } | null
+): string {
+  if (branch?.name) return t("loyalty.visitAt", { branch: branch.name });
+  return note ?? t("loyalty.visit");
 }
 
 function formatDate(iso: string): string {
@@ -48,6 +54,7 @@ function formatDate(iso: string): string {
 
 export default function LoyaltyScreen() {
   const { theme } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { data, isLoading, isRefetching, refetch, error } = useLoyaltyMe();
@@ -129,12 +136,12 @@ export default function LoyaltyScreen() {
     (points: number) => {
       const euros = (points / POINTS_PER_EURO).toFixed(0);
       Alert.alert(
-        "Redeem points?",
-        `Turn ${points} points into a €${euros} voucher toward any product in store.`,
+        t("loyalty.redeemConfirmTitle"),
+        t("loyalty.redeemConfirmMessage", { points, euros }),
         [
-          { text: "Cancel", style: "cancel" },
+          { text: t("common.cancel"), style: "cancel" },
           {
-            text: "Redeem",
+            text: t("loyalty.redeem"),
             onPress: async () => {
               setRedeeming(true);
               try {
@@ -143,9 +150,9 @@ export default function LoyaltyScreen() {
               } catch (err) {
                 const message =
                   err instanceof PublicApiError && err.errorCode === "INSUFFICIENT_POINTS"
-                    ? "You no longer have enough points for this."
-                    : "Could not redeem right now. Please try again.";
-                Alert.alert("Couldn't redeem", message);
+                    ? t("loyalty.redeemErrorInsufficientPoints")
+                    : t("loyalty.redeemErrorGeneric");
+                Alert.alert(t("loyalty.redeemErrorTitle"), message);
               } finally {
                 setRedeeming(false);
               }
@@ -154,7 +161,7 @@ export default function LoyaltyScreen() {
         ]
       );
     },
-    []
+    [t]
   );
 
   if (isLoading) {
@@ -168,7 +175,7 @@ export default function LoyaltyScreen() {
   if (error && !data) {
     return (
       <View style={[styles.container, styles.center, { backgroundColor: theme.background }]}>
-        <EmptyState title="Could not load your points" message="Please try again in a moment." />
+        <EmptyState title={t("loyalty.loadErrorTitle")} message={t("loyalty.loadErrorMessage")} />
       </View>
     );
   }
@@ -187,7 +194,7 @@ export default function LoyaltyScreen() {
         />
       }
     >
-      <Text style={[styles.title, { color: theme.text }]}>Loyalty</Text>
+      <Text style={[styles.title, { color: theme.text }]}>{t("loyalty.title")}</Text>
 
       {celebration !== null ? (
         <Animated.View
@@ -197,13 +204,15 @@ export default function LoyaltyScreen() {
         >
           <Sparkles size={16} color={theme.background} />
           <Text style={[styles.celebrationText, { color: theme.background }]}>
-            +{celebration} points earned today!
+            {t("loyalty.pointsEarnedToday", { count: celebration })}
           </Text>
         </Animated.View>
       ) : null}
 
       <Card style={styles.balanceCard}>
-        <Text style={[styles.balanceLabel, { color: theme.textMuted }]}>Your points</Text>
+        <Text style={[styles.balanceLabel, { color: theme.textMuted }]}>
+          {t("loyalty.yourPoints")}
+        </Text>
         <Animated.Text style={[styles.balanceValue, { color: theme.gold }, celebrationStyle]}>
           {balance}
         </Animated.Text>
@@ -215,16 +224,19 @@ export default function LoyaltyScreen() {
         </View>
         <Text style={[styles.progressLabel, { color: theme.textMuted }]}>
           {canRedeem
-            ? `${redeemablePoints} points ready to redeem`
-            : `${MIN_REDEEM_POINTS - progressToNext} points to your first reward`}
+            ? t("loyalty.pointsReadyToRedeem", { count: redeemablePoints })
+            : t("loyalty.pointsToFirstReward", { count: MIN_REDEEM_POINTS - progressToNext })}
         </Text>
 
         {canRedeem ? (
           <Button
             title={
               redeeming
-                ? "Redeeming…"
-                : `Redeem ${redeemablePoints} points for €${redeemablePoints / POINTS_PER_EURO}`
+                ? t("loyalty.redeeming")
+                : t("loyalty.redeemButton", {
+                    points: redeemablePoints,
+                    euros: redeemablePoints / POINTS_PER_EURO,
+                  })
             }
             onPress={() => handleRedeem(redeemablePoints)}
             disabled={redeeming}
@@ -234,9 +246,9 @@ export default function LoyaltyScreen() {
       </Card>
 
       <Card style={styles.qrCard}>
-        <Text style={[styles.qrLabel, { color: theme.text }]}>My code</Text>
+        <Text style={[styles.qrLabel, { color: theme.text }]}>{t("loyalty.myCode")}</Text>
         <Text style={[styles.qrHint, { color: theme.textMuted }]}>
-          Show this to staff at checkout to earn points on your visit.
+          {t("loyalty.myCodeHint")}
         </Text>
         <View style={styles.qrWrapper}>
           {qrValue ? (
@@ -247,7 +259,9 @@ export default function LoyaltyScreen() {
 
       {activeRewards.length > 0 ? (
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Active rewards</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            {t("loyalty.activeRewards")}
+          </Text>
           {activeRewards.map((reward) => (
             <Card key={reward.id} style={styles.rewardRow}>
               <View style={[styles.rewardIcon, { backgroundColor: theme.muted }]}>
@@ -255,13 +269,13 @@ export default function LoyaltyScreen() {
               </View>
               <View style={styles.rewardInfo}>
                 <Text style={[styles.rewardValue, { color: theme.text }]}>
-                  €{reward.eurosValue} voucher
+                  {t("loyalty.voucher", { value: reward.eurosValue })}
                 </Text>
                 <Text style={[styles.rewardMeta, { color: theme.textMuted }]}>
-                  Show your code to staff to use it
+                  {t("loyalty.showCodeToUse")}
                 </Text>
               </View>
-              <Badge label="Active" variant="primary" />
+              <Badge label={t("loyalty.activeBadge")} variant="primary" />
             </Card>
           ))}
         </View>
@@ -269,12 +283,16 @@ export default function LoyaltyScreen() {
 
       {data && data.transactions.length > 0 ? (
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Recent activity</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            {t("loyalty.recentActivity")}
+          </Text>
           {data.transactions.slice(0, 10).map((tx) => (
             <View key={tx.id} style={styles.historyRow}>
               <View style={styles.historyInfo}>
                 <Text style={[styles.historyLabel, { color: theme.text }]}>
-                  {tx.type === "EARN" ? describeTransaction(tx.note, tx.branch) : "Redeemed reward"}
+                  {tx.type === "EARN"
+                    ? describeTransaction(t, tx.note, tx.branch)
+                    : t("loyalty.redeemedReward")}
                 </Text>
                 <Text style={[styles.historyDate, { color: theme.textMuted }]}>
                   {formatDate(tx.createdAt)}
@@ -295,11 +313,13 @@ export default function LoyaltyScreen() {
 
       {pastRewards.length > 0 ? (
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Used rewards</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            {t("loyalty.usedRewards")}
+          </Text>
           {pastRewards.slice(0, 5).map((reward) => (
             <View key={reward.id} style={styles.historyRow}>
               <Text style={[styles.historyLabel, { color: theme.textMuted }]}>
-                €{reward.eurosValue} voucher
+                {t("loyalty.voucher", { value: reward.eurosValue })}
               </Text>
               <Text style={[styles.historyDate, { color: theme.textMuted }]}>
                 {reward.redeemedAt ? formatDate(reward.redeemedAt) : ""}
