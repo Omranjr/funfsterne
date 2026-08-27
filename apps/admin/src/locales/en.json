@@ -202,7 +202,13 @@
     "someAvailabilityFailed": "Some branch availability didn't save",
     "pleaseRetryFor": "Please retry for: {{branches}}",
     "couldNotLoadBranches": "Could not load branches for availability settings",
-    "failedToSave": "Failed to save product."
+    "failedToSave": "Failed to save product.",
+    "deleteProduct": "Delete product",
+    "deleteConfirmTitle": "Delete {{name}}?",
+    "deleteConfirmDescription": "This permanently removes the product and its branch availability. This cannot be undone.",
+    "deleting": "Deleting...",
+    "productDeleted": "Product deleted",
+    "failedToDelete": "Failed to delete product."
   },
   "categories": {
     "title": "Category Images",

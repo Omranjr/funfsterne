@@ -29,11 +29,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/page-header";
 import { ProductCategorySchema, type Product } from "@funfsterne/shared-types";
 import { ProductForm } from "./product-form";
-import { Pencil, Plus, RefreshCw } from "lucide-react";
+import { Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 
 const categories = ProductCategorySchema.options;
 
@@ -46,6 +54,8 @@ export default function ProductsPage() {
   const [categoryFilter, setCategoryFilter] = useState<"all" | (typeof categories)[number]>("all");
   const [editing, setEditing] = useState<Product | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -93,6 +103,23 @@ export default function ProductsPage() {
       );
     } else {
       toast.error(t("products.couldNotUpdate"), { description: t("common.tryAgain") });
+    }
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const res = await apiFetch(`/admin/products/${deleteTarget.id}`, {
+      method: "DELETE",
+    });
+    setDeleting(false);
+
+    if (res.ok) {
+      setProducts((prev) => prev.filter((p) => p.id !== deleteTarget.id));
+      toast.success(t("products.productDeleted"));
+      setDeleteTarget(null);
+    } else {
+      toast.error(t("products.failedToDelete"), { description: t("common.tryAgain") });
     }
   }
 
@@ -221,6 +248,13 @@ export default function ProductsPage() {
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setDeleteTarget(product)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -228,6 +262,42 @@ export default function ProductsPage() {
           </Table>
         </div>
       )}
+
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t("products.deleteConfirmTitle", { name: deleteTarget?.name })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("products.deleteConfirmDescription")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeleteTarget(null)}
+              disabled={deleting}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? t("products.deleting") : t("products.deleteProduct")}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

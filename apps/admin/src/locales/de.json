@@ -202,7 +202,13 @@
     "someAvailabilityFailed": "Einige Filial-Verfügbarkeiten wurden nicht gespeichert",
     "pleaseRetryFor": "Bitte erneut versuchen für: {{branches}}",
     "couldNotLoadBranches": "Filialen für Verfügbarkeitseinstellungen konnten nicht geladen werden",
-    "failedToSave": "Produkt konnte nicht gespeichert werden."
+    "failedToSave": "Produkt konnte nicht gespeichert werden.",
+    "deleteProduct": "Produkt löschen",
+    "deleteConfirmTitle": "{{name}} löschen?",
+    "deleteConfirmDescription": "Dies entfernt das Produkt und seine Filialverfügbarkeit dauerhaft. Dies kann nicht rückgängig gemacht werden.",
+    "deleting": "Wird gelöscht...",
+    "productDeleted": "Produkt gelöscht",
+    "failedToDelete": "Produkt konnte nicht gelöscht werden."
   },
   "categories": {
     "title": "Kategoriebilder",

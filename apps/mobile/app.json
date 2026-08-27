@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Fünf Sterne",
-    "slug": "mobile",
+    "slug": "omm",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -58,10 +58,10 @@
         "origin": false
       },
       "eas": {
-        "projectId": "039e2e3e-b52e-477a-a8be-73426a2332eb"
+        "projectId": "b62d0779-1c45-435f-975f-de76be0c6569"
       },
       "apiBaseUrl": "https://funfsterne-admin.onrender.com"
     },
-    "owner": "omran22"
+    "owner": "omran808s-team"
   }
 }

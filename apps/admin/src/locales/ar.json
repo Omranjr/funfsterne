@@ -202,7 +202,13 @@
     "someAvailabilityFailed": "تعذّر حفظ توفر بعض الفروع",
     "pleaseRetryFor": "يرجى إعادة المحاولة لـ: {{branches}}",
     "couldNotLoadBranches": "تعذّر تحميل الفروع لإعدادات التوفر",
-    "failedToSave": "تعذّر حفظ المنتج."
+    "failedToSave": "تعذّر حفظ المنتج.",
+    "deleteProduct": "حذف المنتج",
+    "deleteConfirmTitle": "حذف {{name}}؟",
+    "deleteConfirmDescription": "سيؤدي هذا إلى حذف المنتج وتوفره في الفروع بشكل نهائي. لا يمكن التراجع عن ذلك.",
+    "deleting": "جارٍ الحذف...",
+    "productDeleted": "تم حذف المنتج",
+    "failedToDelete": "تعذّر حذف المنتج."
   },
   "categories": {
     "title": "صور الفئات",

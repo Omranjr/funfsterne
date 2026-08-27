@@ -72,18 +72,35 @@ export function ProductForm({
     loadBranches();
   }, [t]);
 
+  // Seeds one availability entry per branch as soon as branches load --
+  // for a branch the product already has a row for, that row's real values;
+  // otherwise `inStock: true`, matching what every branch's toggle already
+  // rendered as (`?? true` below). Without this, a new product left
+  // untouched submitted with an EMPTY availability map, so the submit loop
+  // (which only PUTs entries that exist in the map) sent zero availability
+  // rows -- the product looked "in stock" in this form but was actually
+  // unavailable at every branch on the mobile app, since the public API
+  // treats "no availability row" as "not carried here", not "available
+  // everywhere by default".
   useEffect(() => {
-    if (product?.availabilities) {
-      const map: Record<string, { inStock: boolean; priceOverride: string }> = {};
-      for (const a of product.availabilities as ProductBranchAvailability[]) {
-        map[a.branchId] = {
-          inStock: a.inStock,
-          priceOverride: a.priceOverride?.toString() ?? "",
-        };
+    if (branches.length === 0) return;
+    setAvailability((prev) => {
+      const next = { ...prev };
+      for (const branch of branches) {
+        if (next[branch.id]) continue;
+        const existing = (
+          product?.availabilities as ProductBranchAvailability[] | undefined
+        )?.find((a) => a.branchId === branch.id);
+        next[branch.id] = existing
+          ? {
+              inStock: existing.inStock,
+              priceOverride: existing.priceOverride?.toString() ?? "",
+            }
+          : { inStock: true, priceOverride: "" };
       }
-      setAvailability(map);
-    }
-  }, [product]);
+      return next;
+    });
+  }, [branches, product]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
