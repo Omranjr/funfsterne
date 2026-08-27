@@ -24,7 +24,9 @@ import {
   awardLoyaltyPoints,
   redeemLoyaltyReward,
   getLoyaltyVisitStats,
+  getCustomerVisitSummary,
   type VisitStatsGranularity,
+  type EngagementPeriod,
 } from "../services/loyalty.service.js";
 import { serializePrisma } from "../serializers.js";
 
@@ -335,11 +337,7 @@ export async function adminRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: "Invalid notification payload" });
     }
 
-    const { title, body, discountCodeId, target } = parse.data;
-
-    if (target !== "all") {
-      return reply.status(400).send({ error: "Unsupported target" });
-    }
+    const { title, body, discountCodeId, target, userIds } = parse.data;
 
     if (discountCodeId) {
       const discount = await app.prisma.discountCode.findUnique({
@@ -350,7 +348,16 @@ export async function adminRoutes(app: FastifyInstance) {
       }
     }
 
-    const pushTokens = await app.prisma.pushToken.findMany();
+    // A targeted send resolves to the push tokens owned by the chosen
+    // customers. Customers with no registered token simply contribute none,
+    // which is why the response reports `recipients` (devices actually
+    // messaged) separately from how many customers were picked.
+    const pushTokens =
+      target === "users"
+        ? await app.prisma.pushToken.findMany({
+            where: { userId: { in: userIds ?? [] } },
+          })
+        : await app.prisma.pushToken.findMany();
 
     const tokens = pushTokens.map((pt) => pt.token);
     const { sent, failed } = await sendPushNotifications(
@@ -365,6 +372,7 @@ export async function adminRoutes(app: FastifyInstance) {
         title,
         body,
         discountCodeId,
+        audience: target === "users" ? "SEGMENT" : "ALL",
         sentAt: new Date(),
         sentToCount: sent.length,
       },
@@ -509,5 +517,16 @@ export async function adminRoutes(app: FastifyInstance) {
       granularity,
       userId: query.userId || undefined,
     });
+  });
+
+  // Powers both the Analytics engagement card and the notification
+  // targeting picker -- one shape serving both keeps "who the owner sees"
+  // and "who actually gets the push" from drifting apart.
+  app.get("/loyalty/customer-visits", async (request) => {
+    const query = request.query as { period?: string };
+    const period: EngagementPeriod =
+      query.period === "halfYear" || query.period === "year" ? query.period : "month";
+
+    return serializePrisma(await getCustomerVisitSummary(app, { period }));
   });
 }

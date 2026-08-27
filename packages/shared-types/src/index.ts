@@ -244,11 +244,19 @@ export type AdminResetConsumerPassword = z.infer<
   typeof AdminResetConsumerPasswordSchema
 >;
 
+// ALL = broadcast to every registered device. SEGMENT = sent only to a
+// hand-picked set of customers. Recorded on the row because `sentToCount`
+// alone can't tell the two apart -- "sent to 3 devices" reads as a failed
+// broadcast when it was actually a deliberate targeted offer.
+export const NotificationAudienceSchema = z.enum(["ALL", "SEGMENT"]);
+export type NotificationAudience = z.infer<typeof NotificationAudienceSchema>;
+
 export const NotificationSchema = z.object({
   id: z.string(),
   title: z.string(),
   body: z.string(),
   discountCodeId: z.string().optional(),
+  audience: NotificationAudienceSchema.default("ALL"),
   sentAt: z.coerce.date(),
   sentToCount: z.number().int().nonnegative().default(0),
 });
@@ -263,14 +271,47 @@ export const CreateNotificationSchema = NotificationSchema.omit({
 
 export type CreateNotification = z.infer<typeof CreateNotificationSchema>;
 
-export const SendNotificationSchema = z.object({
-  title: z.string().min(1),
-  body: z.string().min(1),
-  discountCodeId: z.string().optional(),
-  target: z.enum(["all"]),
-});
+export const SendNotificationSchema = z
+  .object({
+    title: z.string().min(1),
+    body: z.string().min(1),
+    discountCodeId: z.string().optional(),
+    // "all" broadcasts to every push token; "users" sends only to the push
+    // tokens belonging to `userIds`.
+    target: z.enum(["all", "users"]),
+    userIds: z.array(z.string().min(1)).optional(),
+  })
+  .refine((v) => v.target !== "users" || (v.userIds?.length ?? 0) > 0, {
+    message: "Select at least one customer to target",
+    path: ["userIds"],
+  });
 
 export type SendNotification = z.infer<typeof SendNotificationSchema>;
+
+// ── Customer engagement (analytics + notification targeting) ───────────────
+
+// Rolling look-back windows for the engagement leaderboard. Deliberately
+// coarse (not a free date range): the owner's question is "who should I
+// nudge?", not "what happened between two exact dates".
+export const EngagementPeriodSchema = z.enum(["month", "halfYear", "year"]);
+export type EngagementPeriod = z.infer<typeof EngagementPeriodSchema>;
+
+export const CustomerVisitSummarySchema = z.object({
+  userId: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
+  username: z.string(),
+  visits: z.number().int().nonnegative(),
+  // null when the customer has not visited at all within the window.
+  lastVisitAt: z.coerce.date().nullable(),
+  joinedAt: z.coerce.date(),
+  // Whether this customer has at least one registered push token. A
+  // customer with none cannot be reached by a targeted notification, and
+  // the UI must say so rather than silently dropping them.
+  reachable: z.boolean(),
+});
+
+export type CustomerVisitSummary = z.infer<typeof CustomerVisitSummarySchema>;
 
 export const RegisterPushTokenSchema = z.object({
   deviceId: z.string().min(1),

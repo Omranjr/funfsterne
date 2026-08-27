@@ -36,6 +36,11 @@ enum LoyaltyRewardStatus {
   REDEEMED
 }
 
+enum NotificationAudience {
+  ALL
+  SEGMENT
+}
+
 model Branch {
   id          String                    @id @default(cuid())
   name        String
@@ -150,6 +155,9 @@ model Notification {
   body           String
   discountCodeId String?
   discountCode   DiscountCode? @relation(fields: [discountCodeId], references: [id], onDelete: SetNull)
+  // Defaulted so existing rows (all of which predate targeting, and were
+  // therefore broadcasts) migrate to the correct value automatically.
+  audience       NotificationAudience @default(ALL)
   sentAt         DateTime      @default(now())
   sentToCount    Int           @default(0)
 

@@ -241,6 +241,108 @@ export async function getLoyaltyVisitStats(
   };
 }
 
+// ── Customer engagement leaderboard ───────────────────────────────────────
+
+export type EngagementPeriod = "month" | "halfYear" | "year";
+
+const ENGAGEMENT_WINDOW_DAYS: Record<EngagementPeriod, number> = {
+  month: 30,
+  halfYear: 182,
+  year: 365,
+};
+
+export type CustomerVisitSummary = {
+  userId: string;
+  firstName: string;
+  lastName: string;
+  username: string;
+  visits: number;
+  lastVisitAt: Date | null;
+  joinedAt: Date;
+  reachable: boolean;
+};
+
+/**
+ * Every registered customer, with their visit count inside the window.
+ *
+ * Deliberately built by starting from ConsumerUser and LEFT-joining visits
+ * in memory, rather than aggregating LoyaltyTransaction directly. A customer
+ * who hasn't visited at all in the window has NO transaction rows, so a
+ * transaction-first query would omit them entirely -- and those are exactly
+ * the "least motivated" customers this endpoint exists to surface. Returning
+ * them with `visits: 0` is the whole point.
+ *
+ * The merge is done in JS rather than SQL because the row count here is the
+ * shop's total customer list (hundreds, realistically), so the simplicity
+ * and portability is worth more than pushing it into a raw query.
+ */
+export async function getCustomerVisitSummary(
+  app: FastifyInstance,
+  args: { period: EngagementPeriod },
+): Promise<{ period: EngagementPeriod; from: Date; customers: CustomerVisitSummary[] }> {
+  const from = new Date(Date.now() - ENGAGEMENT_WINDOW_DAYS[args.period] * 86_400_000);
+
+  const [users, visitGroups, tokenGroups] = await Promise.all([
+    app.prisma.consumerUser.findMany({
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        username: true,
+        createdAt: true,
+      },
+    }),
+    app.prisma.loyaltyTransaction.groupBy({
+      by: ["userId"],
+      where: { type: "EARN", createdAt: { gte: from }, userId: { not: null } },
+      _count: { _all: true },
+      _max: { createdAt: true },
+    }),
+    app.prisma.pushToken.groupBy({
+      by: ["userId"],
+      where: { userId: { not: null } },
+      _count: { _all: true },
+    }),
+  ]);
+
+  const visitsByUser = new Map(
+    visitGroups.flatMap((g) =>
+      g.userId
+        ? [[g.userId, { visits: g._count._all, lastVisitAt: g._max.createdAt }] as const]
+        : [],
+    ),
+  );
+  const reachableUsers = new Set(
+    tokenGroups.flatMap((g) => (g.userId ? [g.userId] : [])),
+  );
+
+  const customers: CustomerVisitSummary[] = users.map((u) => {
+    const stats = visitsByUser.get(u.id);
+    return {
+      userId: u.id,
+      firstName: u.firstName,
+      lastName: u.lastName,
+      username: u.username,
+      visits: stats?.visits ?? 0,
+      lastVisitAt: stats?.lastVisitAt ?? null,
+      joinedAt: u.createdAt,
+      reachable: reachableUsers.has(u.id),
+    };
+  });
+
+  // Most visits first. Ties broken by name so the order is stable between
+  // requests rather than dependent on however Postgres returned the rows --
+  // an unstable list visibly reshuffles on every refresh.
+  customers.sort(
+    (a, b) =>
+      b.visits - a.visits ||
+      a.firstName.localeCompare(b.firstName) ||
+      a.lastName.localeCompare(b.lastName),
+  );
+
+  return { period: args.period, from, customers };
+}
+
 export type RedeemRewardResult =
   | { ok: true }
   | { ok: false; errorCode: "NOT_FOUND" | "ALREADY_REDEEMED" };

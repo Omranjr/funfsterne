@@ -72,7 +72,21 @@
     "loading": "Loading...",
     "noVisits": "No visits in this period.",
     "loadError": "Could not load visit statistics",
-    "loadErrorDescription": "Check your connection and try again."
+    "loadErrorDescription": "Check your connection and try again.",
+    "engagementTitle": "Customer engagement",
+    "engagementDescription": "Who keeps coming back — and who has drifted away.",
+    "mostVisits": "Most visits",
+    "fewestVisits": "Fewest visits",
+    "periodMonth": "Last month",
+    "periodHalfYear": "Last 6 months",
+    "periodYear": "Last year",
+    "visitsLabel": "visits",
+    "lastVisit": "Last visit {{date}}",
+    "neverVisited": "No visits in this period",
+    "joined": "Joined {{date}}",
+    "noCustomers": "No customers have signed up yet.",
+    "targetWithOffer": "Send them an offer",
+    "reachableSummary": "{{reachable}} of {{total}} shown can receive push notifications"
   },
   "loyaltyScan": {
     "title": "Loyalty Scan",
@@ -222,6 +236,20 @@
     "noNotifications": "No notifications sent yet.",
     "sentAt": "Sent At",
     "discountCode": "Discount Code",
-    "sentTo": "Sent To"
+    "sentTo": "Sent To",
+    "audience": "Audience",
+    "audienceAll": "All customers",
+    "audienceSelected": "Selected customers",
+    "audienceAllShort": "All",
+    "audienceSegmentShort": "Targeted",
+    "quickFill": "Quick fill",
+    "applyQuickFill": "Select these",
+    "selectedCount": "{{selected}} selected · {{reachable}} can receive it",
+    "notReachable": "Cannot receive notifications",
+    "clearSelection": "Clear",
+    "noneReachable": "None of the selected customers have the app installed with notifications enabled — this send would reach nobody.",
+    "loadCustomersError": "Could not load the customer list",
+    "selectAtLeastOne": "Select at least one customer to target.",
+    "targetedIntro": "Pick who should receive this. Useful for winning back customers who haven't visited in a while."
   }
 }

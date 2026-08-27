@@ -72,7 +72,21 @@
     "loading": "Wird geladen...",
     "noVisits": "Keine Besuche in diesem Zeitraum.",
     "loadError": "Besuchsstatistiken konnten nicht geladen werden",
-    "loadErrorDescription": "Bitte überprüfen Sie Ihre Verbindung und versuchen Sie es erneut."
+    "loadErrorDescription": "Bitte überprüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+    "engagementTitle": "Kundenbindung",
+    "engagementDescription": "Wer regelmäßig wiederkommt — und wer sich entfernt hat.",
+    "mostVisits": "Meiste Besuche",
+    "fewestVisits": "Wenigste Besuche",
+    "periodMonth": "Letzter Monat",
+    "periodHalfYear": "Letzte 6 Monate",
+    "periodYear": "Letztes Jahr",
+    "visitsLabel": "Besuche",
+    "lastVisit": "Letzter Besuch {{date}}",
+    "neverVisited": "Keine Besuche in diesem Zeitraum",
+    "joined": "Beigetreten {{date}}",
+    "noCustomers": "Es haben sich noch keine Kunden registriert.",
+    "targetWithOffer": "Angebot senden",
+    "reachableSummary": "{{reachable}} von {{total}} angezeigten können Benachrichtigungen empfangen"
   },
   "loyaltyScan": {
     "title": "Treuepunkte scannen",
@@ -222,6 +236,20 @@
     "noNotifications": "Es wurden noch keine Benachrichtigungen gesendet.",
     "sentAt": "Gesendet am",
     "discountCode": "Rabattcode",
-    "sentTo": "Gesendet an"
+    "sentTo": "Gesendet an",
+    "audience": "Empfänger",
+    "audienceAll": "Alle Kunden",
+    "audienceSelected": "Ausgewählte Kunden",
+    "audienceAllShort": "Alle",
+    "audienceSegmentShort": "Gezielt",
+    "quickFill": "Schnellauswahl",
+    "applyQuickFill": "Diese auswählen",
+    "selectedCount": "{{selected}} ausgewählt · {{reachable}} können es empfangen",
+    "notReachable": "Kann keine Benachrichtigungen empfangen",
+    "clearSelection": "Zurücksetzen",
+    "noneReachable": "Keiner der ausgewählten Kunden hat die App mit aktivierten Benachrichtigungen — dieser Versand würde niemanden erreichen.",
+    "loadCustomersError": "Kundenliste konnte nicht geladen werden",
+    "selectAtLeastOne": "Bitte wählen Sie mindestens einen Kunden aus.",
+    "targetedIntro": "Wählen Sie die Empfänger aus. Nützlich, um Kunden zurückzugewinnen, die länger nicht da waren."
   }
 }

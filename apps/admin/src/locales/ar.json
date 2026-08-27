@@ -72,7 +72,21 @@
     "loading": "جارٍ التحميل...",
     "noVisits": "لا توجد زيارات في هذه الفترة.",
     "loadError": "تعذّر تحميل إحصاءات الزيارات",
-    "loadErrorDescription": "يرجى التحقق من اتصالك والمحاولة مرة أخرى."
+    "loadErrorDescription": "يرجى التحقق من اتصالك والمحاولة مرة أخرى.",
+    "engagementTitle": "تفاعل العملاء",
+    "engagementDescription": "من يواظب على الزيارة — ومن ابتعد عنّا.",
+    "mostVisits": "الأكثر زيارة",
+    "fewestVisits": "الأقل زيارة",
+    "periodMonth": "الشهر الماضي",
+    "periodHalfYear": "آخر 6 أشهر",
+    "periodYear": "العام الماضي",
+    "visitsLabel": "زيارة",
+    "lastVisit": "آخر زيارة {{date}}",
+    "neverVisited": "لا توجد زيارات في هذه الفترة",
+    "joined": "انضم في {{date}}",
+    "noCustomers": "لم يسجّل أي عميل بعد.",
+    "targetWithOffer": "أرسل لهم عرضًا",
+    "reachableSummary": "{{reachable}} من {{total}} المعروضين يمكنهم استقبال الإشعارات"
   },
   "loyaltyScan": {
     "title": "مسح نقاط الولاء",
@@ -222,6 +236,20 @@
     "noNotifications": "لم يتم إرسال أي إشعارات بعد.",
     "sentAt": "تاريخ الإرسال",
     "discountCode": "كود الخصم",
-    "sentTo": "أُرسل إلى"
+    "sentTo": "أُرسل إلى",
+    "audience": "الجمهور",
+    "audienceAll": "جميع العملاء",
+    "audienceSelected": "عملاء محددون",
+    "audienceAllShort": "الجميع",
+    "audienceSegmentShort": "مستهدف",
+    "quickFill": "اختيار سريع",
+    "applyQuickFill": "اختر هؤلاء",
+    "selectedCount": "{{selected}} محدد · {{reachable}} يمكنهم استقباله",
+    "notReachable": "لا يمكنه استقبال الإشعارات",
+    "clearSelection": "مسح",
+    "noneReachable": "لا يوجد لدى أي من العملاء المحددين التطبيق مع تفعيل الإشعارات — لن يصل هذا الإرسال إلى أحد.",
+    "loadCustomersError": "تعذّر تحميل قائمة العملاء",
+    "selectAtLeastOne": "يرجى اختيار عميل واحد على الأقل.",
+    "targetedIntro": "اختر من سيستقبل هذا الإشعار. مفيد لاستعادة العملاء الذين لم يزوروا المتجر منذ فترة."
   }
 }
