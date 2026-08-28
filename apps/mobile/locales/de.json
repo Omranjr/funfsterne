@@ -6,7 +6,8 @@
     "ok": "OK",
     "noImage": "Kein Bild",
     "switchToLightMode": "Zum hellen Modus wechseln",
-    "switchToDarkMode": "Zum dunklen Modus wechseln"
+    "switchToDarkMode": "Zum dunklen Modus wechseln",
+    "loading": "LÄDT"
   },
   "tabs": {
     "home": "Start",
@@ -73,7 +74,11 @@
     "errorMessage": "Bitte überprüfe deine Verbindung und ziehe zum Aktualisieren nach unten.",
     "emptyTitle": "Produkte folgen in Kürze",
     "emptyMessage": "Schau bald wieder vorbei für unsere Premium-Auswahl.",
-    "privacyPolicy": "Datenschutz"
+    "privacyPolicy": "Datenschutz",
+    "heroEyebrow": "FRISEUR · SEIT 2020",
+    "swipeHint": "WISCHEN ›",
+    "seeAllShort": "ALLE",
+    "itemsCount": "{{count}} ARTIKEL"
   },
   "products": {
     "title": "Produkte",
@@ -82,7 +87,10 @@
     "errorMessage": "Bitte überprüfe deine Verbindung und versuche es erneut.",
     "emptyTitle": "Keine Produkte gefunden",
     "emptyMessage": "Ändere die Filter oder schau später wieder vorbei.",
-    "clearFilters": "Filter zurücksetzen"
+    "clearFilters": "Filter zurücksetzen",
+    "inStockHere": "HIER VORRÄTIG",
+    "branchCount": "{{count}} FILIALEN",
+    "shotPlaceholder": "FOTO"
   },
   "productDetail": {
     "goBack": "Zurück",
@@ -123,7 +131,9 @@
     "errorAlreadyRedeemedDevice": "Du hast diesen Code auf diesem Gerät bereits eingelöst.",
     "errorAlreadyRedeemedUser": "Du hast diesen Code mit diesem Konto bereits eingelöst.",
     "errorGeneric": "Einlösen fehlgeschlagen. Bitte versuche es erneut.",
-    "deviceIdError": "Geräte-ID konnte nicht gelesen werden. Bitte starte die App neu."
+    "deviceIdError": "Geräte-ID konnte nicht gelesen werden. Bitte starte die App neu.",
+    "dragHint": "ZIEHEN",
+    "razorSubtitle": "Ziehe den Rasierer über einen Gutschein, um ihn auf diesem Gerät einzulösen."
   },
   "account": {
     "title": "Konto",
@@ -136,7 +146,8 @@
     "deleteConfirmMessage": "Dies entfernt deinen Namen, Benutzernamen und dein Passwort dauerhaft. Dies kann nicht rückgängig gemacht werden.",
     "deleteErrorTitle": "Konto konnte nicht gelöscht werden",
     "privacyPolicy": "Datenschutz",
-    "language": "Sprache"
+    "language": "Sprache",
+    "appearance": "Erscheinungsbild"
   },
   "loyalty": {
     "title": "Treueprogramm",

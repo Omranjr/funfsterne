@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   message: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     fontSize: 14,
     textAlign: "center",
   },

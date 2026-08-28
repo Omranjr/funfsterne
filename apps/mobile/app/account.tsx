@@ -5,8 +5,9 @@ import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { User, ChevronRight } from "lucide-react-native";
 import { useTheme } from "@/contexts/ThemeContext";
+import { typography, screenTopPadding } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
-import { Card, Button } from "@/components";
+import { Card, Button, ThemeToggle, Ground } from "@/components";
 import { SUPPORTED_LANGUAGES } from "@/lib/i18n";
 
 const PRIVACY_URL = "https://funfsterne-admin-eight.vercel.app/privacy";
@@ -48,22 +49,23 @@ export default function AccountScreen() {
   }, [confirmDelete, t]);
 
   return (
+    <Ground>
     <ScrollView
-      style={[styles.container, { backgroundColor: theme.background }]}
-      contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 24) }]}
+      style={styles.container}
+      contentContainerStyle={[styles.content, { paddingTop: screenTopPadding(insets.top) }]}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={[styles.title, { color: theme.text }]}>{t("account.title")}</Text>
+      <Text style={[typography.displayLg, { color: theme.text }]}>{t("account.title")}</Text>
 
       <Card style={styles.profileCard}>
         <View style={[styles.avatar, { backgroundColor: theme.muted }]}>
           <User size={28} color={theme.gold} />
         </View>
         <View style={styles.profileInfo}>
-          <Text style={[styles.name, { color: theme.text }]} numberOfLines={1}>
+          <Text style={[typography.bodyLg, { color: theme.text }]} numberOfLines={1}>
             {user ? `${user.firstName} ${user.lastName}` : "—"}
           </Text>
-          <Text style={[styles.username, { color: theme.textMuted }]} numberOfLines={1}>
+          <Text style={[typography.bodySm, { color: theme.textMuted }]} numberOfLines={1}>
             @{user?.username ?? "—"}
           </Text>
         </View>
@@ -72,15 +74,24 @@ export default function AccountScreen() {
       <Pressable onPress={() => router.push("/language")}>
         <Card style={styles.settingRow}>
           <Text style={styles.settingFlag}>{currentLanguage.flag}</Text>
-          <Text style={[styles.settingLabel, { color: theme.text }]}>
+          <Text style={[typography.bodyMd, styles.settingLabel, { color: theme.text }]}>
             {t("account.language")}
           </Text>
-          <Text style={[styles.settingValue, { color: theme.textMuted }]}>
+          <Text style={[typography.bodySm, { color: theme.textMuted }]}>
             {currentLanguage.label}
           </Text>
           <ChevronRight size={18} color={theme.textMuted} />
         </Card>
       </Pressable>
+
+      {/* The 3a hero has no room for a theme control, so the toggle lives
+          here beside Language — the app's other display preference. */}
+      <Card style={styles.settingRow}>
+        <Text style={[typography.bodyMd, styles.settingLabel, { color: theme.text }]}>
+          {t("account.appearance")}
+        </Text>
+        <ThemeToggle />
+      </Card>
 
       <View style={styles.actions}>
         <Button
@@ -94,19 +105,20 @@ export default function AccountScreen() {
           variant="secondary"
           onPress={handleDeleteAccount}
           disabled={deleting}
-          style={[styles.actionButton, { borderColor: "#EF4444" }]}
-          textStyle={{ color: "#EF4444" }}
+          style={[styles.actionButton, { borderColor: theme.danger }]}
+          textStyle={{ color: theme.danger }}
         />
       </View>
 
       <Text
         onPress={() => Linking.openURL(PRIVACY_URL).catch(() => {})}
         accessibilityRole="link"
-        style={[styles.privacyLink, { color: theme.textMuted }]}
+        style={[typography.micro, styles.privacyLink, { color: theme.textMuted }]}
       >
         {t("account.privacyPolicy")}
       </Text>
     </ScrollView>
+    </Ground>
   );
 }
 
@@ -118,10 +130,6 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 40,
     gap: 24,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "800",
   },
   profileCard: {
     flexDirection: "row",
@@ -139,13 +147,6 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 2,
   },
-  name: {
-    fontSize: 17,
-    fontWeight: "700",
-  },
-  username: {
-    fontSize: 14,
-  },
   settingRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -156,11 +157,6 @@ const styles = StyleSheet.create({
   },
   settingLabel: {
     flex: 1,
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  settingValue: {
-    fontSize: 14,
   },
   actions: {
     gap: 12,
@@ -169,7 +165,7 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   privacyLink: {
-    fontSize: 13,
+    textTransform: "uppercase",
     textAlign: "center",
     textDecorationLine: "underline",
     marginTop: 8,

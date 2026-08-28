@@ -6,7 +6,8 @@
     "ok": "OK",
     "noImage": "No image",
     "switchToLightMode": "Switch to light mode",
-    "switchToDarkMode": "Switch to dark mode"
+    "switchToDarkMode": "Switch to dark mode",
+    "loading": "LOADING"
   },
   "tabs": {
     "home": "Home",
@@ -73,7 +74,11 @@
     "errorMessage": "Check your connection and pull down to try again.",
     "emptyTitle": "Products coming soon",
     "emptyMessage": "Check back soon for our premium selection.",
-    "privacyPolicy": "Privacy Policy"
+    "privacyPolicy": "Privacy Policy",
+    "heroEyebrow": "BARBER · SINCE 2020",
+    "swipeHint": "SWIPE ›",
+    "seeAllShort": "SEE ALL",
+    "itemsCount": "{{count}} ITEMS"
   },
   "products": {
     "title": "Products",
@@ -82,7 +87,10 @@
     "errorMessage": "Check your connection and try again.",
     "emptyTitle": "No products found",
     "emptyMessage": "Try changing filters or check back later.",
-    "clearFilters": "Clear filters"
+    "clearFilters": "Clear filters",
+    "inStockHere": "IN STOCK HERE",
+    "branchCount": "{{count}} BRANCHES",
+    "shotPlaceholder": "SHOT"
   },
   "productDetail": {
     "goBack": "Go back",
@@ -123,7 +131,9 @@
     "errorAlreadyRedeemedDevice": "You already redeemed this code on this device.",
     "errorAlreadyRedeemedUser": "You already redeemed this code with this account.",
     "errorGeneric": "Could not redeem. Please try again.",
-    "deviceIdError": "Could not read device id. Please restart the app."
+    "deviceIdError": "Could not read device id. Please restart the app.",
+    "dragHint": "DRAG",
+    "razorSubtitle": "Pull the razor across a coupon to redeem it on this device."
   },
   "account": {
     "title": "Account",
@@ -136,7 +146,8 @@
     "deleteConfirmMessage": "This permanently removes your name, username, and password. It can't be undone.",
     "deleteErrorTitle": "Couldn't delete account",
     "privacyPolicy": "Privacy Policy",
-    "language": "Language"
+    "language": "Language",
+    "appearance": "Appearance"
   },
   "loyalty": {
     "title": "Loyalty",

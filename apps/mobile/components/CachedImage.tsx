@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   placeholderText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Manrope_500Medium",
     fontSize: 12,
   },
 });

@@ -44,7 +44,7 @@ export function Input({
           styles.input,
           {
             backgroundColor: theme.surface,
-            borderColor: error ? "#EF4444" : theme.muted,
+            borderColor: error ? theme.danger : theme.muted,
             color: theme.text,
           },
           inputStyle,
@@ -75,6 +75,5 @@ const styles = StyleSheet.create({
   },
   error: {
     fontSize: 12,
-    color: "#EF4444",
   },
 });

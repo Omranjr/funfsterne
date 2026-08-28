@@ -5,10 +5,13 @@ import {
   View,
   ActivityIndicator,
   StyleSheet,
-  Platform,
 } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaProvider,
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { useRouter, useRootNavigationState, Tabs } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as SplashScreen from "expo-splash-screen";
@@ -33,7 +36,14 @@ import { hasBeenPrompted } from "@/lib/notification-permission";
 import { useAppFonts } from "@/hooks/useFonts";
 import { initI18n } from "@/lib/i18n";
 import { useTranslation } from "react-i18next";
-import { Home, ShoppingBag, Tag, User, Gift } from "lucide-react-native";
+
+/**
+ * The active-tab marker. The 3a tab bar drops per-tab glyphs in favour of a
+ * single gold dot above the label, so this renders in the icon slot.
+ */
+function TabDot({ color }: { color: string }) {
+  return <View style={[styles.tabDot, { backgroundColor: color }]} />;
+}
 
 /**
  * expo-router auto-derives deep linking from the file-based routes plus
@@ -105,77 +115,62 @@ SplashScreen.preventAutoHideAsync().catch(() => {
 function AppNavigator() {
   const { theme } = useTheme();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
 
   return (
+    // Deliberately no "top" edge: the Home hero is full-bleed to y:0 with
+    // the status bar floating over it. An opaque top inset here would put a
+    // solid strip above the photo and clip the portrait. Screens that do
+    // need a top inset apply it themselves via useSafeAreaInsets().
     <SafeAreaView
-      style={{ flex: 1, backgroundColor: theme.background }}
-      edges={["top", "left", "right"]}
+      style={{ flex: 1, backgroundColor: theme.ground }}
+      edges={["left", "right"]}
     >
       <NotificationRouter />
       <Tabs
         screenOptions={{
           headerShown: false,
           tabBarStyle: {
-            backgroundColor: theme.surface,
-            borderTopColor: theme.border,
+            backgroundColor: theme.groundDeep,
+            borderTopColor: theme.hairlineStrong,
             borderTopWidth: StyleSheet.hairlineWidth,
-            height: 64 + (Platform.OS === "ios" ? 20 : 0),
-            paddingBottom: Platform.OS === "ios" ? 20 : 8,
-            paddingTop: 8,
+            // The bar owns the bottom inset itself (the root SafeAreaView
+            // deliberately doesn't claim it, so the Home hero can run
+            // full-bleed). Without this the labels sit under the home
+            // indicator / gesture pill on devices that have one.
+            height: 64 + insets.bottom,
+            paddingBottom: Math.max(insets.bottom, 8),
+            paddingTop: 10,
           },
           tabBarActiveTintColor: theme.gold,
           tabBarInactiveTintColor: theme.textMuted,
           tabBarLabelStyle: {
-            fontFamily: "Inter_600SemiBold",
-            fontSize: 11,
+            // Plex Mono medium at 10dp: 9dp is the design's floor, but the
+            // mono's thin strokes lose legibility there on device, and the
+            // spec allows 9.5–10 provided family and tracking hold.
+            fontFamily: "IBMPlexMono_500Medium",
+            fontSize: 10,
+            letterSpacing: 1.4, // ≈0.14em at 10dp
+            textTransform: "uppercase",
           },
+          tabBarItemStyle: {
+            paddingTop: 2,
+          },
+          // The design replaces per-tab glyphs with a single gold dot that
+          // marks the active tab; the icon slot is what renders it.
+          tabBarIcon: ({ focused }) => (
+            <TabDot color={focused ? theme.gold : "transparent"} />
+          ),
         }}
       >
-        <Tabs.Screen
-          name="index"
-          options={{
-            title: t("tabs.home"),
-            tabBarIcon: ({ color, size }) => (
-              <Home size={size} color={color} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="products"
-          options={{
-            title: t("tabs.shop"),
-            tabBarIcon: ({ color, size }) => (
-              <ShoppingBag size={size} color={color} />
-            ),
-          }}
-        />
+        <Tabs.Screen name="index" options={{ title: t("tabs.home") }} />
+        <Tabs.Screen name="products" options={{ title: t("tabs.shop") }} />
         <Tabs.Screen
           name="discount-codes"
-          options={{
-            title: t("tabs.offers"),
-            tabBarIcon: ({ color, size }) => (
-              <Tag size={size} color={color} />
-            ),
-          }}
+          options={{ title: t("tabs.offers") }}
         />
-        <Tabs.Screen
-          name="loyalty"
-          options={{
-            title: t("tabs.rewards"),
-            tabBarIcon: ({ color, size }) => (
-              <Gift size={size} color={color} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="account"
-          options={{
-            title: t("tabs.account"),
-            tabBarIcon: ({ color, size }) => (
-              <User size={size} color={color} />
-            ),
-          }}
-        />
+        <Tabs.Screen name="loyalty" options={{ title: t("tabs.rewards") }} />
+        <Tabs.Screen name="account" options={{ title: t("tabs.account") }} />
         <Tabs.Screen
           name="branches"
           options={{
@@ -321,5 +316,11 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+  },
+  tabDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    marginBottom: 2,
   },
 });

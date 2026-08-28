@@ -13,6 +13,7 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 import { useTheme } from "@/contexts/ThemeContext";
+import { typography, borderRadius } from "@/constants/theme";
 
 export interface BranchPillProps {
   name: string;
@@ -70,7 +71,7 @@ export function BranchPill({
         numberOfLines={1}
         style={[
           styles.text,
-          { color, fontFamily: selected ? "Inter_600SemiBold" : "Inter_500Medium" },
+          { color, fontFamily: selected ? "Manrope_600SemiBold" : "Manrope_500Medium" },
           textStyle,
         ]}
       >
@@ -84,7 +85,7 @@ const styles = StyleSheet.create({
   pill: {
     paddingVertical: 8,
     paddingHorizontal: 16,
-    borderRadius: 999,
+    borderRadius: borderRadius.pill,
     borderWidth: StyleSheet.hairlineWidth,
     alignItems: "center",
     justifyContent: "center",

@@ -33,15 +33,9 @@ export function Badge({
     { background: string; color: string }
   > = {
     default: { background: theme.muted, color: theme.text },
-    primary: { background: theme.gold, color: theme.background },
-    success: {
-      background: theme.mode === "dark" ? "#22C55E" : "#16A34A",
-      color: "#FFFFFF",
-    },
-    danger: {
-      background: theme.mode === "dark" ? "#EF4444" : "#DC2626",
-      color: "#FFFFFF",
-    },
+    primary: { background: theme.gold, color: theme.onGold },
+    success: { background: theme.success, color: theme.onStatus },
+    danger: { background: theme.dangerSurface, color: theme.onStatus },
   };
 
   const { background, color } = variantStyles[variant];
@@ -68,7 +62,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   text: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Manrope_600SemiBold",
     fontSize: 11,
   },
 });

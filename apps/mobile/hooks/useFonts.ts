@@ -2,25 +2,29 @@ import { useCallback } from "react";
 import {
   useFonts as useGoogleFonts,
   PlayfairDisplay_400Regular,
+  PlayfairDisplay_400Regular_Italic,
   PlayfairDisplay_600SemiBold,
-  PlayfairDisplay_700Bold,
 } from "@expo-google-fonts/playfair-display";
 import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-} from "@expo-google-fonts/inter";
+  Manrope_400Regular,
+  Manrope_500Medium,
+  Manrope_600SemiBold,
+} from "@expo-google-fonts/manrope";
+import {
+  IBMPlexMono_400Regular,
+  IBMPlexMono_500Medium,
+} from "@expo-google-fonts/ibm-plex-mono";
 
 export function useAppFonts() {
   const [fontsLoaded, fontError] = useGoogleFonts({
     PlayfairDisplay_400Regular,
+    PlayfairDisplay_400Regular_Italic,
     PlayfairDisplay_600SemiBold,
-    PlayfairDisplay_700Bold,
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
+    Manrope_400Regular,
+    Manrope_500Medium,
+    Manrope_600SemiBold,
+    IBMPlexMono_400Regular,
+    IBMPlexMono_500Medium,
   });
 
   const loadFonts = useCallback(async () => {

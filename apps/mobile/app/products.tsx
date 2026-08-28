@@ -12,13 +12,16 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { Grid3X3, List as ListIcon } from "lucide-react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/contexts/ThemeContext";
+import { typography, borderRadius, screenTopPadding } from "@/constants/theme";
 import {
   ProductCard,
   BranchPill,
   ListSkeleton,
   BranchPillSkeleton,
   EmptyState,
+  Ground,
 } from "@/components";
 import { useProducts, useBranches } from "@/hooks/usePublicData";
 import { type ProductCategory } from "@funfsterne/shared-types";
@@ -36,6 +39,7 @@ export default function ProductsScreen() {
   const { width } = useWindowDimensions();
   const { theme } = useTheme();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
 
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [category, setCategory] = useState<ProductCategory | "ALL">(
@@ -73,10 +77,17 @@ export default function ProductsScreen() {
   const cardWidth = viewMode === "grid" ? (width - 48) / 2 : undefined;
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={[styles.header, { paddingTop: 12 }]}>
-        <Text style={[styles.title, { color: theme.text }]}>{t("products.title")}</Text>
-        <View style={[styles.toggle, { backgroundColor: theme.surface }]}>
+    <Ground style={styles.container}>
+      <View style={[styles.header, { paddingTop: screenTopPadding(insets.top) }]}>
+        <Text style={[typography.displayLg, { color: theme.text }]}>
+          {t("products.title")}
+        </Text>
+        <View
+          style={[
+            styles.toggle,
+            { backgroundColor: theme.scrim, borderColor: theme.hairline },
+          ]}
+        >
           <TouchableOpacity
             style={[
               styles.toggleButton,
@@ -87,7 +98,7 @@ export default function ProductsScreen() {
             <Grid3X3
               size={18}
               fill={
-                viewMode === "grid" ? theme.background : theme.text
+                viewMode === "grid" ? theme.ground : theme.textMuted
               }
             />
           </TouchableOpacity>
@@ -101,7 +112,7 @@ export default function ProductsScreen() {
             <ListIcon
               size={18}
               fill={
-                viewMode === "list" ? theme.background : theme.text
+                viewMode === "list" ? theme.ground : theme.textMuted
               }
             />
           </TouchableOpacity>
@@ -185,6 +196,7 @@ export default function ProductsScreen() {
                 price={item.basePrice}
                 imageUrl={item.images[0]}
                 category={t(`categories.${item.category}`)}
+                variant={viewMode === "grid" ? "grid" : "row"}
                 onPress={() => router.push(`/products/${item.id}`)}
               />
             </View>
@@ -201,7 +213,7 @@ export default function ProductsScreen() {
           }}
         />
       )}
-    </View>
+    </Ground>
   );
 }
 
@@ -216,19 +228,16 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 16,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "800",
-  },
   toggle: {
     flexDirection: "row",
-    borderRadius: 8,
+    borderRadius: borderRadius.pill,
+    borderWidth: StyleSheet.hairlineWidth,
     padding: 4,
     gap: 4,
   },
   toggleButton: {
     padding: 8,
-    borderRadius: 4,
+    borderRadius: borderRadius.pill,
   },
   filters: {
     gap: 8,

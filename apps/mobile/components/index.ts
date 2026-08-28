@@ -31,5 +31,10 @@ export { BrandedIntroGate, type BrandedIntroGateProps } from "./BrandedIntroGate
 export { ScreenWrapper, type ScreenWrapperProps } from "./ScreenWrapper";
 export { ThemeToggle, type ThemeToggleProps } from "./ThemeToggle";
 export { HeroBanner, type HeroBannerProps } from "./HeroBanner";
+export { Ground, type GroundProps } from "./Ground";
+export {
+  StripePlaceholder,
+  type StripePlaceholderProps,
+} from "./StripePlaceholder";
 export { BranchPicker, type BranchPickerProps } from "./BranchPicker";
 export { ErrorBoundary } from "./ErrorBoundary";

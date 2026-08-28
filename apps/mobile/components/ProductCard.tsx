@@ -17,8 +17,9 @@ import Animated, {
 } from "react-native-reanimated";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/contexts/ThemeContext";
-import { Badge } from "./Badge";
+import { typography, borderRadius } from "@/constants/theme";
 import { CachedImage } from "./CachedImage";
+import { StripePlaceholder } from "./StripePlaceholder";
 import { formatPrice } from "@/lib/format-price";
 
 export interface ProductCardProps {
@@ -26,9 +27,19 @@ export interface ProductCardProps {
   description?: string;
   price: number;
   imageUrl?: string | null;
+  /** Already-translated category label, rendered as the gold eyebrow. */
   category?: string;
   isAvailable?: boolean;
   isNew?: boolean;
+  /** Micro status line beside the price, e.g. "IN STOCK HERE". */
+  stockLabel?: string;
+  /**
+   * "row"  — the 3a featured card: thumbnail left, text column right.
+   * "grid" — the tile used by the Shop screen's 2-column grid, where the
+   *          image sits on top. Kept so redesigning Home doesn't force a
+   *          redesign of Shop, which is out of scope for this pass.
+   */
+  variant?: "row" | "grid";
   onPress?: () => void;
   style?: StyleProp<ViewStyle>;
   imageStyle?: StyleProp<ImageStyle>;
@@ -38,14 +49,17 @@ export interface ProductCardProps {
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
+const THUMB_SIZE = 104;
+
 export function ProductCard({
   name,
   description,
   price,
   imageUrl,
   category,
-  isAvailable = true,
   isNew = false,
+  stockLabel,
+  variant = "row",
   onPress,
   style,
   imageStyle,
@@ -55,6 +69,8 @@ export function ProductCard({
   const { theme } = useTheme();
   const { t } = useTranslation();
   const scale = useSharedValue(1);
+  const isDark = theme.mode === "dark";
+  const isGrid = variant === "grid";
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -85,51 +101,101 @@ export function ProductCard({
       accessibilityLabel={accessibilityLabel}
       style={[
         styles.card,
+        isGrid && styles.cardGrid,
         {
-          backgroundColor: theme.surface,
-          borderColor: theme.border,
+          backgroundColor: theme.cardTint,
+          borderColor: theme.hairline,
         },
         animatedStyle,
         style,
       ]}
     >
-      <View style={styles.imageWrapper}>
-        <CachedImage
-          source={imageUrl}
-          style={[styles.image, imageStyle]}
-          contentFit="cover"
-          cachePolicy="memory-disk"
-          fallbackText={t("productDetail.noImage")}
-        />
-        {isNew ? (
-          <Badge
-            label={t("products.newBadge")}
-            variant="primary"
-            style={styles.badge}
+      {imageUrl ? (
+        // The photo sits INSIDE a framed well rather than bleeding to the
+        // card edge: product shots are mostly on white packaging, and
+        // edge-to-edge they became the card's own background, erasing the
+        // hairline frame (and putting a white block on the dark ground).
+        <View
+          style={[
+            isGrid ? styles.thumbGrid : styles.thumb,
+            styles.thumbWell,
+            { backgroundColor: theme.surface, borderColor: theme.hairline },
+          ]}
+        >
+          <CachedImage
+            source={imageUrl}
+            style={[styles.thumbImage, imageStyle]}
+            contentFit="contain"
+            cachePolicy="memory-disk"
           />
-        ) : null}
-      </View>
+        </View>
+      ) : (
+        <StripePlaceholder
+          size={12}
+          style={isGrid ? styles.thumbGrid : styles.thumb}
+        >
+          <View style={styles.thumbLabel}>
+            <Text
+              style={[typography.microXs, { color: theme.textMuted }]}
+              allowFontScaling={false}
+            >
+              {t("products.shotPlaceholder")}
+            </Text>
+          </View>
+        </StripePlaceholder>
+      )}
 
-      <View style={styles.content}>
-        <Text numberOfLines={2} style={[styles.name, { color: theme.text }, textStyle]}>
-          {name}
-        </Text>
-
+      <View style={[styles.content, isGrid && styles.contentGrid]}>
         {category ? (
-          <Text numberOfLines={1} style={[styles.category, { color: theme.gold }]}>
+          <Text
+            style={[typography.microXs, styles.eyebrow, { color: theme.goldText }]}
+            numberOfLines={1}
+            allowFontScaling={false}
+          >
             {category}
           </Text>
         ) : null}
 
+        <Text
+          numberOfLines={2}
+          style={[typography.bodyLg, { color: theme.text }, textStyle]}
+        >
+          {name}
+        </Text>
+
         {description ? (
-          <Text numberOfLines={2} style={[styles.description, { color: theme.textMuted }]}>
+          <Text
+            numberOfLines={2}
+            style={[typography.bodySm, { color: theme.textMuted }]}
+          >
             {description}
           </Text>
         ) : null}
 
-        <Text style={[styles.price, { color: theme.gold }]}>
-          €{formatPrice(price)}
-        </Text>
+        <View style={styles.priceRow}>
+          <Text style={[typography.price, { color: theme.goldText }]}>
+            €{formatPrice(price)}
+          </Text>
+          {isNew ? (
+            <Text
+              style={[typography.microXs, { color: theme.goldText }]}
+              numberOfLines={1}
+              allowFontScaling={false}
+            >
+              {t("products.newBadge").toUpperCase()}
+            </Text>
+          ) : stockLabel ? (
+            <Text
+              style={[typography.microXs, { color: theme.textMuted }]}
+              // Keeps "IN STOCK HERE" on one line so it never wraps under
+              // the price and breaks the row's baseline alignment.
+              numberOfLines={1}
+              allowFontScaling={false}
+            >
+              {stockLabel}
+            </Text>
+          ) : null}
+        </View>
       </View>
     </AnimatedPressable>
   );
@@ -137,47 +203,73 @@ export function ProductCard({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 16,
-    overflow: "hidden",
+    flexDirection: "row",
+    gap: 15,
+    padding: 13,
+    borderRadius: borderRadius.card,
     borderWidth: StyleSheet.hairlineWidth,
+    overflow: "hidden",
   },
-  imageWrapper: {
-    position: "relative",
+  cardGrid: {
+    flexDirection: "column",
+    gap: 10,
+    // Keeps the image well inset from the card's hairline instead of
+    // butting against it.
+    padding: 10,
+  },
+  thumb: {
+    width: THUMB_SIZE,
+    height: THUMB_SIZE,
+    borderRadius: borderRadius.sm,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  thumbGrid: {
     width: "100%",
     aspectRatio: 1,
+    borderRadius: borderRadius.sm,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  image: {
+  // Product shots are almost all white packaging on white. Without a real
+  // inset the photo becomes the card's background and swallows the hairline
+  // frame, so the well keeps a visible margin of `theme.surface` on every
+  // side and `contain` keeps the whole product inside it rather than
+  // cropping it out to the edges.
+  thumbWell: {
+    padding: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: "hidden",
+  },
+  thumbImage: {
+    flex: 1,
     width: "100%",
-    height: "100%",
+    borderRadius: borderRadius.sm - 2,
   },
-  badge: {
-    position: "absolute",
-    top: 8,
-    left: 8,
+  thumbLabel: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
   },
   content: {
-    padding: 12,
+    flex: 1,
+    justifyContent: "center",
+    gap: 6,
+  },
+  contentGrid: {
+    flex: 0,
     gap: 4,
   },
-  name: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
-    lineHeight: 18,
-  },
-  category: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 11,
+  eyebrow: {
+    // Micro type is always uppercase; translations stay natural-cased in
+    // the locale files and get transformed here.
     textTransform: "uppercase",
-    letterSpacing: 0.5,
   },
-  description: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    lineHeight: 16,
-  },
-  price: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 14,
-    marginTop: 2,
+  priceRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 11,
+    marginTop: 4,
+    flexWrap: "nowrap",
   },
 });

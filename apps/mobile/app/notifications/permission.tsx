@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Bell, Scissors, Tag } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/contexts/ThemeContext";
+import { typography } from "@/constants/theme";
 import { Button, Card } from "@/components";
 import {
   useNotificationPermission,
@@ -180,12 +181,13 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
   },
   title: {
+    fontFamily: "PlayfairDisplay_400Regular",
     fontSize: 28,
-    fontWeight: "800",
+    lineHeight: 34,
     textAlign: "center",
   },
   subtitle: {
-    fontSize: 16,
+    ...typography.bodyLg,
     textAlign: "center",
     paddingHorizontal: 16,
   },
@@ -203,11 +205,10 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   benefitTitle: {
-    fontSize: 16,
-    fontWeight: "700",
+    ...typography.bodyLg,
   },
   benefitDesc: {
-    fontSize: 14,
+    ...typography.bodyMd,
   },
   actions: {
     width: "100%",

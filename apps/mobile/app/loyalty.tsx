@@ -29,8 +29,9 @@ import {
   POINTS_PER_EURO,
 } from "@funfsterne/shared-types";
 import { useTheme } from "@/contexts/ThemeContext";
+import { typography, borderRadius, screenTopPadding } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
-import { Card, Button, Badge, EmptyState } from "@/components";
+import { Card, Button, Badge, EmptyState, Ground } from "@/components";
 import { useLoyaltyMe } from "@/hooks/usePublicData";
 import { redeemLoyaltyPoints, PublicApiError } from "@/lib/api";
 import { queryClient } from "@/lib/query-client";
@@ -166,24 +167,25 @@ export default function LoyaltyScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.container, styles.center, { backgroundColor: theme.background }]}>
+      <Ground style={styles.center}>
         <ActivityIndicator color={theme.gold} />
-      </View>
+      </Ground>
     );
   }
 
   if (error && !data) {
     return (
-      <View style={[styles.container, styles.center, { backgroundColor: theme.background }]}>
+      <Ground style={styles.center}>
         <EmptyState title={t("loyalty.loadErrorTitle")} message={t("loyalty.loadErrorMessage")} />
-      </View>
+      </Ground>
     );
   }
 
   return (
+    <Ground>
     <ScrollView
-      style={[styles.container, { backgroundColor: theme.background }]}
-      contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 24) }]}
+      style={styles.container}
+      contentContainerStyle={[styles.content, { paddingTop: screenTopPadding(insets.top) }]}
       showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl
@@ -194,7 +196,7 @@ export default function LoyaltyScreen() {
         />
       }
     >
-      <Text style={[styles.title, { color: theme.text }]}>{t("loyalty.title")}</Text>
+      <Text style={[typography.displayLg, { color: theme.text }]}>{t("loyalty.title")}</Text>
 
       {celebration !== null ? (
         <Animated.View
@@ -202,27 +204,32 @@ export default function LoyaltyScreen() {
           exiting={FadeOut.duration(300)}
           style={[styles.celebrationBanner, { backgroundColor: theme.gold }]}
         >
-          <Sparkles size={16} color={theme.background} />
-          <Text style={[styles.celebrationText, { color: theme.background }]}>
+          <Sparkles size={16} color={theme.onGold} />
+          <Text style={[styles.celebrationText, { color: theme.onGold }]}>
             {t("loyalty.pointsEarnedToday", { count: celebration })}
           </Text>
         </Animated.View>
       ) : null}
 
       <Card style={styles.balanceCard}>
-        <Text style={[styles.balanceLabel, { color: theme.textMuted }]}>
+        <Text style={[typography.micro, styles.balanceLabel, { color: theme.textMuted }]}>
           {t("loyalty.yourPoints")}
         </Text>
-        <Animated.Text style={[styles.balanceValue, { color: theme.gold }, celebrationStyle]}>
+        <Animated.Text style={[styles.balanceValue, { color: theme.goldText }, celebrationStyle]}>
           {balance}
         </Animated.Text>
 
-        <View style={[styles.progressTrack, { backgroundColor: theme.muted }]}>
+        <View
+          style={[
+            styles.progressTrack,
+            { backgroundColor: theme.muted, borderColor: theme.hairline },
+          ]}
+        >
           <Animated.View
             style={[styles.progressFill, { backgroundColor: theme.gold }, progressFillStyle]}
           />
         </View>
-        <Text style={[styles.progressLabel, { color: theme.textMuted }]}>
+        <Text style={[typography.bodySm, { color: theme.textMuted }]}>
           {canRedeem
             ? t("loyalty.pointsReadyToRedeem", { count: redeemablePoints })
             : t("loyalty.pointsToFirstReward", { count: MIN_REDEEM_POINTS - progressToNext })}
@@ -246,13 +253,18 @@ export default function LoyaltyScreen() {
       </Card>
 
       <Card style={styles.qrCard}>
-        <Text style={[styles.qrLabel, { color: theme.text }]}>{t("loyalty.myCode")}</Text>
-        <Text style={[styles.qrHint, { color: theme.textMuted }]}>
+        <Text style={[typography.displayMd, { color: theme.text }]}>{t("loyalty.myCode")}</Text>
+        <Text style={[typography.bodySm, styles.qrHint, { color: theme.textMuted }]}>
           {t("loyalty.myCodeHint")}
         </Text>
-        <View style={styles.qrWrapper}>
+        <View style={[styles.qrWrapper, { backgroundColor: theme.qrBackground }]}>
           {qrValue ? (
-            <QRCode value={qrValue} size={180} color="#000000" backgroundColor="#FFFFFF" />
+            <QRCode
+              value={qrValue}
+              size={180}
+              color={theme.qrForeground}
+              backgroundColor={theme.qrBackground}
+            />
           ) : null}
         </View>
       </Card>
@@ -329,6 +341,7 @@ export default function LoyaltyScreen() {
         </View>
       ) : null}
     </ScrollView>
+    </Ground>
   );
 }
 
@@ -345,10 +358,6 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     gap: 20,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "800",
-  },
   celebrationBanner: {
     flexDirection: "row",
     alignItems: "center",
@@ -358,24 +367,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   celebrationText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 13,
+    ...typography.micro,
+    textTransform: "uppercase",
   },
   balanceCard: {
     alignItems: "center",
     gap: 6,
   },
   balanceLabel: {
-    fontSize: 13,
-    fontWeight: "600",
     textTransform: "uppercase",
-    letterSpacing: 0.5,
   },
   balanceValue: {
+    fontFamily: "PlayfairDisplay_400Regular",
     fontSize: 48,
-    fontWeight: "800",
+    lineHeight: 56,
   },
   progressTrack: {
+    borderWidth: StyleSheet.hairlineWidth,
     width: "100%",
     height: 8,
     borderRadius: 999,
@@ -398,26 +406,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
   },
-  qrLabel: {
-    fontSize: 16,
-    fontWeight: "700",
-  },
   qrHint: {
-    fontSize: 12,
     textAlign: "center",
     marginBottom: 8,
   },
   qrWrapper: {
     padding: 16,
-    backgroundColor: "#FFFFFF",
+    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 16,
   },
   section: {
     gap: 10,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
+    ...typography.displayMd,
   },
   rewardRow: {
     flexDirection: "row",
@@ -436,8 +438,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   rewardValue: {
-    fontSize: 14,
-    fontWeight: "700",
+    ...typography.bodyLg,
   },
   rewardMeta: {
     fontSize: 12,
@@ -452,14 +453,12 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   historyLabel: {
-    fontSize: 14,
-    fontWeight: "600",
+    ...typography.bodyMd,
   },
   historyDate: {
     fontSize: 12,
   },
   historyPoints: {
-    fontSize: 14,
-    fontWeight: "700",
+    ...typography.priceSm,
   },
 });

@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { Check, ChevronLeft } from "lucide-react-native";
 import { useTheme } from "@/contexts/ThemeContext";
+import { typography } from "@/constants/theme";
 import {
   SUPPORTED_LANGUAGES,
   changeLanguage,
@@ -110,8 +111,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   title: {
-    fontSize: 18,
-    fontWeight: "700",
+    ...typography.displayMd,
   },
   list: {
     gap: 12,
@@ -128,8 +128,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
   },
   label: {
+    ...typography.bodyLg,
     flex: 1,
-    fontSize: 16,
-    fontWeight: "600",
   },
 });

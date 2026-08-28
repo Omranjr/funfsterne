@@ -15,6 +15,7 @@ import Animated, {
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "@/contexts/ThemeContext";
+import { borderRadius } from "@/constants/theme";
 
 type ButtonVariant = "primary" | "secondary";
 
@@ -77,7 +78,15 @@ export function Button({
       ? theme.gold
       : "transparent";
   const borderColor = disabled ? theme.muted : theme.gold;
-  const color = disabled ? theme.textMuted : theme.text;
+  // On a gold fill the label must be the theme's dark ink. `theme.text` is
+  // cream in dark mode and measured ~2:1 on gold — effectively unreadable.
+  // `onGold` resolves to the darker of the two per theme (8.6:1 dark,
+  // 4.95:1 light).
+  const color = disabled
+    ? theme.textMuted
+    : isPrimary
+      ? theme.onGold
+      : theme.text;
 
   return (
     <AnimatedPressable
@@ -95,7 +104,7 @@ export function Button({
           backgroundColor,
           borderColor,
           borderWidth: isPrimary ? 0 : StyleSheet.hairlineWidth,
-          borderRadius: 12,
+          borderRadius: borderRadius.pill,
         },
         animatedStyle,
         style,
@@ -115,7 +124,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   text: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Manrope_600SemiBold",
     fontSize: 14,
   },
 });

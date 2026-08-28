@@ -9,7 +9,8 @@ import {
 import { MapPin } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/contexts/ThemeContext";
-import { Card, EmptyState, BranchPillSkeleton } from "@/components";
+import { typography } from "@/constants/theme";
+import { Card, EmptyState, BranchPillSkeleton, Ground } from "@/components";
 import { useBranches } from "@/hooks/usePublicData";
 
 export default function BranchesScreen() {
@@ -29,76 +30,81 @@ export default function BranchesScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <Ground style={styles.container}>
         <Text style={[styles.title, { color: theme.text, paddingTop: 12 }]}>
           {t("branches.title")}
         </Text>
         <BranchPillSkeleton count={6} />
-      </View>
+      </Ground>
     );
   }
 
   if (error) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <Ground style={styles.container}>
         <EmptyState
           title={t("branches.errorTitle")}
           message={t("branches.errorMessage")}
           actionTitle={t("common.retry")}
           onAction={handleRefresh}
         />
-      </View>
+      </Ground>
     );
   }
 
   if (!branches?.length) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <Ground style={styles.container}>
         <EmptyState
           title={t("branches.emptyTitle")}
           message={t("branches.emptyMessage")}
         />
-      </View>
+      </Ground>
     );
   }
 
   return (
-    <FlatList
-      data={branches}
-      keyExtractor={(b) => b.id}
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: 12 },
-      ]}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl
-          refreshing={isRefetching}
-          onRefresh={handleRefresh}
-          tintColor={theme.gold}
-          colors={[theme.gold]}
-        />
-      }
-      ListHeaderComponent={
-        <Text style={[styles.title, { color: theme.text }]}>{t("branches.ourBranches")}</Text>
-      }
-      renderItem={({ item }) => (
-        <Card style={styles.card}>
-          <Text style={[styles.name, { color: theme.text }]}>{item.name}</Text>
-          {item.address ? (
-            <View style={styles.row}>
-              <MapPin size={14} fill={theme.textMuted} />
-              <Text style={[styles.address, { color: theme.textMuted }]}>{item.address}</Text>
-            </View>
-          ) : null}
-        </Card>
-      )}
-      ItemSeparatorComponent={() => <View style={styles.separator} />}
-    />
+    <Ground style={styles.flex}>
+      <FlatList
+        data={branches}
+        keyExtractor={(b) => b.id}
+        contentContainerStyle={[
+          styles.content,
+          { paddingTop: 12 },
+        ]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={handleRefresh}
+            tintColor={theme.gold}
+            colors={[theme.gold]}
+          />
+        }
+        ListHeaderComponent={
+          <Text style={[styles.title, { color: theme.text }]}>{t("branches.ourBranches")}</Text>
+        }
+        renderItem={({ item }) => (
+          <Card style={styles.card}>
+            <Text style={[styles.name, { color: theme.text }]}>{item.name}</Text>
+            {item.address ? (
+              <View style={styles.row}>
+                <MapPin size={14} fill={theme.textMuted} />
+                <Text style={[styles.address, { color: theme.textMuted }]}>{item.address}</Text>
+              </View>
+            ) : null}
+          </Card>
+        )}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
+      />
+    </Ground>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     padding: 16,
@@ -110,16 +116,14 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   title: {
-    fontSize: 24,
-    fontWeight: "800",
+    ...typography.displayLg,
     marginBottom: 8,
   },
   card: {
     gap: 4,
   },
   name: {
-    fontSize: 18,
-    fontWeight: "700",
+    ...typography.displayMd,
   },
   row: {
     flexDirection: "row",
@@ -127,7 +131,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   address: {
-    fontSize: 14,
+    ...typography.bodyMd,
     flex: 1,
   },
   separator: {

@@ -37,7 +37,10 @@ export function BranchPicker({
       animationType="slide"
       onRequestClose={onClose}
     >
-      <Pressable style={styles.backdrop} onPress={onClose}>
+      <Pressable
+        style={[styles.backdrop, { backgroundColor: theme.backdrop }]}
+        onPress={onClose}
+      >
         <View
           style={[
             styles.sheet,
@@ -151,11 +154,11 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   branchName: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Manrope_600SemiBold",
     fontSize: 15,
   },
   branchAddress: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     fontSize: 13,
   },
 });

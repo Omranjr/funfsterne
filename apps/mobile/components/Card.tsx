@@ -7,6 +7,7 @@ import {
 } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useTheme } from "@/contexts/ThemeContext";
+import { borderRadius } from "@/constants/theme";
 
 export interface CardProps {
   children: React.ReactNode;

@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { Input } from "./Input";
 import { Button } from "./Button";
 import { useTheme } from "@/contexts/ThemeContext";
+import { typography } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 
 export interface LogInScreenProps {
@@ -96,7 +97,7 @@ export function LogInScreen({ onSwitchToSignUp, testID }: LogInScreenProps) {
           />
 
           {formError ? (
-            <Text style={styles.formError}>{formError}</Text>
+            <Text style={[styles.formError, { color: theme.danger }]}>{formError}</Text>
           ) : null}
 
           <Button
@@ -113,7 +114,7 @@ export function LogInScreen({ onSwitchToSignUp, testID }: LogInScreenProps) {
           >
             <Text style={[styles.switchText, { color: theme.textMuted }]}>
               {t("auth.logIn.newHere")}{" "}
-              <Text style={{ color: theme.gold, fontWeight: "700" }}>
+              <Text style={{ color: theme.goldText, fontFamily: "Manrope_600SemiBold" }}>
                 {t("auth.logIn.createAccount")}
               </Text>
             </Text>
@@ -150,12 +151,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   title: {
+    fontFamily: "PlayfairDisplay_400Regular",
     fontSize: 26,
-    fontWeight: "800",
+    lineHeight: 32,
     textAlign: "center",
   },
   subtitle: {
-    fontSize: 14,
+    ...typography.bodyMd,
     textAlign: "center",
   },
   form: {
@@ -163,7 +165,6 @@ const styles = StyleSheet.create({
   },
   formError: {
     fontSize: 13,
-    color: "#EF4444",
     textAlign: "center",
   },
   submitButton: {
@@ -174,7 +175,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   switchText: {
-    fontSize: 14,
+    ...typography.bodyMd,
   },
   recoveryHint: {
     fontSize: 12,

@@ -324,11 +324,11 @@ const styles = StyleSheet.create({
     lineHeight: 34,
   },
   price: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Manrope_600SemiBold",
     fontSize: 22,
   },
   description: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     fontSize: 15,
     lineHeight: 22,
   },
@@ -359,15 +359,15 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   branchName: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Manrope_600SemiBold",
     fontSize: 13,
   },
   branchAddress: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     fontSize: 12,
   },
   empty: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     fontSize: 14,
   },
   cta: {
@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   ctaText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Manrope_600SemiBold",
     fontSize: 15,
   },
   error: {

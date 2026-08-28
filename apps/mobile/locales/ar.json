@@ -6,7 +6,8 @@
     "ok": "حسنًا",
     "noImage": "لا توجد صورة",
     "switchToLightMode": "التبديل إلى الوضع الفاتح",
-    "switchToDarkMode": "التبديل إلى الوضع الداكن"
+    "switchToDarkMode": "التبديل إلى الوضع الداكن",
+    "loading": "جارٍ التحميل"
   },
   "tabs": {
     "home": "الرئيسية",
@@ -73,7 +74,11 @@
     "errorMessage": "يرجى التحقق من اتصالك وسحب الشاشة للأسفل للمحاولة مرة أخرى.",
     "emptyTitle": "المنتجات قادمة قريبًا",
     "emptyMessage": "تابعنا قريبًا لتصفّح تشكيلتنا المميزة.",
-    "privacyPolicy": "سياسة الخصوصية"
+    "privacyPolicy": "سياسة الخصوصية",
+    "heroEyebrow": "حلاقة · منذ 2020",
+    "swipeHint": "اسحب ›",
+    "seeAllShort": "عرض الكل",
+    "itemsCount": "{{count}} منتج"
   },
   "products": {
     "title": "المنتجات",
@@ -82,7 +87,10 @@
     "errorMessage": "يرجى التحقق من اتصالك والمحاولة مرة أخرى.",
     "emptyTitle": "لا توجد منتجات",
     "emptyMessage": "جرّب تغيير الفلاتر أو تابعنا لاحقًا.",
-    "clearFilters": "إعادة ضبط الفلاتر"
+    "clearFilters": "إعادة ضبط الفلاتر",
+    "inStockHere": "متوفر هنا",
+    "branchCount": "{{count}} فروع",
+    "shotPlaceholder": "صورة"
   },
   "productDetail": {
     "goBack": "رجوع",
@@ -123,7 +131,9 @@
     "errorAlreadyRedeemedDevice": "لقد استخدمت هذا الكود بالفعل على هذا الجهاز.",
     "errorAlreadyRedeemedUser": "لقد استخدمت هذا الكود بالفعل بهذا الحساب.",
     "errorGeneric": "تعذّر الاستخدام. يرجى المحاولة مرة أخرى.",
-    "deviceIdError": "تعذّر قراءة معرّف الجهاز. يرجى إعادة تشغيل التطبيق."
+    "deviceIdError": "تعذّر قراءة معرّف الجهاز. يرجى إعادة تشغيل التطبيق.",
+    "dragHint": "اسحب",
+    "razorSubtitle": "اسحب الشفرة عبر القسيمة لاستخدامها على هذا الجهاز."
   },
   "account": {
     "title": "الحساب",
@@ -136,7 +146,8 @@
     "deleteConfirmMessage": "سيؤدي هذا إلى حذف اسمك واسم المستخدم وكلمة المرور بشكل نهائي، ولا يمكن التراجع عن ذلك.",
     "deleteErrorTitle": "تعذّر حذف الحساب",
     "privacyPolicy": "سياسة الخصوصية",
-    "language": "اللغة"
+    "language": "اللغة",
+    "appearance": "المظهر"
   },
   "loyalty": {
     "title": "برنامج الولاء",
