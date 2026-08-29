@@ -189,8 +189,15 @@ export default function ProductsScreen() {
             />
           }
           renderItem={({ item }) => (
-            <View style={viewMode === "grid" ? { width: cardWidth } : styles.listItem}>
+            <View
+              style={
+                viewMode === "grid"
+                  ? [styles.gridItem, { width: cardWidth }]
+                  : styles.listItem
+              }
+            >
               <ProductCard
+                style={viewMode === "grid" ? styles.gridCard : undefined}
                 name={item.name}
                 description={item.description}
                 price={item.basePrice}
@@ -254,7 +261,19 @@ const styles = StyleSheet.create({
   },
   gridRow: {
     justifyContent: "space-between",
+    // `stretch` is the default, but it is stated here because the whole
+    // point of the row is that both cells take the taller sibling's height.
+    alignItems: "stretch",
     gap: 16,
+  },
+  // The cell stretches to the row height; the card fills the cell. Without
+  // the second half, a one-line product sat in a short card beside a
+  // two-line one and the grid looked ragged.
+  gridItem: {
+    alignSelf: "stretch",
+  },
+  gridCard: {
+    flex: 1,
   },
   listItem: {
     flex: 1,

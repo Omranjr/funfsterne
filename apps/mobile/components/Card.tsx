@@ -8,6 +8,7 @@ import {
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useTheme } from "@/contexts/ThemeContext";
 import { borderRadius } from "@/constants/theme";
+import { CardWash } from "./CardWash";
 
 export interface CardProps {
   children: React.ReactNode;
@@ -32,12 +33,13 @@ export const Card = forwardRef<View, CardProps>(
           styles.card,
           {
             backgroundColor: theme.surface,
-            borderColor: theme.border,
+            borderColor: theme.hairlineStrong,
           },
           style,
         ]}
         {...wrapperProps}
       >
+        <CardWash />
         {children}
       </Wrapper>
     );
@@ -47,9 +49,15 @@ export const Card = forwardRef<View, CardProps>(
 Card.displayName = "Card";
 
 const styles = StyleSheet.create({
+  // One card recipe across the whole app, taken from the coupon: the 8dp
+  // radius, the gold hairline (not the neutral border), the opaque surface
+  // fill, and the warm wash above. Previously this was a 16dp radius with a
+  // grey border, which is why loyalty and account panels read as a
+  // different family from the coupons and product tiles.
   card: {
-    borderRadius: 16,
+    borderRadius: borderRadius.md,
     padding: 16,
     borderWidth: StyleSheet.hairlineWidth,
+    overflow: "hidden",
   },
 });

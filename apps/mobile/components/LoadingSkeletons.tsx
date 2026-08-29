@@ -8,6 +8,8 @@ import Animated, {
   interpolate,
 } from "react-native-reanimated";
 import { useTheme } from "@/contexts/ThemeContext";
+// Aliased: `borderRadius` is also a Skeleton prop name below.
+import { borderRadius as radii } from "@/constants/theme";
 
 export interface SkeletonProps {
   width?: number | string;
@@ -223,7 +225,7 @@ const styles = StyleSheet.create({
     // backgroundColor is set dynamically via theme
   },
   card: {
-    borderRadius: 16,
+    borderRadius: radii.md,
     overflow: "hidden",
     borderWidth: StyleSheet.hairlineWidth,
     gap: 8,
@@ -243,7 +245,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    borderRadius: 16,
+    borderRadius: radii.md,
     padding: 16,
     borderWidth: StyleSheet.hairlineWidth,
     gap: 8,

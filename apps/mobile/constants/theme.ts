@@ -57,13 +57,23 @@ export const darkTheme = {
   // ── 3a direction tokens ──────────────────────────────────────────────
   ground: "#0E0B08", // page background — replaces flat #0D0D0C on themed screens
   groundDeep: "#0B0906", // tab bar, sheets below the fold
-  // Wash and grain alphas are the reference's exact values. Round 2 raised
-  // them, which flattened the ground into one uniform brown instead of two
+  // Wash alphas are the reference's exact values. Round 2 raised them,
+  // which flattened the ground into one uniform brown instead of two
   // readable pools of light — the depth comes from the radial falloff, not
-  // from more pigment.
+  // from more pigment. (The grain below is the one deliberate deviation.)
   groundWarmA: "rgba(120,80,40,0.16)", // top-left radial wash
   groundWarmB: "rgba(90,60,30,0.12)", // right-mid radial wash
-  grain: "rgba(255,255,255,0.012)", // diagonal texture stroke
+  /**
+   * Diagonal texture stroke.
+   *
+   * The reference uses 0.012, which is right for a browser compositing on
+   * a desktop panel. Over a #0E0B08 ground that is ~3/255 — on a phone
+   * OLED it quantises away and the ground reads as flat brown. 0.022 is
+   * the alpha at which the hatch reads on device the way the reference
+   * reads on screen; the geometry (2dp stripe, 5dp pitch, 52°) is the
+   * reference's exactly.
+   */
+  grain: "rgba(255,255,255,0.022)",
   hairline: "rgba(201,162,74,0.18)", // gold hairline on cards
   hairlineStrong: "rgba(201,162,74,0.28)",
   placeholderA: "#1A150D", // product-image placeholder stripe A

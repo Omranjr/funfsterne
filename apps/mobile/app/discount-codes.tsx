@@ -28,6 +28,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { typography, borderRadius, SHARED_TOKENS, screenTopPadding } from "@/constants/theme";
 import {
   Badge,
+  CardWash,
   EmptyState,
   DiscountCodeListSkeleton,
   Ground,
@@ -449,13 +450,7 @@ function RazorCouponCard({
           isSettled && styles.couponSettled,
         ]}
       >
-        <LinearGradient
-          pointerEvents="none"
-          colors={[theme.groundWarmA, "transparent"]}
-          start={{ x: 0, y: 0.5 }}
-          end={{ x: 0.6, y: 0.5 }}
-          style={StyleSheet.absoluteFill}
-        />
+        <CardWash />
 
         {/* Upper half — the part that stays after the cut. */}
         <View style={styles.couponTop}>

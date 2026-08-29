@@ -19,6 +19,7 @@ import { useTranslation } from "react-i18next";
 import { useTheme } from "@/contexts/ThemeContext";
 import { typography, borderRadius } from "@/constants/theme";
 import { CachedImage } from "./CachedImage";
+import { CardWash } from "./CardWash";
 import { StripePlaceholder } from "./StripePlaceholder";
 import { formatPrice } from "@/lib/format-price";
 
@@ -103,13 +104,15 @@ export function ProductCard({
         styles.card,
         isGrid && styles.cardGrid,
         {
-          backgroundColor: theme.cardTint,
-          borderColor: theme.hairline,
+          backgroundColor: theme.surface,
+          borderColor: theme.hairlineStrong,
         },
         animatedStyle,
         style,
       ]}
     >
+      <CardWash />
+
       {imageUrl ? (
         // The photo sits INSIDE a framed well rather than bleeding to the
         // card edge: product shots are mostly on white packaging, and
@@ -156,23 +159,35 @@ export function ProductCard({
           </Text>
         ) : null}
 
+        {/* In the grid both text blocks reserve their full two lines even
+            when they only use one, so a short product and a long one
+            produce the same card and their prices line up across the row. */}
         <Text
           numberOfLines={2}
-          style={[typography.bodyLg, { color: theme.text }, textStyle]}
+          style={[
+            typography.bodyLg,
+            isGrid && styles.nameGrid,
+            { color: theme.text },
+            textStyle,
+          ]}
         >
           {name}
         </Text>
 
-        {description ? (
+        {description || isGrid ? (
           <Text
             numberOfLines={2}
-            style={[typography.bodySm, { color: theme.textMuted }]}
+            style={[
+              typography.bodySm,
+              isGrid && styles.descriptionGrid,
+              { color: theme.textMuted },
+            ]}
           >
-            {description}
+            {description ?? ""}
           </Text>
         ) : null}
 
-        <View style={styles.priceRow}>
+        <View style={[styles.priceRow, isGrid && styles.priceRowGrid]}>
           <Text style={[typography.price, { color: theme.goldText }]}>
             €{formatPrice(price)}
           </Text>
@@ -202,11 +217,13 @@ export function ProductCard({
 }
 
 const styles = StyleSheet.create({
+  // Same surface recipe as the coupon and the shared Card: 8dp radius,
+  // gold hairline, opaque fill, warm wash.
   card: {
     flexDirection: "row",
     gap: 15,
     padding: 13,
-    borderRadius: borderRadius.card,
+    borderRadius: borderRadius.md,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: "hidden",
   },
@@ -256,9 +273,23 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
   },
+  // Fills the card's remaining height so the price row can be pinned to the
+  // bottom of it rather than floating under whatever text happened to fit.
   contentGrid: {
-    flex: 0,
+    flex: 1,
+    justifyContent: "flex-start",
     gap: 4,
+  },
+  nameGrid: {
+    // 2 × typography.bodyLg lineHeight
+    minHeight: 40,
+  },
+  descriptionGrid: {
+    // 2 × typography.bodySm lineHeight
+    minHeight: 30,
+  },
+  priceRowGrid: {
+    marginTop: "auto",
   },
   eyebrow: {
     // Micro type is always uppercase; translations stay natural-cased in

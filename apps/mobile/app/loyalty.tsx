@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
   qrWrapper: {
     padding: 16,
     borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 16,
+    borderRadius: borderRadius.md,
   },
   section: {
     gap: 10,

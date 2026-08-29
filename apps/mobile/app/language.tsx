@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { Check, ChevronLeft } from "lucide-react-native";
 import { useTheme } from "@/contexts/ThemeContext";
-import { typography } from "@/constants/theme";
+import { typography, borderRadius } from "@/constants/theme";
 import {
   SUPPORTED_LANGUAGES,
   changeLanguage,
@@ -74,7 +74,7 @@ export default function LanguageScreen() {
               disabled={switching !== null}
               style={[
                 styles.row,
-                { backgroundColor: theme.surface, borderColor: theme.border },
+                { backgroundColor: theme.surface, borderColor: theme.hairlineStrong },
               ]}
             >
               <Text style={styles.flag}>{lang.flag}</Text>
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     padding: 16,
-    borderRadius: 14,
+    borderRadius: borderRadius.md,
     borderWidth: StyleSheet.hairlineWidth,
   },
   flag: {

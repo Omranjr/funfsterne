@@ -13,6 +13,14 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { useRouter, useRootNavigationState, Tabs } from "expo-router";
+import {
+  House,
+  ShoppingBag,
+  TicketPercent,
+  Star,
+  User,
+  type LucideIcon,
+} from "lucide-react-native";
 import { StatusBar } from "expo-status-bar";
 import * as SplashScreen from "expo-splash-screen";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
@@ -38,11 +46,23 @@ import { initI18n } from "@/lib/i18n";
 import { useTranslation } from "react-i18next";
 
 /**
- * The active-tab marker. The 3a tab bar drops per-tab glyphs in favour of a
- * single gold dot above the label, so this renders in the icon slot.
+ * Tab glyphs. Each tab renders its own icon above the Plex Mono label, and
+ * the icon carries the focused/unfocused colour the same way the label does.
  */
-function TabDot({ color }: { color: string }) {
-  return <View style={[styles.tabDot, { backgroundColor: color }]} />;
+const TAB_ICON_SIZE = 21;
+
+function tabIcon(Icon: LucideIcon) {
+  return function TabIcon({ color, focused }: { color: string; focused: boolean }) {
+    return (
+      <Icon
+        size={TAB_ICON_SIZE}
+        color={color}
+        // A slightly heavier stroke on the active tab so the gold reads as
+        // selected even at a glance, without changing the icon's size.
+        strokeWidth={focused ? 2.1 : 1.6}
+      />
+    );
+  };
 }
 
 /**
@@ -138,9 +158,9 @@ function AppNavigator() {
             // deliberately doesn't claim it, so the Home hero can run
             // full-bleed). Without this the labels sit under the home
             // indicator / gesture pill on devices that have one.
-            height: 64 + insets.bottom,
+            height: 72 + insets.bottom,
             paddingBottom: Math.max(insets.bottom, 8),
-            paddingTop: 10,
+            paddingTop: 9,
           },
           tabBarActiveTintColor: theme.gold,
           tabBarInactiveTintColor: theme.textMuted,
@@ -156,21 +176,31 @@ function AppNavigator() {
           tabBarItemStyle: {
             paddingTop: 2,
           },
-          // The design replaces per-tab glyphs with a single gold dot that
-          // marks the active tab; the icon slot is what renders it.
-          tabBarIcon: ({ focused }) => (
-            <TabDot color={focused ? theme.gold : "transparent"} />
-          ),
+          tabBarIconStyle: {
+            marginBottom: 1,
+          },
         }}
       >
-        <Tabs.Screen name="index" options={{ title: t("tabs.home") }} />
-        <Tabs.Screen name="products" options={{ title: t("tabs.shop") }} />
+        <Tabs.Screen
+          name="index"
+          options={{ title: t("tabs.home"), tabBarIcon: tabIcon(House) }}
+        />
+        <Tabs.Screen
+          name="products"
+          options={{ title: t("tabs.shop"), tabBarIcon: tabIcon(ShoppingBag) }}
+        />
         <Tabs.Screen
           name="discount-codes"
-          options={{ title: t("tabs.offers") }}
+          options={{ title: t("tabs.offers"), tabBarIcon: tabIcon(TicketPercent) }}
         />
-        <Tabs.Screen name="loyalty" options={{ title: t("tabs.rewards") }} />
-        <Tabs.Screen name="account" options={{ title: t("tabs.account") }} />
+        <Tabs.Screen
+          name="loyalty"
+          options={{ title: t("tabs.rewards"), tabBarIcon: tabIcon(Star) }}
+        />
+        <Tabs.Screen
+          name="account"
+          options={{ title: t("tabs.account"), tabBarIcon: tabIcon(User) }}
+        />
         <Tabs.Screen
           name="branches"
           options={{
@@ -316,11 +346,5 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-  },
-  tabDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    marginBottom: 2,
   },
 });

@@ -215,7 +215,7 @@ export default function ProductDetailsScreen() {
                       styles.branchChip,
                       {
                         backgroundColor: theme.surface,
-                        borderColor: theme.border,
+                        borderColor: theme.hairlineStrong,
                       },
                     ]}
                   >

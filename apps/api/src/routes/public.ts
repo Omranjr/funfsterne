@@ -181,25 +181,73 @@ export async function publicRoutes(app: FastifyInstance) {
         return reply.status(400).send({ errorCode: "ALREADY_REDEEMED_BY_USER", error: "Discount code already redeemed on this account" });
       }
 
-      const [updated, redemption] = await app.prisma.$transaction([
-        app.prisma.discountCode.update({
-          where: { id: discount.id },
-          data: { currentRedemptions: { increment: 1 } },
-        }),
-        app.prisma.discountCodeRedemption.create({
-          data: {
-            deviceId,
-            userId,
-            branchId: branchId ?? null,
-            discountCodeId: discount.id,
-          },
-        }),
-      ]);
+      // The checks above are a fast path for good error messages; they are
+      // not what enforces the limits. Two requests for the last remaining
+      // use of a code can both pass a plain read, so the increment itself
+      // is gated on the cap and Postgres decides the winner at write time.
+      // (Per-user and per-device limits are enforced by the unique indexes
+      // on the redemption row, which is why P2002 is a "someone else got
+      // there first" answer rather than a 500.)
+      const maxRedemptions = discount.maxRedemptions;
+
+      const result = await app.prisma
+        .$transaction(async (tx) => {
+          const { count } = await tx.discountCode.updateMany({
+            where: {
+              id: discount.id,
+              isActive: true,
+              ...(maxRedemptions !== null
+                ? { currentRedemptions: { lt: maxRedemptions } }
+                : {}),
+            },
+            data: { currentRedemptions: { increment: 1 } },
+          });
+
+          if (count === 0) return null;
+
+          const [updated, redemption] = await Promise.all([
+            tx.discountCode.findUniqueOrThrow({ where: { id: discount.id } }),
+            tx.discountCodeRedemption.create({
+              data: {
+                deviceId,
+                userId,
+                branchId: branchId ?? null,
+                discountCodeId: discount.id,
+              },
+            }),
+          ]);
+
+          return { updated, redemption };
+        })
+        .catch((err: unknown) => {
+          if (
+            typeof err === "object" &&
+            err !== null &&
+            (err as { code?: string }).code === "P2002"
+          ) {
+            return "DUPLICATE" as const;
+          }
+          throw err;
+        });
+
+      if (result === "DUPLICATE") {
+        return reply.status(400).send({
+          errorCode: "ALREADY_REDEEMED_BY_USER",
+          error: "Discount code already redeemed on this account",
+        });
+      }
+
+      if (!result) {
+        return reply.status(400).send({
+          errorCode: "MAX_REDEMPTIONS_REACHED",
+          error: "Discount code fully redeemed",
+        });
+      }
 
       return {
         success: true,
-        discount: serializePrisma(updated),
-        redemption: serializePrisma(redemption),
+        discount: serializePrisma(result.updated),
+        redemption: serializePrisma(result.redemption),
       };
     },
   );

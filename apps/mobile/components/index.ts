@@ -1,5 +1,6 @@
 export { Button, type ButtonProps } from "./Button";
 export { Card, type CardProps } from "./Card";
+export { CardWash } from "./CardWash";
 export { Badge, type BadgeProps, type BadgeVariant } from "./Badge";
 export { Input, type InputProps } from "./Input";
 export { BranchPill, type BranchPillProps } from "./BranchPill";
