@@ -7,7 +7,12 @@
     "noImage": "Kein Bild",
     "switchToLightMode": "Zum hellen Modus wechseln",
     "switchToDarkMode": "Zum dunklen Modus wechseln",
-    "loading": "LÄDT"
+    "loading": "LÄDT",
+    "stillWorking": "Einen Moment noch…",
+    "themeSystem": "System",
+    "themeLight": "Hell",
+    "themeDark": "Dunkel",
+    "changeAppearance": "Erscheinungsbild ändern"
   },
   "tabs": {
     "home": "Start",
@@ -102,7 +107,10 @@
     "availableAt": "Verfügbar bei",
     "unavailableError": "Verfügbarkeit konnte nicht geladen werden — zum Aktualisieren nach unten ziehen",
     "unavailable": "Derzeit nicht verfügbar — schau bald wieder vorbei",
-    "askAboutProduct": "Frage zu diesem Produkt stellen"
+    "askAboutProduct": "Frage zu diesem Produkt stellen",
+    "linkFailedTitle": "Konnte nicht geöffnet werden",
+    "linkFailedInstagram": "Instagram konnte auf diesem Gerät nicht geöffnet werden.",
+    "linkFailedContact": "Auf diesem Gerät ist keine Nachrichten-App verfügbar. Rufen Sie uns an: +49 2823 4198333."
   },
   "branches": {
     "title": "Filialen",

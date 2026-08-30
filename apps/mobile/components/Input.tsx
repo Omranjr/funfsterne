@@ -51,7 +51,12 @@ export function Input({
         ]}
       />
       {error ? (
-        <Text style={[styles.error, errorStyle]}>{error}</Text>
+        // The colour has to come from the theme here. Without it this Text
+        // fell back to React Native's default black, which on the dark
+        // ground made every validation message effectively invisible.
+        <Text style={[styles.error, { color: theme.dangerText }, errorStyle]}>
+          {error}
+        </Text>
       ) : null}
     </View>
   );

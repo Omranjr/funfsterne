@@ -106,7 +106,7 @@ export default function AccountScreen() {
           onPress={handleDeleteAccount}
           disabled={deleting}
           style={[styles.actionButton, { borderColor: theme.danger }]}
-          textStyle={{ color: theme.danger }}
+          textStyle={{ color: theme.dangerText }}
         />
       </View>
 

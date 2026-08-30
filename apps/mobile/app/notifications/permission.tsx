@@ -14,6 +14,7 @@ import {
   getPlatformType,
 } from "@/hooks/useNotifications";
 import { hasBeenPrompted, setPrompted } from "@/lib/notification-permission";
+import { logSwallowed } from "@/lib/log";
 
 /**
  * Pre-permission screen shown ONCE before the OS prompt. After the user
@@ -54,8 +55,10 @@ export default function NotificationPermissionScreen() {
     if (token) {
       try {
         await register.mutateAsync({ token, platform: getPlatformType() });
-      } catch {
-        // Non-fatal: if registration fails, the user can re-enable later.
+      } catch (error) {
+        // Non-fatal here only because usePushTokenSync retries on the next
+        // foreground. Before that existed, a failure here was permanent.
+        logSwallowed("push-token-register", error);
       }
     }
     setHasFinished(true);
@@ -112,7 +115,7 @@ export default function NotificationPermissionScreen() {
           { backgroundColor: theme.surface, borderColor: theme.gold },
         ]}
       >
-        <Bell size={40} fill={theme.gold} />
+        <Bell size={40} color={theme.gold} />
       </View>
 
       <Text style={[styles.title, { color: theme.text }]}>{t("notificationsPermission.title")}</Text>
@@ -122,7 +125,7 @@ export default function NotificationPermissionScreen() {
 
       <Card style={styles.benefits}>
         <View style={styles.benefit}>
-          <Scissors size={20} fill={theme.gold} />
+          <Scissors size={20} color={theme.gold} />
           <View style={styles.benefitText}>
             <Text style={[styles.benefitTitle, { color: theme.text }]}>
               {t("notificationsPermission.haircutRemindersTitle")}
@@ -134,7 +137,7 @@ export default function NotificationPermissionScreen() {
         </View>
 
         <View style={styles.benefit}>
-          <Tag size={20} fill={theme.gold} />
+          <Tag size={20} color={theme.gold} />
           <View style={styles.benefitText}>
             <Text style={[styles.benefitTitle, { color: theme.text }]}>
               {t("notificationsPermission.discountsTitle")}

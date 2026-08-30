@@ -107,20 +107,48 @@ export async function publicRoutes(app: FastifyInstance) {
     },
   );
 
-  app.get("/discount-codes/active", async () => {
-    const now = new Date();
+  // Authenticated because the answer is now per-customer: a coupon this
+  // person has already used must not come back. Previously this was
+  // unauthenticated and returned every active code to everybody, so a
+  // redeemed coupon reappeared on the next load and the list only ever grew.
+  app.get(
+    "/discount-codes/active",
+    { preHandler: consumerAuthMiddleware },
+    async (request) => {
+      const now = new Date();
+      const userId = request.consumer!.sub;
+      const { deviceId } = request.query as { deviceId?: string };
 
-    const codes = await app.prisma.discountCode.findMany({
-      where: {
-        isActive: true,
-        OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
-      },
-      include: { scopeBranch: true },
-      orderBy: { code: "asc" },
-    });
+      const codes = await app.prisma.discountCode.findMany({
+        where: {
+          isActive: true,
+          // Expired codes already dropped out here, for every customer.
+          OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+          // ...and now so does anything this customer has already redeemed.
+          // Matched on device as well as account when the client tells us
+          // its device id: redemptions made before accounts existed carry a
+          // deviceId but no userId, and those would otherwise still show up
+          // as available and fail on redeem.
+          redemptions: {
+            none: deviceId ? { OR: [{ userId }, { deviceId }] } : { userId },
+          },
+        },
+        include: { scopeBranch: true },
+        orderBy: { code: "asc" },
+      });
 
-    return serializePrisma(codes);
-  });
+      // Prisma cannot compare two columns of the same row in a `where`, so
+      // the "this code is fully used up" test happens here. Without it a
+      // code at its redemption cap stays on every customer's list and fails
+      // every time it is dragged.
+      const available = codes.filter(
+        (c) =>
+          c.maxRedemptions === null || c.currentRedemptions < c.maxRedemptions,
+      );
+
+      return serializePrisma(available);
+    },
+  );
 
   app.post(
     "/discount-codes/:code/redeem",

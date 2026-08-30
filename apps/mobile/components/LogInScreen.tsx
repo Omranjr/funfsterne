@@ -15,6 +15,7 @@ import { Button } from "./Button";
 import { useTheme } from "@/contexts/ThemeContext";
 import { typography } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSlowOperation } from "@/hooks/useSlowOperation";
 
 export interface LogInScreenProps {
   onSwitchToSignUp: () => void;
@@ -30,6 +31,7 @@ export function LogInScreen({ onSwitchToSignUp, testID }: LogInScreenProps) {
   const [password, setPassword] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const isSlow = useSlowOperation(submitting);
 
   const handleSubmit = useCallback(async () => {
     setFormError(null);
@@ -97,11 +99,20 @@ export function LogInScreen({ onSwitchToSignUp, testID }: LogInScreenProps) {
           />
 
           {formError ? (
-            <Text style={[styles.formError, { color: theme.danger }]}>{formError}</Text>
+            <Text style={[styles.formError, { color: theme.dangerText }]}>{formError}</Text>
           ) : null}
 
+          {/* A cold backend can take the best part of a minute to answer the
+              first request, so past a few seconds the label says so rather
+              than leaving the button looking stuck. */}
           <Button
-            title={submitting ? t("auth.logIn.loggingIn") : t("auth.logIn.logIn")}
+            title={
+              submitting
+                ? isSlow
+                  ? t("common.stillWorking")
+                  : t("auth.logIn.loggingIn")
+                : t("auth.logIn.logIn")
+            }
             onPress={handleSubmit}
             disabled={submitting}
             style={styles.submitButton}

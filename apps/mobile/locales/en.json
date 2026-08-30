@@ -7,7 +7,12 @@
     "noImage": "No image",
     "switchToLightMode": "Switch to light mode",
     "switchToDarkMode": "Switch to dark mode",
-    "loading": "LOADING"
+    "loading": "LOADING",
+    "stillWorking": "Still working…",
+    "themeSystem": "System",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "changeAppearance": "Change appearance"
   },
   "tabs": {
     "home": "Home",
@@ -102,7 +107,10 @@
     "availableAt": "Available at",
     "unavailableError": "Could not load branch availability — pull down to retry",
     "unavailable": "Currently unavailable — check back soon",
-    "askAboutProduct": "Ask about this product"
+    "askAboutProduct": "Ask about this product",
+    "linkFailedTitle": "Could not open",
+    "linkFailedInstagram": "Instagram could not be opened on this device.",
+    "linkFailedContact": "No messaging app is available on this device. Call us on +49 2823 4198333."
   },
   "branches": {
     "title": "Branches",

@@ -1,6 +1,7 @@
 import "dotenv/config";
 import Fastify from "fastify";
 import { corsPlugin } from "./plugins/cors.js";
+import { helmetPlugin } from "./plugins/helmet.js";
 import { prismaPlugin } from "./plugins/prisma.js";
 import { jwtPlugin } from "./plugins/jwt.js";
 import { uploadPlugin } from "./plugins/upload.js";
@@ -19,6 +20,9 @@ const app = Fastify({
 
 async function main() {
   await app.register(errorHandlerPlugin);
+  // Registered before the routes so the headers land on every reply,
+  // including the ones Fastify generates itself.
+  await app.register(helmetPlugin);
   await app.register(corsPlugin);
   await app.register(prismaPlugin);
   await app.register(jwtPlugin);

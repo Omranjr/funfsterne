@@ -21,6 +21,7 @@ import { Button } from "./Button";
 import { useTheme } from "@/contexts/ThemeContext";
 import { typography } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSlowOperation } from "@/hooks/useSlowOperation";
 
 export interface SignUpScreenProps {
   onSwitchToLogIn: () => void;
@@ -44,6 +45,7 @@ export function SignUpScreen({ onSwitchToLogIn, testID }: SignUpScreenProps) {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const isSlow = useSlowOperation(submitting);
 
   const handleContinue = useCallback(() => {
     const errors: Record<string, string> = {};
@@ -269,11 +271,20 @@ export function SignUpScreen({ onSwitchToLogIn, testID }: SignUpScreenProps) {
               />
 
               {formError ? (
-                <Text style={[styles.formError, { color: theme.danger }]}>{formError}</Text>
+                <Text style={[styles.formError, { color: theme.dangerText }]}>{formError}</Text>
               ) : null}
 
+              {/* Account creation is the first request a new customer ever
+                  makes, so it is the one most likely to hit a sleeping
+                  backend. Past a few seconds, say so. */}
               <Button
-                title={submitting ? t("auth.signUp.creatingAccount") : t("auth.signUp.createAccount")}
+                title={
+                  submitting
+                    ? isSlow
+                      ? t("common.stillWorking")
+                      : t("auth.signUp.creatingAccount")
+                    : t("auth.signUp.createAccount")
+                }
                 onPress={handleSubmit}
                 disabled={submitting}
                 style={styles.submitButton}

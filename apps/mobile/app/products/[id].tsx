@@ -9,6 +9,7 @@ import {
   RefreshControl,
   Linking,
   Platform,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -18,6 +19,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { Badge, CachedImage, EmptyState, ProductDetailSkeleton } from "@/components";
 import { useProduct, useBranches } from "@/hooks/usePublicData";
 import { formatPrice } from "@/lib/format-price";
+import { logSwallowed } from "@/lib/log";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -44,6 +46,14 @@ export default function ProductDetailsScreen() {
     error: branchesError,
   } = useBranches();
 
+  // Deep links (funfsterne://products/<id>) can open this screen with no
+  // history behind it, and router.back() is a silent no-op in that case --
+  // leaving the back button dead. Fall through to the Shop tab instead.
+  const handleBack = useCallback(() => {
+    if (router.canGoBack()) router.back();
+    else router.replace("/products");
+  }, [router]);
+
   const handleRefresh = useCallback(() => {
     refetch();
     refetchBranches();
@@ -57,14 +67,23 @@ export default function ProductDetailsScreen() {
     return branches.filter((b) => inStockIds.has(b.id));
   }, [product, branches]);
 
+  // Both handlers used to swallow the failure entirely, which turned a
+  // device without Instagram (or without an SMS app — every iPad, and any
+  // phone where the user removed Messages) into a button that visibly does
+  // nothing at all. Tell the customer what happened and give them the phone
+  // number, which is the thing they were reaching for anyway.
   const handleShare = useCallback(async () => {
     if (!product) return;
     try {
       await Linking.openURL(SHOP_INSTAGRAM);
-    } catch {
-      // ignore
+    } catch (error) {
+      logSwallowed("open-instagram", error);
+      Alert.alert(
+        t("productDetail.linkFailedTitle"),
+        t("productDetail.linkFailedInstagram"),
+      );
     }
-  }, [product]);
+  }, [product, t]);
 
   const handleContact = useCallback(async () => {
     const url = Platform.select({
@@ -74,15 +93,19 @@ export default function ProductDetailsScreen() {
     });
     try {
       await Linking.openURL(url);
-    } catch {
-      // ignore
+    } catch (error) {
+      logSwallowed("open-contact", error);
+      Alert.alert(
+        t("productDetail.linkFailedTitle"),
+        t("productDetail.linkFailedContact"),
+      );
     }
-  }, []);
+  }, [t]);
 
   const backHeader = (
     <View style={[styles.header, { paddingTop: Math.max(insets.top, 16) }]}>
       <TouchableOpacity
-        onPress={() => router.back()}
+        onPress={handleBack}
         style={[styles.iconButton, { backgroundColor: theme.border }]}
         accessibilityRole="button"
         accessibilityLabel={t("productDetail.goBack")}
@@ -133,7 +156,7 @@ export default function ProductDetailsScreen() {
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.header, { paddingTop: Math.max(insets.top, 16) }]}>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={handleBack}
           style={[
             styles.iconButton,
             { backgroundColor: theme.border },
@@ -319,7 +342,7 @@ const styles = StyleSheet.create({
   },
   name: {
     flex: 1,
-    fontFamily: "PlayfairDisplay_700Bold",
+    fontFamily: "PlayfairDisplay_400Regular",
     fontSize: 28,
     lineHeight: 34,
   },
@@ -337,7 +360,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   sectionTitle: {
-    fontFamily: "PlayfairDisplay_700Bold",
+    fontFamily: "PlayfairDisplay_400Regular",
     fontSize: 18,
   },
   branchList: {
@@ -384,7 +407,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   error: {
-    fontFamily: "PlayfairDisplay_700Bold",
+    fontFamily: "PlayfairDisplay_400Regular",
     fontSize: 24,
     textAlign: "center",
     marginTop: 100,

@@ -42,6 +42,7 @@ import {
 } from "@/components";
 import { hasBeenPrompted } from "@/lib/notification-permission";
 import { useAppFonts } from "@/hooks/useFonts";
+import { usePushTokenSync } from "@/hooks/usePushTokenSync";
 import { initI18n } from "@/lib/i18n";
 import { useTranslation } from "react-i18next";
 
@@ -136,6 +137,10 @@ function AppNavigator() {
   const { theme } = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  // Re-registers the push token whenever the app comes to the foreground;
+  // the one-shot registration on the permission screen was unrecoverable
+  // if it ever failed. See usePushTokenSync for the full reasoning.
+  usePushTokenSync();
 
   return (
     // Deliberately no "top" edge: the Home hero is full-bleed to y:0 with

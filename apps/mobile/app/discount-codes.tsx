@@ -34,6 +34,7 @@ import {
   Ground,
 } from "@/components";
 import { useDiscountCodes } from "@/hooks/usePublicData";
+import { queryClient } from "@/lib/query-client";
 import { useReduceMotion } from "@/hooks/useReduceMotion";
 import { getOrCreateDeviceId } from "@/lib/device-id";
 import { formatPrice } from "@/lib/format-price";
@@ -140,6 +141,16 @@ export default function OffersScreen() {
             branchId: code.scopeBranchId ?? undefined,
           });
           setCardState(code.id, "redeemed");
+          // The server now filters out codes this customer has used, so the
+          // list is stale the moment a redemption succeeds. Marked stale
+          // rather than refetched: an immediate refetch would pull the card
+          // out from under the cut animation that is still playing. This
+          // way the customer sees the cut finish, and the coupon is gone
+          // the next time the screen loads or they pull to refresh.
+          queryClient.invalidateQueries({
+            queryKey: ["discount-codes", "active"],
+            refetchType: "none",
+          });
         } catch (err) {
           const isPublic = err instanceof PublicApiError;
           const isAlreadyRedeemedByDevice =
@@ -610,7 +621,7 @@ function RazorCouponCard({
           style={[
             typography.bodySm,
             styles.errorText,
-            { color: error.isAlreadyRedeemed ? theme.textMuted : theme.danger },
+            { color: error.isAlreadyRedeemed ? theme.textMuted : theme.dangerText },
           ]}
         >
           {error.message}

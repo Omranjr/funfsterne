@@ -53,7 +53,11 @@ export default function LanguageScreen() {
     >
       <View style={styles.header}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => {
+            // Reachable as a deep link, where there is nothing to go back to.
+            if (router.canGoBack()) router.back();
+            else router.replace("/account");
+          }}
           style={[styles.backButton, { backgroundColor: theme.border }]}
           accessibilityRole="button"
           accessibilityLabel={t("productDetail.goBack")}

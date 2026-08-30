@@ -7,7 +7,12 @@
     "noImage": "لا توجد صورة",
     "switchToLightMode": "التبديل إلى الوضع الفاتح",
     "switchToDarkMode": "التبديل إلى الوضع الداكن",
-    "loading": "جارٍ التحميل"
+    "loading": "جارٍ التحميل",
+    "stillWorking": "لا يزال قيد التنفيذ…",
+    "themeSystem": "النظام",
+    "themeLight": "فاتح",
+    "themeDark": "داكن",
+    "changeAppearance": "تغيير المظهر"
   },
   "tabs": {
     "home": "الرئيسية",
@@ -102,7 +107,10 @@
     "availableAt": "متوفر في",
     "unavailableError": "تعذّر تحميل مدى التوفر في الفروع — اسحب للأسفل لإعادة المحاولة",
     "unavailable": "غير متوفر حاليًا — تابعنا قريبًا",
-    "askAboutProduct": "استفسار عن هذا المنتج"
+    "askAboutProduct": "استفسار عن هذا المنتج",
+    "linkFailedTitle": "تعذر الفتح",
+    "linkFailedInstagram": "تعذر فتح إنستغرام على هذا الجهاز.",
+    "linkFailedContact": "لا يوجد تطبيق مراسلة على هذا الجهاز. اتصل بنا على ‎+49 2823 4198333‎."
   },
   "branches": {
     "title": "الفروع",

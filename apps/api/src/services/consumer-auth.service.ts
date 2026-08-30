@@ -85,11 +85,30 @@ export async function authenticateConsumer(
   };
 }
 
+/**
+ * Customer session length.
+ *
+ * Long deliberately: there is no email or phone on these accounts, so a
+ * forgotten password needs the shop to reset it by hand. Expiring sessions
+ * aggressively would turn a routine re-login into a support call. 180 days
+ * keeps a stolen token from being useful forever without doing that.
+ *
+ * This is not revocable on its own — killing one session early still means
+ * rotating JWT_SECRET, which signs everybody out. Proper per-session
+ * revocation needs database-backed refresh tokens; that is a deliberate
+ * post-launch piece of work, not an oversight.
+ *
+ * The app handles the expiry cleanly: a 401 on a request that carried a
+ * token clears it and returns to the sign-in screen (see the unauthorized
+ * handler in lib/api.ts).
+ */
+const CONSUMER_TOKEN_TTL = "180d";
+
 export function signConsumerToken(
   app: FastifyInstance,
   payload: ConsumerJwtPayload,
 ): string {
-  return app.jwt.sign(payload);
+  return app.jwt.sign(payload, { expiresIn: CONSUMER_TOKEN_TTL });
 }
 
 // Sets a brand new password for a user. This is a RESET, not a recovery --

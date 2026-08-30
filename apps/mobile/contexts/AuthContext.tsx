@@ -18,6 +18,7 @@ import {
   loginConsumerUser,
   deleteConsumerAccountRequest,
   getConsumerProfile,
+  setUnauthorizedHandler,
   PublicApiError,
   type ConsumerProfile,
 } from "@/lib/api";
@@ -140,6 +141,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await removeAuthToken();
     setUser(null);
   }, []);
+
+  // A 401 on a request that carried a token means the stored credential is
+  // dead -- the account was deleted from the admin dashboard, JWT_SECRET was
+  // rotated, or (once tokens expire) it simply aged out. Drop it and fall
+  // back to the sign-in screen instead of leaving the user "logged in" with
+  // every screen showing an error and no way out.
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      void logout();
+    });
+    return () => setUnauthorizedHandler(null);
+  }, [logout]);
 
   const deleteAccount = useCallback<AuthContextValue["deleteAccount"]>(async () => {
     try {

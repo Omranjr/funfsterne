@@ -14,6 +14,7 @@ import {
 } from "expo-notifications";
 import { registerPushToken } from "@/lib/api";
 import { getOrCreateDeviceId } from "@/lib/device-id";
+import { logSwallowed } from "@/lib/log";
 import { type Platform as PlatformType } from "@funfsterne/shared-types";
 
 export type NotificationPermissionStatus =
@@ -124,7 +125,10 @@ export function useExpoPushToken() {
       const { data } = await getExpoPushTokenAsync();
       setToken(data);
       return data;
-    } catch {
+    } catch (error) {
+      // Android throws here when Firebase is not configured, which is by far
+      // the likeliest cause and was otherwise completely invisible.
+      logSwallowed("expo-push-token", error);
       setToken(null);
       return null;
     }

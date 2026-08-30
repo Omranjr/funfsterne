@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   title: {
-    fontFamily: "PlayfairDisplay_700Bold",
+    fontFamily: "PlayfairDisplay_400Regular",
     fontSize: 20,
     textAlign: "center",
   },

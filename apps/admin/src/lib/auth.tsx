@@ -8,9 +8,8 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
-import Cookies from "js-cookie";
-
-const TOKEN_COOKIE = "adminToken";
+import { setUnauthorizedHandler } from "./api";
+import { getAdminToken, setAdminToken, clearAdminToken } from "./admin-token";
 
 type AdminUser = {
   id: string;
@@ -33,7 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AdminUser | null>(null);
 
   useEffect(() => {
-    const token = Cookies.get(TOKEN_COOKIE);
+    const token = getAdminToken();
     if (token) {
       setIsAuthenticated(true);
     }
@@ -50,11 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!res.ok) return false;
 
       const data = (await res.json()) as { token: string; admin: AdminUser };
-      Cookies.set(TOKEN_COOKIE, data.token, {
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        expires: 7,
-      });
+      setAdminToken(data.token);
       setIsAuthenticated(true);
       setUser(data.admin);
       return true;
@@ -64,10 +59,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    Cookies.remove(TOKEN_COOKIE);
+    clearAdminToken();
     setIsAuthenticated(false);
     setUser(null);
   }, []);
+
+  // A 401 from any admin call means the stored token is finished --
+  // expired (they last 7 days now) or revoked. Drop it and fall back to
+  // the sign-in form instead of leaving every page showing a bare
+  // "failed to load".
+  useEffect(() => {
+    setUnauthorizedHandler(logout);
+    return () => setUnauthorizedHandler(null);
+  }, [logout]);
 
   return (
     <AuthContext.Provider value={{ isAuthenticated, user, login, logout }}>
@@ -82,8 +86,4 @@ export function useAuth() {
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
-}
-
-export function getAdminToken(): string | undefined {
-  return Cookies.get(TOKEN_COOKIE);
 }

@@ -89,7 +89,7 @@ export default function BranchesScreen() {
             <Text style={[styles.name, { color: theme.text }]}>{item.name}</Text>
             {item.address ? (
               <View style={styles.row}>
-                <MapPin size={14} fill={theme.textMuted} />
+                <MapPin size={14} color={theme.textMuted} />
                 <Text style={[styles.address, { color: theme.textMuted }]}>{item.address}</Text>
               </View>
             ) : null}

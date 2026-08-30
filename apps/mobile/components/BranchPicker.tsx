@@ -3,6 +3,7 @@ import {
   View,
   Text,
   Modal,
+  ScrollView,
   StyleSheet,
   TouchableOpacity,
   Pressable,
@@ -10,6 +11,7 @@ import {
 import { X, MapPin } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/contexts/ThemeContext";
+import { typography, borderRadius } from "@/constants/theme";
 import { type Branch } from "@funfsterne/shared-types";
 
 export interface BranchPickerProps {
@@ -30,6 +32,8 @@ export function BranchPicker({
   const { theme } = useTheme();
   const { t } = useTranslation();
 
+  const list = branches ?? [];
+
   return (
     <Modal
       visible={visible}
@@ -40,18 +44,23 @@ export function BranchPicker({
       <Pressable
         style={[styles.backdrop, { backgroundColor: theme.backdrop }]}
         onPress={onClose}
+        accessibilityLabel={t("home.closeBranchPicker")}
       >
-        <View
+        {/* The sheet claims the touch itself. Without this, the backdrop
+            Pressable above also receives taps that land on the sheet's own
+            padding or header, so touching the sheet dismissed it. */}
+        <Pressable
+          onPress={(e) => e.stopPropagation()}
           style={[
             styles.sheet,
             {
               backgroundColor: theme.surface,
-              borderTopColor: theme.border,
+              borderTopColor: theme.hairlineStrong,
             },
           ]}
         >
           <View style={styles.header}>
-            <Text style={[styles.title, { color: theme.text }]}>
+            <Text style={[typography.displayMd, { color: theme.text }]}>
               {t("home.selectBranch")}
             </Text>
             <TouchableOpacity
@@ -64,50 +73,70 @@ export function BranchPicker({
             </TouchableOpacity>
           </View>
 
-          {branches?.map((branch) => {
-            const selected = selectedBranchId === branch.id;
-            return (
-              <TouchableOpacity
-                key={branch.id}
-                activeOpacity={0.7}
-                onPress={() => {
-                  onSelect(selected ? null : branch);
-                  onClose();
-                }}
-                style={[
-                  styles.row,
-                  {
-                    backgroundColor: selected
-                      ? theme.border
-                      : "transparent",
-                    borderBottomColor: theme.border,
-                  },
-                ]}
-              >
-                <MapPin
-                  size={18}
-                  color={selected ? theme.gold : theme.textMuted}
-                />
-                <View style={styles.rowText}>
-                  <Text
+          {list.length === 0 ? (
+            <Text style={[typography.bodyMd, styles.empty, { color: theme.textMuted }]}>
+              {t("home.noBranchesAvailable")}
+            </Text>
+          ) : (
+            // Scrollable: the sheet is capped at 70% of the screen, so
+            // without this a long branch list was simply cut off with no way
+            // to reach the entries below the fold.
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.list}
+            >
+              {list.map((branch, index) => {
+                const selected = selectedBranchId === branch.id;
+                const isLast = index === list.length - 1;
+                return (
+                  <TouchableOpacity
+                    key={branch.id}
+                    activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    onPress={() => {
+                      onSelect(selected ? null : branch);
+                      onClose();
+                    }}
                     style={[
-                      styles.branchName,
-                      { color: selected ? theme.gold : theme.text },
+                      styles.row,
+                      {
+                        backgroundColor: selected ? theme.muted : "transparent",
+                        borderBottomColor: theme.hairline,
+                        borderBottomWidth: isLast
+                          ? 0
+                          : StyleSheet.hairlineWidth,
+                      },
                     ]}
                   >
-                    {branch.name}
-                  </Text>
-                  <Text
-                    style={[styles.branchAddress, { color: theme.textMuted }]}
-                    numberOfLines={1}
-                  >
-                    {branch.address}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+                    <MapPin
+                      size={18}
+                      color={selected ? theme.gold : theme.textMuted}
+                    />
+                    <View style={styles.rowText}>
+                      <Text
+                        style={[
+                          typography.bodyLg,
+                          { color: selected ? theme.goldText : theme.text },
+                        ]}
+                      >
+                        {branch.name}
+                      </Text>
+                      {branch.address ? (
+                        <Text
+                          style={[typography.bodyMd, { color: theme.textMuted }]}
+                          numberOfLines={1}
+                        >
+                          {branch.address}
+                        </Text>
+                      ) : null}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          )}
+        </Pressable>
       </Pressable>
     </Modal>
   );
@@ -117,12 +146,11 @@ const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
     justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.5)",
   },
   sheet: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: borderRadius.sheet,
+    borderTopRightRadius: borderRadius.sheet,
     paddingHorizontal: 16,
     paddingBottom: 32,
     maxHeight: "70%",
@@ -133,12 +161,15 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: 16,
   },
-  title: {
-    fontFamily: "PlayfairDisplay_700Bold",
-    fontSize: 22,
-  },
   close: {
     padding: 4,
+  },
+  list: {
+    paddingBottom: 8,
+  },
+  empty: {
+    paddingVertical: 24,
+    textAlign: "center",
   },
   row: {
     flexDirection: "row",
@@ -146,19 +177,10 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 14,
     paddingHorizontal: 12,
-    borderRadius: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderRadius: borderRadius.md,
   },
   rowText: {
     flex: 1,
     gap: 2,
-  },
-  branchName: {
-    fontFamily: "Manrope_600SemiBold",
-    fontSize: 15,
-  },
-  branchAddress: {
-    fontFamily: "Manrope_400Regular",
-    fontSize: 13,
   },
 });

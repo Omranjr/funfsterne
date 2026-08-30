@@ -116,7 +116,14 @@ export default function HomeScreen() {
       onPress={() =>
         router.push({
           pathname: "/products",
-          params: { category: item.key, branchId: selectedBranchId ?? "" },
+          // `nav` is a per-tap nonce: /products is a tab route that stays
+          // mounted, so without it a second tap on the same tile carries
+          // identical params and the Shop has no way to tell it happened.
+          params: {
+            category: item.key,
+            branchId: selectedBranchId ?? "",
+            nav: String(Date.now()),
+          },
         })
       }
     >
@@ -228,7 +235,11 @@ export default function HomeScreen() {
               onPress={() =>
                 router.push({
                   pathname: "/products",
-                  params: { branchId: selectedBranchId ?? "" },
+                  params: {
+                    category: "ALL",
+                    branchId: selectedBranchId ?? "",
+                    nav: String(Date.now()),
+                  },
                 })
               }
             >

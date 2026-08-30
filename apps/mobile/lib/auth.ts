@@ -1,11 +1,17 @@
 import * as SecureStore from "expo-secure-store";
+import { logSwallowed } from "@/lib/log";
 
 const AUTH_TOKEN_KEY = "consumer_auth_token";
 
 export async function getAuthToken(): Promise<string | null> {
   try {
     return await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
-  } catch {
+  } catch (error) {
+    // Returning null here signs the user out for the rest of the session,
+    // so a transient Keychain failure looks exactly like "not logged in".
+    // Nothing better is available — without the token we cannot
+    // authenticate — but it should at least be traceable.
+    logSwallowed("secure-store-read", error);
     return null;
   }
 }

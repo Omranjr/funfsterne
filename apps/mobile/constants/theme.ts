@@ -85,6 +85,15 @@ export const darkTheme = {
   cardTint: "rgba(245,240,230,0.018)",
   success: "#22C55E",
   dangerSurface: "#EF4444",
+  /**
+   * Danger as TYPE.
+   *
+   * The shared `danger` is a fixed #EF4444, which is right for a border or
+   * an icon (those only need 3:1) but is also used as a text colour in a
+   * few places, where it has to clear 4.5:1 against this theme's ground.
+   * Measured here: 5.22:1 on the ground, 4.67:1 on a card.
+   */
+  dangerText: "#EF4444",
   ...SHARED_TOKENS,
 };
 
@@ -131,6 +140,12 @@ export const lightTheme = {
   cardTint: "#FFFFFF",
   success: "#16A34A",
   dangerSurface: "#DC2626",
+  /**
+   * The shared #EF4444 measures only 3.55:1 on this cream ground, so error
+   * text was failing AA in light mode wherever it was used. This darker
+   * step of the same hue is 4.55:1 on the ground and 4.83:1 on a card.
+   */
+  dangerText: "#DC2626",
   ...SHARED_TOKENS,
 };
 
