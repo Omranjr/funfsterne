@@ -29,18 +29,30 @@ import {
   type EngagementPeriod,
 } from "../services/loyalty.service.js";
 import { serializePrisma } from "../serializers.js";
+import { resolveTenant, tenantId } from "../middleware/tenant.js";
 
 export async function adminRoutes(app: FastifyInstance) {
+  // Order matters: resolveTenant runs first so adminAuthMiddleware can check
+  // the token's tenant claim against the resolved tenant. Both are plugin
+  // hooks rather than per-route preHandlers, which is what makes it
+  // impossible to add a route to this file and forget either one.
+  app.addHook("preHandler", resolveTenant);
   app.addHook("preHandler", adminAuthMiddleware);
 
   app.get("/me", async (request) => {
-    return request.admin;
+    // The tenant is included so the dashboard can show which shop the
+    // session is signed into -- with one email able to administer several,
+    // the email alone no longer answers that.
+    return { ...request.admin, tenant: request.tenant };
   });
 
   // ── Branches ─────────────────────────────────────────────────────────────
 
-  app.get("/branches", async () => {
-    const branches = await app.prisma.branch.findMany({ orderBy: { name: "asc" } });
+  app.get("/branches", async (request) => {
+    const branches = await app.prisma.branch.findMany({
+      where: { tenantId: tenantId(request) },
+      orderBy: { name: "asc" },
+    });
     return serializePrisma(branches);
   });
 
@@ -50,7 +62,9 @@ export async function adminRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: "Invalid branch payload" });
     }
     return serializePrisma(
-      await app.prisma.branch.create({ data: parse.data }),
+      await app.prisma.branch.create({
+        data: { ...parse.data, tenantId: tenantId(request) },
+      }),
     );
   });
 
@@ -58,7 +72,9 @@ export async function adminRoutes(app: FastifyInstance) {
     const id = BranchSchema.shape.id.parse(
       (request.params as { id: string }).id,
     );
-    const branch = await app.prisma.branch.findUnique({ where: { id } });
+    const branch = await app.prisma.branch.findFirst({
+      where: { id, tenantId: tenantId(request) },
+    });
     if (!branch) return reply.status(404).send({ error: "Branch not found" });
     return serializePrisma(branch);
   });
@@ -71,8 +87,19 @@ export async function adminRoutes(app: FastifyInstance) {
     if (!parse.success) {
       return reply.status(400).send({ error: "Invalid branch payload" });
     }
+    // updateMany/deleteMany rather than update/delete throughout this file:
+    // they take a full `where`, so the tenant filter is enforced by the
+    // write itself. `update({ where: { id } })` would happily modify another
+    // tenant's row if an id were ever guessed or leaked.
+    const { count } = await app.prisma.branch.updateMany({
+      where: { id, tenantId: tenantId(request) },
+      data: parse.data,
+    });
+    if (count === 0) return reply.status(404).send({ error: "Branch not found" });
+    // Safe to read back by id alone: the updateMany above matched exactly
+    // this tenant's row, so ownership is already proven for this request.
     return serializePrisma(
-      await app.prisma.branch.update({ where: { id }, data: parse.data }),
+      await app.prisma.branch.findUniqueOrThrow({ where: { id } }),
     );
   });
 
@@ -80,14 +107,18 @@ export async function adminRoutes(app: FastifyInstance) {
     const id = BranchSchema.shape.id.parse(
       (request.params as { id: string }).id,
     );
-    await app.prisma.branch.delete({ where: { id } });
+    const { count } = await app.prisma.branch.deleteMany({
+      where: { id, tenantId: tenantId(request) },
+    });
+    if (count === 0) return reply.status(404).send({ error: "Branch not found" });
     return reply.status(204).send();
   });
 
   // ── Products ─────────────────────────────────────────────────────────────
 
-  app.get("/products", async () => {
+  app.get("/products", async (request) => {
     const products = await app.prisma.product.findMany({
+      where: { tenantId: tenantId(request) },
       orderBy: { name: "asc" },
       include: { availabilities: { include: { branch: true } } },
     });
@@ -100,7 +131,9 @@ export async function adminRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: "Invalid product payload" });
     }
     return serializePrisma(
-      await app.prisma.product.create({ data: parse.data }),
+      await app.prisma.product.create({
+        data: { ...parse.data, tenantId: tenantId(request) },
+      }),
     );
   });
 
@@ -108,8 +141,8 @@ export async function adminRoutes(app: FastifyInstance) {
     const id = ProductSchema.shape.id.parse(
       (request.params as { id: string }).id,
     );
-    const product = await app.prisma.product.findUnique({
-      where: { id },
+    const product = await app.prisma.product.findFirst({
+      where: { id, tenantId: tenantId(request) },
       include: { availabilities: { include: { branch: true } } },
     });
     if (!product) return reply.status(404).send({ error: "Product not found" });
@@ -124,8 +157,15 @@ export async function adminRoutes(app: FastifyInstance) {
     if (!parse.success) {
       return reply.status(400).send({ error: "Invalid product payload" });
     }
+    const { count } = await app.prisma.product.updateMany({
+      where: { id, tenantId: tenantId(request) },
+      data: parse.data,
+    });
+    if (count === 0) return reply.status(404).send({ error: "Product not found" });
+    // See the branch PATCH above: the tenant-scoped updateMany already
+    // proved this id belongs here.
     return serializePrisma(
-      await app.prisma.product.update({ where: { id }, data: parse.data }),
+      await app.prisma.product.findUniqueOrThrow({ where: { id } }),
     );
   });
 
@@ -133,7 +173,10 @@ export async function adminRoutes(app: FastifyInstance) {
     const id = ProductSchema.shape.id.parse(
       (request.params as { id: string }).id,
     );
-    await app.prisma.product.delete({ where: { id } });
+    const { count } = await app.prisma.product.deleteMany({
+      where: { id, tenantId: tenantId(request) },
+    });
+    if (count === 0) return reply.status(404).send({ error: "Product not found" });
     return reply.status(204).send();
   });
 
@@ -152,15 +195,19 @@ export async function adminRoutes(app: FastifyInstance) {
 
     const { branchId, inStock, priceOverride } = parse.data;
 
-    const product = await app.prisma.product.findUnique({
-      where: { id: productId },
+    const tid = tenantId(request);
+
+    // Both parents are checked against the tenant, which is also what stops
+    // a join row pairing this tenant's product with another tenant's branch.
+    const product = await app.prisma.product.findFirst({
+      where: { id: productId, tenantId: tid },
     });
     if (!product) {
       return reply.status(404).send({ error: "Product not found" });
     }
 
-    const branch = await app.prisma.branch.findUnique({
-      where: { id: branchId },
+    const branch = await app.prisma.branch.findFirst({
+      where: { id: branchId, tenantId: tid },
     });
     if (!branch) {
       return reply.status(404).send({ error: "Branch not found" });
@@ -169,7 +216,7 @@ export async function adminRoutes(app: FastifyInstance) {
     return serializePrisma(
       await app.prisma.productBranchAvailability.upsert({
         where: { productId_branchId: { productId, branchId } },
-        create: { productId, branchId, inStock, priceOverride },
+        create: { tenantId: tid, productId, branchId, inStock, priceOverride },
         update: { inStock, priceOverride },
       }),
     );
@@ -177,8 +224,9 @@ export async function adminRoutes(app: FastifyInstance) {
 
   // ── Discount codes ───────────────────────────────────────────────────────
 
-  app.get("/discount-codes", async () => {
+  app.get("/discount-codes", async (request) => {
     const codes = await app.prisma.discountCode.findMany({
+      where: { tenantId: tenantId(request) },
       orderBy: { code: "asc" },
       include: { scopeBranch: true },
     });
@@ -191,14 +239,16 @@ export async function adminRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: "Invalid discount code payload" });
     }
     return serializePrisma(
-      await app.prisma.discountCode.create({ data: parse.data }),
+      await app.prisma.discountCode.create({
+        data: { ...parse.data, tenantId: tenantId(request) },
+      }),
     );
   });
 
   app.get("/discount-codes/:id", async (request, reply) => {
     const id = (request.params as { id: string }).id;
-    const discount = await app.prisma.discountCode.findUnique({
-      where: { id },
+    const discount = await app.prisma.discountCode.findFirst({
+      where: { id, tenantId: tenantId(request) },
       include: { scopeBranch: true, redemptions: true },
     });
     if (!discount) {
@@ -213,14 +263,26 @@ export async function adminRoutes(app: FastifyInstance) {
     if (!parse.success) {
       return reply.status(400).send({ error: "Invalid discount code payload" });
     }
+    const { count } = await app.prisma.discountCode.updateMany({
+      where: { id, tenantId: tenantId(request) },
+      data: parse.data,
+    });
+    if (count === 0) {
+      return reply.status(404).send({ error: "Discount code not found" });
+    }
     return serializePrisma(
-      await app.prisma.discountCode.update({ where: { id }, data: parse.data }),
+      await app.prisma.discountCode.findUniqueOrThrow({ where: { id } }),
     );
   });
 
   app.delete("/discount-codes/:id", async (request, reply) => {
     const id = (request.params as { id: string }).id;
-    await app.prisma.discountCode.delete({ where: { id } });
+    const { count } = await app.prisma.discountCode.deleteMany({
+      where: { id, tenantId: tenantId(request) },
+    });
+    if (count === 0) {
+      return reply.status(404).send({ error: "Discount code not found" });
+    }
     return reply.status(204).send();
   });
 
@@ -230,8 +292,9 @@ export async function adminRoutes(app: FastifyInstance) {
   // set yet. The mobile app's GET /public/category-images returns only the
   // rows that exist; this admin endpoint synthesises the full 5-row list so
   // the dashboard can render an upload slot for every category.
-  app.get("/category-images", async () => {
+  app.get("/category-images", async (request) => {
     const existing = await app.prisma.categoryImage.findMany({
+      where: { tenantId: tenantId(request) },
       orderBy: { category: "asc" },
     });
     const byCategory = new Map(existing.map((row) => [row.category, row]));
@@ -275,14 +338,18 @@ export async function adminRoutes(app: FastifyInstance) {
     const category = categoryParse.data;
     const { imageUrl } = bodyParse.data;
 
+    const tid = tenantId(request);
+
     if (imageUrl === "") {
-      await app.prisma.categoryImage.deleteMany({ where: { category } });
+      await app.prisma.categoryImage.deleteMany({
+        where: { tenantId: tid, category },
+      });
       return { category, imageUrl: null, deleted: true };
     }
 
     const row = await app.prisma.categoryImage.upsert({
-      where: { category },
-      create: { category, imageUrl },
+      where: { tenantId_category: { tenantId: tid, category } },
+      create: { tenantId: tid, category, imageUrl },
       update: { imageUrl },
     });
 
@@ -300,15 +367,16 @@ export async function adminRoutes(app: FastifyInstance) {
     }
 
     await app.prisma.categoryImage.deleteMany({
-      where: { category: categoryParse.data },
+      where: { tenantId: tenantId(request), category: categoryParse.data },
     });
     return reply.status(204).send();
   });
 
   // ── Notifications ────────────────────────────────────────────────────────
 
-  app.get("/notifications", async () => {
+  app.get("/notifications", async (request) => {
     const notifications = await app.prisma.notification.findMany({
+      where: { tenantId: tenantId(request) },
       orderBy: { sentAt: "desc" },
     });
     return serializePrisma(notifications);
@@ -316,8 +384,10 @@ export async function adminRoutes(app: FastifyInstance) {
 
   // Lets the admin see how many devices a broadcast will actually reach
   // before confirming send, rather than sending blind.
-  app.get("/notifications/recipient-count", async () => {
-    const count = await app.prisma.pushToken.count();
+  app.get("/notifications/recipient-count", async (request) => {
+    const count = await app.prisma.pushToken.count({
+      where: { tenantId: tenantId(request) },
+    });
     return { count };
   });
 
@@ -327,7 +397,9 @@ export async function adminRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: "Invalid notification payload" });
     }
     return serializePrisma(
-      await app.prisma.notification.create({ data: parse.data }),
+      await app.prisma.notification.create({
+        data: { ...parse.data, tenantId: tenantId(request) },
+      }),
     );
   });
 
@@ -338,10 +410,11 @@ export async function adminRoutes(app: FastifyInstance) {
     }
 
     const { title, body, discountCodeId, target, userIds } = parse.data;
+    const tid = tenantId(request);
 
     if (discountCodeId) {
-      const discount = await app.prisma.discountCode.findUnique({
-        where: { id: discountCodeId },
+      const discount = await app.prisma.discountCode.findFirst({
+        where: { id: discountCodeId, tenantId: tid },
       });
       if (!discount) {
         return reply.status(404).send({ error: "Discount code not found" });
@@ -352,12 +425,18 @@ export async function adminRoutes(app: FastifyInstance) {
     // customers. Customers with no registered token simply contribute none,
     // which is why the response reports `recipients` (devices actually
     // messaged) separately from how many customers were picked.
+    // The tenant filter on BOTH branches is the single most important line
+    // in this file. Before it, "target: all" meant every push token in the
+    // table, so the second customer's first broadcast would have reached the
+    // first customer's entire user base. The targeted branch needs it too:
+    // userIds arrive in the request body, so an id belonging to another
+    // tenant would otherwise resolve to that tenant's device.
     const pushTokens =
       target === "users"
         ? await app.prisma.pushToken.findMany({
-            where: { userId: { in: userIds ?? [] } },
+            where: { tenantId: tid, userId: { in: userIds ?? [] } },
           })
-        : await app.prisma.pushToken.findMany();
+        : await app.prisma.pushToken.findMany({ where: { tenantId: tid } });
 
     const tokens = pushTokens.map((pt) => pt.token);
     const { sent, failed } = await sendPushNotifications(
@@ -369,6 +448,7 @@ export async function adminRoutes(app: FastifyInstance) {
 
     const notification = await app.prisma.notification.create({
       data: {
+        tenantId: tid,
         title,
         body,
         discountCodeId,
@@ -387,15 +467,15 @@ export async function adminRoutes(app: FastifyInstance) {
 
   app.get("/discount-codes/:id/redemptions", async (request, reply) => {
     const id = (request.params as { id: string }).id;
-    const discount = await app.prisma.discountCode.findUnique({
-      where: { id },
+    const discount = await app.prisma.discountCode.findFirst({
+      where: { id, tenantId: tenantId(request) },
     });
     if (!discount) {
       return reply.status(404).send({ error: "Discount code not found" });
     }
 
     const redemptions = await app.prisma.discountCodeRedemption.findMany({
-      where: { discountCodeId: id },
+      where: { discountCodeId: id, tenantId: tenantId(request) },
       include: { branch: true },
       orderBy: { redeemedAt: "desc" },
     });
@@ -412,8 +492,9 @@ export async function adminRoutes(app: FastifyInstance) {
   // admin-assisted "forgot password" flow (the app collects no email/phone,
   // so there's no self-service reset path).
 
-  app.get("/consumer-users", async () => {
+  app.get("/consumer-users", async (request) => {
     const users = await app.prisma.consumerUser.findMany({
+      where: { tenantId: tenantId(request) },
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -437,12 +518,26 @@ export async function adminRoutes(app: FastifyInstance) {
         return reply.status(400).send({ error: "Invalid password payload" });
       }
 
-      const user = await app.prisma.consumerUser.findUnique({ where: { id } });
+      const tid = tenantId(request);
+
+      const user = await app.prisma.consumerUser.findFirst({
+        where: { id, tenantId: tid },
+      });
       if (!user) {
         return reply.status(404).send({ error: "User not found" });
       }
 
-      await resetConsumerPassword(app, id, parse.data.newPassword);
+      const ok = await resetConsumerPassword(
+        app,
+        tid,
+        id,
+        parse.data.newPassword,
+      );
+      // The row was there a moment ago, so a miss here means it was deleted
+      // in between -- report it as gone rather than as a silent success.
+      if (!ok) {
+        return reply.status(404).send({ error: "User not found" });
+      }
       return reply.status(204).send();
     },
   );
@@ -455,7 +550,21 @@ export async function adminRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: "Invalid scan payload" });
     }
 
-    const result = await awardLoyaltyPoints(app, parse.data);
+    const tid = tenantId(request);
+
+    // The branch is checked before any points are awarded: branchId comes
+    // from the dashboard's own state, but a stale one from a shop the staff
+    // member no longer works at would otherwise attribute a visit to another
+    // tenant's location.
+    const branch = await app.prisma.branch.findFirst({
+      where: { id: parse.data.branchId, tenantId: tid },
+      select: { id: true },
+    });
+    if (!branch) {
+      return reply.status(404).send({ error: "Branch not found" });
+    }
+
+    const result = await awardLoyaltyPoints(app, { ...parse.data, tenantId: tid });
     if (!result.ok) {
       const status = result.errorCode === "USER_NOT_FOUND" ? 404 : 409;
       return reply
@@ -464,12 +573,12 @@ export async function adminRoutes(app: FastifyInstance) {
     }
 
     const [user, activeRewards] = await Promise.all([
-      app.prisma.consumerUser.findUnique({
-        where: { id: parse.data.userId },
+      app.prisma.consumerUser.findFirst({
+        where: { id: parse.data.userId, tenantId: tid },
         select: { firstName: true, lastName: true },
       }),
       app.prisma.loyaltyReward.findMany({
-        where: { userId: parse.data.userId, status: "ACTIVE" },
+        where: { userId: parse.data.userId, tenantId: tid, status: "ACTIVE" },
         orderBy: { createdAt: "desc" },
       }),
     ]);
@@ -490,7 +599,18 @@ export async function adminRoutes(app: FastifyInstance) {
         return reply.status(400).send({ error: "Invalid redeem payload" });
       }
 
+      const tid = tenantId(request);
+
+      const branch = await app.prisma.branch.findFirst({
+        where: { id: parse.data.branchId, tenantId: tid },
+        select: { id: true },
+      });
+      if (!branch) {
+        return reply.status(404).send({ error: "Branch not found" });
+      }
+
       const result = await redeemLoyaltyReward(app, {
+        tenantId: tid,
         rewardId: id,
         branchId: parse.data.branchId,
       });
@@ -514,6 +634,7 @@ export async function adminRoutes(app: FastifyInstance) {
         : "day";
 
     return getLoyaltyVisitStats(app, {
+      tenantId: tenantId(request),
       granularity,
       userId: query.userId || undefined,
     });
@@ -527,6 +648,11 @@ export async function adminRoutes(app: FastifyInstance) {
     const period: EngagementPeriod =
       query.period === "halfYear" || query.period === "year" ? query.period : "month";
 
-    return serializePrisma(await getCustomerVisitSummary(app, { period }));
+    return serializePrisma(
+      await getCustomerVisitSummary(app, {
+        tenantId: tenantId(request),
+        period,
+      }),
+    );
   });
 }

@@ -1,0 +1,82 @@
+name: Build changed customer apps
+
+on:
+  push:
+    branches: [master, main]
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: EAS build profile
+        default: production
+        type: choice
+        options: [production, preview]
+
+concurrency:
+  # One run per branch. A second push while builds are queueing supersedes
+  # the first rather than racing it onto EAS.
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Typecheck once for the whole workspace rather than inside each matrix
+  # leg: a type error is a property of the shared code, and finding it N
+  # times in parallel just costs N times as much.
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      # Fails if a brand colour, URL, phone number or shop name has crept
+      # into packages/core -- the one invariant the white-label split rests
+      # on, and one that nothing else would catch.
+      - run: npm run check:core
+      - run: npm run typecheck
+
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      customers: ${{ steps.detect.outputs.customers }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Two commits so the diff against HEAD~1 has something to compare.
+          fetch-depth: 2
+      - id: detect
+        run: |
+          CUSTOMERS=$(node scripts/build-changed.js "${{ github.event.before || 'HEAD~1' }}")
+          echo "Building: $CUSTOMERS"
+          echo "customers=$CUSTOMERS" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: [check, detect-changes]
+    if: needs.detect-changes.outputs.customers != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      # One customer's failure must not cancel the others': they are separate
+      # releases to separate businesses.
+      fail-fast: false
+      matrix:
+        customer: ${{ fromJson(needs.detect-changes.outputs.customers) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - run: npm ci
+      - name: EAS build
+        working-directory: apps/mobile/${{ matrix.customer }}
+        run: |
+          eas build \
+            --platform all \
+            --profile "${{ inputs.profile || 'production' }}" \
+            --non-interactive \
+            --no-wait

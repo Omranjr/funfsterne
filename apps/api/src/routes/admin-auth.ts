@@ -5,6 +5,7 @@ import {
   authenticateAdmin,
   signAdminToken,
 } from "../services/admin-auth.service.js";
+import { resolveTenant, tenantId } from "../middleware/tenant.js";
 
 const LoginBodySchema = z.object({
   email: z.string().email(),
@@ -12,6 +13,11 @@ const LoginBodySchema = z.object({
 });
 
 export async function adminAuthRoutes(app: FastifyInstance) {
+  // The dashboard sends x-tenant-id with the login request, because which
+  // shop is being signed into cannot be inferred from the email address --
+  // one owner may run several.
+  app.addHook("preHandler", resolveTenant);
+
   // Same reasoning as consumer-auth.ts: scoped to this plugin so it only
   // throttles admin login, not the rest of the admin API.
   await app.register(rateLimit, {
@@ -25,12 +31,19 @@ export async function adminAuthRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: "Invalid login payload" });
     }
 
-    const admin = await authenticateAdmin(app, parse.data);
+    const admin = await authenticateAdmin(app, {
+      ...parse.data,
+      tenantId: tenantId(request),
+    });
     if (!admin) {
       return reply.status(401).send({ error: "Invalid credentials" });
     }
 
     const token = signAdminToken(app, admin);
-    return { token, admin: { id: admin.sub, email: admin.email } };
+    return {
+      token,
+      admin: { id: admin.sub, email: admin.email },
+      tenant: request.tenant,
+    };
   });
 }

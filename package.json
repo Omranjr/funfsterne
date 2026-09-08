@@ -1,20 +1,39 @@
 {
-  "name": "funfsterne",
+  "name": "funfsterne-platform",
   "private": true,
   "workspaces": [
-    "apps/*",
-    "packages/*"
+    "packages/*",
+    "apps/mobile/*",
+    "apps/api",
+    "apps/admin"
   ],
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
+    "mobile:funfsterne": "npm run start --workspace=@funfsterne/funfsterne",
+    "mobile:mido": "npm run start --workspace=@funfsterne/mido-barber",
+    "ios:funfsterne": "npm run start --workspace=@funfsterne/funfsterne -- --ios",
+    "ios:mido": "npm run start --workspace=@funfsterne/mido-barber -- --ios",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
-    "postinstall": "npm run build --workspace=@funfsterne/shared-types"
+    "check:core": "node scripts/check-core-is-brand-free.js",
+    "check": "npm run check:core && npm run typecheck",
+    "new-customer": "bash scripts/new-customer.sh",
+    "build:all": "bash scripts/build-all.sh",
+    "build:changed": "node scripts/build-changed.js",
+    "db:migrate": "npm run migrate --workspace=@funfsterne/db",
+    "db:migrate:deploy": "npm run migrate:deploy --workspace=@funfsterne/db",
+    "db:generate": "npm run generate --workspace=@funfsterne/db",
+    "db:seed": "npm run seed --workspace=@funfsterne/db",
+    "db:validate": "npm run validate --workspace=@funfsterne/db",
+    "api:dev": "npm run dev --workspace=@funfsterne/api",
+    "admin:dev": "npm run dev --workspace=@funfsterne/admin",
+    "postinstall": "npm run build --workspace=@funfsterne/shared-types && npm run generate --workspace=@funfsterne/db"
   },
   "devDependencies": {
-    "turbo": "^2.0.0"
+    "turbo": "^2.0.0",
+    "typescript": "^5.9.2"
   },
   "overrides": {
     "nativewind": {

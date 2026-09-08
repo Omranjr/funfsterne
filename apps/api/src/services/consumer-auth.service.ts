@@ -5,6 +5,7 @@ import type { ConsumerJwtPayload } from "../plugins/jwt.js";
 const PASSWORD_HASH_ROUNDS = 10;
 
 export interface RegisterConsumerInput {
+  tenantId: string;
   firstName: string;
   lastName: string;
   username: string;
@@ -12,6 +13,7 @@ export interface RegisterConsumerInput {
 }
 
 export interface ConsumerLoginInput {
+  tenantId: string;
   username: string;
   password: string;
 }
@@ -31,8 +33,16 @@ export async function registerConsumer(
   app: FastifyInstance,
   input: RegisterConsumerInput,
 ): Promise<RegisterConsumerResult> {
+  // Usernames are unique per tenant, not globally: the hundredth shop's
+  // first customer should not be told "mohamed is taken" because someone at
+  // a different shop registered it years ago.
   const existing = await app.prisma.consumerUser.findUnique({
-    where: { username: input.username },
+    where: {
+      tenantId_username: {
+        tenantId: input.tenantId,
+        username: input.username,
+      },
+    },
   });
   if (existing) {
     return { ok: false, errorCode: "USERNAME_TAKEN" };
@@ -42,6 +52,7 @@ export async function registerConsumer(
 
   const user = await app.prisma.consumerUser.create({
     data: {
+      tenantId: input.tenantId,
       firstName: input.firstName,
       lastName: input.lastName,
       username: input.username,
@@ -51,7 +62,12 @@ export async function registerConsumer(
 
   return {
     ok: true,
-    payload: { sub: user.id, username: user.username, role: "consumer" },
+    payload: {
+      sub: user.id,
+      username: user.username,
+      role: "consumer",
+      tid: user.tenantId,
+    },
     profile: {
       id: user.id,
       firstName: user.firstName,
@@ -65,8 +81,16 @@ export async function authenticateConsumer(
   app: FastifyInstance,
   input: ConsumerLoginInput,
 ): Promise<{ payload: ConsumerJwtPayload; profile: ConsumerProfile } | null> {
+  // Scoped to the tenant, so the same username at two shops resolves to two
+  // different accounts and a password that is right at one shop is simply
+  // wrong at the other.
   const user = await app.prisma.consumerUser.findUnique({
-    where: { username: input.username },
+    where: {
+      tenantId_username: {
+        tenantId: input.tenantId,
+        username: input.username,
+      },
+    },
   });
 
   if (!user) return null;
@@ -75,7 +99,12 @@ export async function authenticateConsumer(
   if (!valid) return null;
 
   return {
-    payload: { sub: user.id, username: user.username, role: "consumer" },
+    payload: {
+      sub: user.id,
+      username: user.username,
+      role: "consumer",
+      tid: user.tenantId,
+    },
     profile: {
       id: user.id,
       firstName: user.firstName,
@@ -117,28 +146,30 @@ export function signConsumerToken(
 // app collects no email/phone to run a self-service reset through.
 export async function resetConsumerPassword(
   app: FastifyInstance,
+  tenantId: string,
   userId: string,
   newPassword: string,
 ): Promise<boolean> {
   const passwordHash = await bcrypt.hash(newPassword, PASSWORD_HASH_ROUNDS);
-  try {
-    await app.prisma.consumerUser.update({
-      where: { id: userId },
-      data: { passwordHash },
-    });
-    return true;
-  } catch {
-    return false;
-  }
+  // updateMany, not update: it takes a full `where`, so the tenant filter is
+  // part of the write itself. `update` would only accept the unique id and
+  // would happily reset another shop's customer's password if an id ever
+  // leaked into the wrong dashboard.
+  const { count } = await app.prisma.consumerUser.updateMany({
+    where: { id: userId, tenantId },
+    data: { passwordHash },
+  });
+  return count === 1;
 }
 
 export async function deleteConsumerAccount(
   app: FastifyInstance,
+  tenantId: string,
   userId: string,
 ): Promise<void> {
   // PushToken/DiscountCodeRedemption rows are kept (onDelete: SetNull on the
   // userId relation) so the shop's aggregate usage stats survive -- only the
   // personally-identifying account (name, username, password) is removed,
   // matching what the account-deletion flow promises the user.
-  await app.prisma.consumerUser.delete({ where: { id: userId } });
+  await app.prisma.consumerUser.deleteMany({ where: { id: userId, tenantId } });
 }

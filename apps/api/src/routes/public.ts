@@ -7,6 +7,7 @@ import { z } from "zod";
 import type { FastifyInstance } from "fastify";
 import { serializePrisma } from "../serializers.js";
 import { consumerAuthMiddleware } from "../middleware/consumer-auth.js";
+import { resolveTenant, tenantId } from "../middleware/tenant.js";
 
 const ProductQuerySchema = z.object({
   category: ProductCategorySchema.optional(),
@@ -19,9 +20,15 @@ const RedeemDiscountCodeSchema = z.object({
 });
 
 export async function publicRoutes(app: FastifyInstance) {
-  app.get("/branches", async () => {
+  // Every route in this plugin reads or writes customer data, so the tenant
+  // is resolved once here rather than per route. Registering it as a plugin
+  // hook (not on individual routes) is what makes it impossible to add a
+  // route to this file and forget it.
+  app.addHook("preHandler", resolveTenant);
+
+  app.get("/branches", async (request) => {
     return app.prisma.branch.findMany({
-      where: { isActive: true },
+      where: { tenantId: tenantId(request), isActive: true },
       orderBy: { name: "asc" },
     });
   });
@@ -30,8 +37,9 @@ export async function publicRoutes(app: FastifyInstance) {
   // a fallback for any category that isn't in the result (or whose imageUrl is
   // null/empty), so the response is intentionally the raw "what's in the DB"
   // rather than always 5 entries.
-  app.get("/category-images", async () => {
+  app.get("/category-images", async (request) => {
     const images = await app.prisma.categoryImage.findMany({
+      where: { tenantId: tenantId(request) },
       orderBy: { category: "asc" },
     });
     return serializePrisma(images);
@@ -47,6 +55,7 @@ export async function publicRoutes(app: FastifyInstance) {
 
     const products = await app.prisma.product.findMany({
       where: {
+        tenantId: tenantId(request),
         isActive: true,
         ...(category ? { category } : {}),
         ...(branchId
@@ -70,8 +79,12 @@ export async function publicRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: "Invalid product id" });
     }
 
-    const product = await app.prisma.product.findUnique({
-      where: { id: parse.data, isActive: true },
+    // findFirst rather than findUnique: the id alone is unique, but looking
+    // one up without the tenant filter would let any app fetch any other
+    // customer's product by guessing an id. Same reasoning everywhere a
+    // `:id` route reads a single row below.
+    const product = await app.prisma.product.findFirst({
+      where: { id: parse.data, tenantId: tenantId(request), isActive: true },
       include: { availabilities: { include: { branch: true } } },
     });
 
@@ -96,11 +109,17 @@ export async function publicRoutes(app: FastifyInstance) {
       // a client-supplied userId would let anyone attribute a push token to
       // someone else's account.
       const userId = request.consumer!.sub;
+      const tid = tenantId(request);
 
+      // Upserted on `token`, which stays globally unique: one Expo token is
+      // one installed app on one device. If a device previously ran a
+      // different tenant's build and got the same token reissued, the update
+      // below moves the row to the current tenant rather than leaving a
+      // stale row that would keep receiving the other shop's pushes.
       const pushToken = await app.prisma.pushToken.upsert({
         where: { token },
-        create: { deviceId, userId, token, platform },
-        update: { deviceId, userId, platform },
+        create: { tenantId: tid, deviceId, userId, token, platform },
+        update: { tenantId: tid, deviceId, userId, platform },
       });
 
       return pushToken;
@@ -121,6 +140,7 @@ export async function publicRoutes(app: FastifyInstance) {
 
       const codes = await app.prisma.discountCode.findMany({
         where: {
+          tenantId: tenantId(request),
           isActive: true,
           // Expired codes already dropped out here, for every customer.
           OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
@@ -164,9 +184,13 @@ export async function publicRoutes(app: FastifyInstance) {
       // Same reasoning as push-tokens: userId comes from the verified JWT,
       // never the request body.
       const userId = request.consumer!.sub;
+      const tid = tenantId(request);
 
+      // `code` is only unique per tenant now, so the compound key is the
+      // lookup. Without the tenant half, two shops both running a
+      // "WELCOME10" would race for whichever row Postgres returned first.
       const discount = await app.prisma.discountCode.findUnique({
-        where: { code },
+        where: { tenantId_code: { tenantId: tid, code } },
       });
 
       if (!discount) {
@@ -188,6 +212,9 @@ export async function publicRoutes(app: FastifyInstance) {
         return reply.status(400).send({ errorCode: "MAX_REDEMPTIONS_REACHED", error: "Discount code fully redeemed" });
       }
 
+      // Neither of these needs a tenant filter: both unique keys include
+      // discountCodeId, and `discount` was fetched by (tenantId, code) above,
+      // so the code is already known to be this tenant's.
       const [existingByDevice, existingByUser] = await Promise.all([
         app.prisma.discountCodeRedemption.findUnique({
           where: {
@@ -223,6 +250,7 @@ export async function publicRoutes(app: FastifyInstance) {
           const { count } = await tx.discountCode.updateMany({
             where: {
               id: discount.id,
+              tenantId: tid,
               isActive: true,
               ...(maxRedemptions !== null
                 ? { currentRedemptions: { lt: maxRedemptions } }
@@ -237,6 +265,7 @@ export async function publicRoutes(app: FastifyInstance) {
             tx.discountCode.findUniqueOrThrow({ where: { id: discount.id } }),
             tx.discountCodeRedemption.create({
               data: {
+                tenantId: tid,
                 deviceId,
                 userId,
                 branchId: branchId ?? null,

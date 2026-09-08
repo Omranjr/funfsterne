@@ -1,8 +1,10 @@
-import { PrismaClient } from "@prisma/client";
 import fp from "fastify-plugin";
 import type { FastifyInstance } from "fastify";
+// The schema and the generated client live in packages/db, so any future
+// worker or platform tool shares one migration history with the API.
+import { prisma } from "@funfsterne/db";
 
-export const prisma = new PrismaClient();
+export { prisma };
 
 export const prismaPlugin = fp(async function prismaPlugin(app: FastifyInstance) {
   app.decorate("prisma", prisma);

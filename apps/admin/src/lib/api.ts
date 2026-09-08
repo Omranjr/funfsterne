@@ -1,4 +1,5 @@
 import { getAdminToken } from "./admin-token";
+import { TENANT_ID } from "./tenant";
 
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
@@ -27,6 +28,10 @@ export function apiHeaders(): Record<string, string> {
   const token = getAdminToken();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
+    // Required on every request, including the ones that carry no token:
+    // the API resolves the tenant before it authenticates, so that a token
+    // issued for one shop cannot be replayed against another.
+    "x-tenant-id": TENANT_ID,
   };
   if (token) {
     headers.Authorization = `Bearer ${token}`;

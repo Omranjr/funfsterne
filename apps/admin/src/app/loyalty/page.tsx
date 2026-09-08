@@ -17,8 +17,13 @@ import {
 import { PageHeader } from "@/components/page-header";
 import { type Branch, POINTS_PER_VISIT } from "@funfsterne/shared-types";
 import { CheckCircle2, Gift, ScanLine, XCircle } from "lucide-react";
+import { TENANT_ID } from "@/lib/tenant";
 
-const QR_PREFIX = "funfsterne:loyalty:";
+// Must match the prefix the mobile app encodes (see LoyaltyScreen in
+// @funfsterne/core). Namespaced by tenant so this scanner physically cannot
+// award points against another shop's customer id -- the check below rejects
+// a code from a different shop before it ever reaches the API.
+const QR_PREFIX = `${TENANT_ID}:loyalty:`;
 const BRANCH_STORAGE_KEY = "loyalty-scan-branch-id";
 
 type ActiveReward = {

@@ -11,8 +11,14 @@ import {
   deleteConsumerAccount,
 } from "../services/consumer-auth.service.js";
 import { consumerAuthMiddleware } from "../middleware/consumer-auth.js";
+import { resolveTenant, tenantId } from "../middleware/tenant.js";
 
 export async function consumerAuthRoutes(app: FastifyInstance) {
+  // Registering, signing in and reading a profile are all per-tenant, so
+  // the tenant is resolved before any of them -- including register/login,
+  // which have no token to carry it.
+  app.addHook("preHandler", resolveTenant);
+
   // Registered inside this plugin function (not globally) so it only ever
   // throttles /public/auth/* -- real credentials are at stake here, unlike
   // the rest of the public API, so this is where brute-force protection
@@ -28,7 +34,10 @@ export async function consumerAuthRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: "Invalid registration payload" });
     }
 
-    const result = await registerConsumer(app, parse.data);
+    const result = await registerConsumer(app, {
+      ...parse.data,
+      tenantId: tenantId(request),
+    });
     if (!result.ok) {
       return reply
         .status(409)
@@ -45,7 +54,10 @@ export async function consumerAuthRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: "Invalid login payload" });
     }
 
-    const result = await authenticateConsumer(app, parse.data);
+    const result = await authenticateConsumer(app, {
+      ...parse.data,
+      tenantId: tenantId(request),
+    });
     if (!result) {
       return reply.status(401).send({ error: "Invalid credentials" });
     }
@@ -64,8 +76,8 @@ export async function consumerAuthRoutes(app: FastifyInstance) {
     { preHandler: consumerAuthMiddleware },
     async (request, reply) => {
       const consumer = request.consumer!;
-      const user = await app.prisma.consumerUser.findUnique({
-        where: { id: consumer.sub },
+      const user = await app.prisma.consumerUser.findFirst({
+        where: { id: consumer.sub, tenantId: tenantId(request) },
         select: { id: true, firstName: true, lastName: true, username: true },
       });
       if (!user) {
@@ -80,7 +92,7 @@ export async function consumerAuthRoutes(app: FastifyInstance) {
     { preHandler: consumerAuthMiddleware },
     async (request, reply) => {
       const consumer = request.consumer!;
-      await deleteConsumerAccount(app, consumer.sub);
+      await deleteConsumerAccount(app, tenantId(request), consumer.sub);
       return reply.status(204).send();
     },
   );

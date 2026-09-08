@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "Mido Barber",
+    "slug": "mido-barber",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "midobarber",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.midobarber.mobile",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.midobarber.mobile",
+      "adaptiveIcon": {
+        "backgroundColor": "#0E0B08",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0E0B08",
+          "image": "./assets/splash-owner.png",
+          "resizeMode": "cover",
+          "dark": {
+            "backgroundColor": "#0E0B08",
+            "image": "./assets/splash-owner.png",
+            "resizeMode": "cover"
+          }
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#C9A84C"
+        }
+      ],
+      "expo-font",
+      "expo-localization",
+      "./plugins/withWindowsCmakePathFix"
+    ],
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "383148c1-8842-4f8a-ae2e-a91b15fab585"
+      }
+    }
+  }
+}

@@ -54,7 +54,13 @@ export function ImageUploader({
         try {
           const res = await fetch(`${API_BASE_URL}/admin/upload/image`, {
             method: "POST",
-            headers: { Authorization: apiHeaders().Authorization ?? "" },
+            // Content-Type is deliberately omitted so the browser sets the
+            // multipart boundary itself; the other two headers still have to
+            // be here by hand.
+            headers: {
+              Authorization: apiHeaders().Authorization ?? "",
+              "x-tenant-id": apiHeaders()["x-tenant-id"],
+            },
             body: formData,
           });
 

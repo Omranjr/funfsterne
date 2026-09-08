@@ -3,6 +3,7 @@ import type { FastifyInstance } from "fastify";
 import type { AdminJwtPayload } from "../plugins/jwt.js";
 
 export interface AdminLoginInput {
+  tenantId: string;
   email: string;
   password: string;
 }
@@ -11,8 +12,12 @@ export async function authenticateAdmin(
   app: FastifyInstance,
   input: AdminLoginInput,
 ): Promise<AdminJwtPayload | null> {
+  // Per tenant: one person may well run two shops from the same email
+  // address, and each shop is a separate login with separate data.
   const admin = await app.prisma.adminUser.findUnique({
-    where: { email: input.email },
+    where: {
+      tenantId_email: { tenantId: input.tenantId, email: input.email },
+    },
   });
 
   if (!admin) return null;
@@ -20,7 +25,12 @@ export async function authenticateAdmin(
   const valid = await bcrypt.compare(input.password, admin.passwordHash);
   if (!valid) return null;
 
-  return { sub: admin.id, email: admin.email, role: "admin" };
+  return {
+    sub: admin.id,
+    email: admin.email,
+    role: "admin",
+    tid: admin.tenantId,
+  };
 }
 
 /**

@@ -10,6 +10,7 @@ import {
 } from "react";
 import { setUnauthorizedHandler } from "./api";
 import { getAdminToken, setAdminToken, clearAdminToken } from "./admin-token";
+import { TENANT_ID } from "./tenant";
 
 type AdminUser = {
   id: string;
@@ -25,6 +26,7 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+// Duplicated from ./api on purpose historically; kept in step by hand.
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -42,7 +44,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const res = await fetch(`${API_BASE_URL}/admin/auth/login`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        // Sign-in is tenant-scoped: admin emails are unique per tenant now,
+        // because one owner may run several shops from one address.
+        headers: {
+          "Content-Type": "application/json",
+          "x-tenant-id": TENANT_ID,
+        },
         body: JSON.stringify({ email, password }),
       });
 

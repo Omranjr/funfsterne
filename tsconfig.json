@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "noEmit": true
+  },
+  "//": "Base options only. Each workspace has its own tsconfig with the compiler settings its runtime needs (Expo's base for the mobile apps, Next's for the dashboard, NodeNext-ish for the API), so this is deliberately not a project-references root -- it exists so an editor opened at the repo root has sane defaults.",
+  "files": [],
+  "exclude": ["node_modules", "**/dist", "**/.next", "**/.expo"]
+}

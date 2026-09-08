@@ -2,6 +2,13 @@ import type { FastifyInstance } from "fastify";
 import { Prisma } from "@prisma/client";
 import { POINTS_PER_VISIT, POINTS_PER_EURO } from "@funfsterne/shared-types";
 
+// The business day boundary for the "one scan per calendar day" rule and
+// the analytics buckets.
+//
+// Platform-wide, not per tenant: making it per tenant means a Tenant column
+// and a lookup in every one of these functions, which is the right change
+// the day a customer opens outside this timezone. Recorded in
+// docs/WHITE_LABEL.md as a known limit rather than left implicit.
 const BUSINESS_TIMEZONE = "Europe/Berlin";
 
 // "YYYY-MM-DD" as seen in the business's local timezone. Used to compare
@@ -22,10 +29,14 @@ export type AwardPointsResult =
 
 export async function awardLoyaltyPoints(
   app: FastifyInstance,
-  args: { userId: string; branchId: string },
+  args: { tenantId: string; userId: string; branchId: string },
 ): Promise<AwardPointsResult> {
-  const user = await app.prisma.consumerUser.findUnique({
-    where: { id: args.userId },
+  // findFirst with the tenant filter, not findUnique on the id: this is a
+  // staff-triggered write driven by a scanned QR code, so the id arrives
+  // from outside and must be proved to belong to this shop before points
+  // are awarded against it.
+  const user = await app.prisma.consumerUser.findFirst({
+    where: { id: args.userId, tenantId: args.tenantId },
     select: { id: true },
   });
   if (!user) {
@@ -37,7 +48,7 @@ export async function awardLoyaltyPoints(
   // the block below once testing is complete.
   //
   // const lastEarn = await app.prisma.loyaltyTransaction.findFirst({
-  //   where: { userId: args.userId, type: "EARN" },
+  //   where: { userId: args.userId, tenantId: args.tenantId, type: "EARN" },
   //   orderBy: { createdAt: "desc" },
   //   select: { createdAt: true },
   // });
@@ -50,12 +61,17 @@ export async function awardLoyaltyPoints(
   const [, updated] = await app.prisma.$transaction([
     app.prisma.loyaltyTransaction.create({
       data: {
+        tenantId: args.tenantId,
         userId: args.userId,
         branchId: args.branchId,
         points: POINTS_PER_VISIT,
         type: "EARN",
       },
     }),
+    // By id alone, and deliberately `update` rather than `updateMany`: the
+    // findFirst at the top of this function already proved the account
+    // belongs to this tenant, and only `update` returns the new balance,
+    // which the caller needs.
     app.prisma.consumerUser.update({
       where: { id: args.userId },
       data: { loyaltyPoints: { increment: POINTS_PER_VISIT } },
@@ -72,7 +88,7 @@ export type RedeemPointsResult =
 
 export async function redeemLoyaltyPoints(
   app: FastifyInstance,
-  args: { userId: string; points: number },
+  args: { tenantId: string; userId: string; points: number },
 ): Promise<RedeemPointsResult> {
   const eurosValue = new Prisma.Decimal(args.points).div(POINTS_PER_EURO);
 
@@ -86,7 +102,11 @@ export async function redeemLoyaltyPoints(
     // simultaneous requests can ever succeed -- closing the double-spend
     // race a "check then write" version would have.
     const { count } = await tx.consumerUser.updateMany({
-      where: { id: args.userId, loyaltyPoints: { gte: args.points } },
+      where: {
+        id: args.userId,
+        tenantId: args.tenantId,
+        loyaltyPoints: { gte: args.points },
+      },
       data: { loyaltyPoints: { decrement: args.points } },
     });
 
@@ -100,12 +120,22 @@ export async function redeemLoyaltyPoints(
         select: { loyaltyPoints: true },
       }),
       tx.loyaltyTransaction.create({
-        data: { userId: args.userId, points: -args.points, type: "REDEEM" },
+        data: {
+          tenantId: args.tenantId,
+          userId: args.userId,
+          points: -args.points,
+          type: "REDEEM",
+        },
       }),
     ]);
 
     const reward = await tx.loyaltyReward.create({
-      data: { userId: args.userId, eurosValue, pointsSpent: args.points },
+      data: {
+        tenantId: args.tenantId,
+        userId: args.userId,
+        eurosValue,
+        pointsSpent: args.points,
+      },
     });
 
     return {
@@ -208,12 +238,13 @@ function enumerateBuckets(
 
 export async function getLoyaltyVisitStats(
   app: FastifyInstance,
-  args: { granularity: VisitStatsGranularity; userId?: string },
+  args: { tenantId: string; granularity: VisitStatsGranularity; userId?: string },
 ): Promise<VisitStatsResult> {
   const from = new Date(Date.now() - GRANULARITY_WINDOW_DAYS[args.granularity] * 86_400_000);
 
   const transactions = await app.prisma.loyaltyTransaction.findMany({
     where: {
+      tenantId: args.tenantId,
       type: "EARN",
       createdAt: { gte: from },
       ...(args.userId ? { userId: args.userId } : {}),
@@ -278,12 +309,13 @@ export type CustomerVisitSummary = {
  */
 export async function getCustomerVisitSummary(
   app: FastifyInstance,
-  args: { period: EngagementPeriod },
+  args: { tenantId: string; period: EngagementPeriod },
 ): Promise<{ period: EngagementPeriod; from: Date; customers: CustomerVisitSummary[] }> {
   const from = new Date(Date.now() - ENGAGEMENT_WINDOW_DAYS[args.period] * 86_400_000);
 
   const [users, visitGroups, tokenGroups] = await Promise.all([
     app.prisma.consumerUser.findMany({
+      where: { tenantId: args.tenantId },
       select: {
         id: true,
         firstName: true,
@@ -294,13 +326,18 @@ export async function getCustomerVisitSummary(
     }),
     app.prisma.loyaltyTransaction.groupBy({
       by: ["userId"],
-      where: { type: "EARN", createdAt: { gte: from }, userId: { not: null } },
+      where: {
+        tenantId: args.tenantId,
+        type: "EARN",
+        createdAt: { gte: from },
+        userId: { not: null },
+      },
       _count: { _all: true },
       _max: { createdAt: true },
     }),
     app.prisma.pushToken.groupBy({
       by: ["userId"],
-      where: { userId: { not: null } },
+      where: { tenantId: args.tenantId, userId: { not: null } },
       _count: { _all: true },
     }),
   ]);
@@ -349,10 +386,10 @@ export type RedeemRewardResult =
 
 export async function redeemLoyaltyReward(
   app: FastifyInstance,
-  args: { rewardId: string; branchId: string },
+  args: { tenantId: string; rewardId: string; branchId: string },
 ): Promise<RedeemRewardResult> {
-  const reward = await app.prisma.loyaltyReward.findUnique({
-    where: { id: args.rewardId },
+  const reward = await app.prisma.loyaltyReward.findFirst({
+    where: { id: args.rewardId, tenantId: args.tenantId },
   });
 
   if (!reward) {
@@ -362,14 +399,21 @@ export async function redeemLoyaltyReward(
     return { ok: false, errorCode: "ALREADY_REDEEMED" };
   }
 
-  await app.prisma.loyaltyReward.update({
-    where: { id: args.rewardId },
+  // updateMany so the tenant filter is part of the write, and gated on
+  // status so two staff members scanning the same voucher at once cannot
+  // both mark it redeemed -- Postgres decides the winner.
+  const { count } = await app.prisma.loyaltyReward.updateMany({
+    where: { id: args.rewardId, tenantId: args.tenantId, status: "ACTIVE" },
     data: {
       status: "REDEEMED",
       redeemedAt: new Date(),
       redeemedByBranchId: args.branchId,
     },
   });
+
+  if (count === 0) {
+    return { ok: false, errorCode: "ALREADY_REDEEMED" };
+  }
 
   return { ok: true };
 }

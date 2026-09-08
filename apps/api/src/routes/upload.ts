@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { adminAuthMiddleware } from "../middleware/admin-auth.js";
+import { resolveTenant } from "../middleware/tenant.js";
 
 /**
  * Image types this endpoint will store, and the extension each is written
@@ -20,6 +21,9 @@ const ALLOWED_IMAGE_TYPES: Record<string, string> = {
 };
 
 export async function uploadRoutes(app: FastifyInstance) {
+  // resolveTenant first, so adminAuthMiddleware can check the token's tenant
+  // claim -- and so uploads land under the right prefix.
+  app.addHook("preHandler", resolveTenant);
   app.addHook("preHandler", adminAuthMiddleware);
 
   app.post("/image", async (request, reply) => {
@@ -40,7 +44,16 @@ export async function uploadRoutes(app: FastifyInstance) {
     // The object key is generated, never derived from `data.filename`.
     // Supabase treats "/" in a key as a path separator, so a client-supplied
     // name like "../../x.png" would write outside the intended prefix.
-    const filename = `${Date.now()}-${randomUUID()}.${extension}`;
+    // Prefixed by tenant so one customer's uploads are enumerable, and
+    // deletable, as a group -- the bucket is shared, and an off-boarding
+    // that has to grep filenames to find a customer's images is an
+    // off-boarding that will leave some behind.
+    //
+    // The tenant slug is safe to interpolate into a key: it comes from the
+    // database, not the request, and the object name itself is still
+    // generated rather than derived from `data.filename`, so a client
+    // cannot write outside its own prefix.
+    const filename = `${request.tenant!.slug}/${Date.now()}-${randomUUID()}.${extension}`;
     const bucket = process.env.SUPABASE_STORAGE_BUCKET ?? "product-images";
 
     const { error } = await app.supabase.storage

@@ -1,3 +1,13 @@
+/**
+ * DEAD CODE -- nothing imports this.
+ *
+ * Magic-link auth was removed by the `remove_user_accounts` migration; the
+ * app has collected no email address since. Left in place rather than
+ * deleted because removing it is out of scope for the multi-tenant
+ * restructure, but note that its `from` address and its subject line are
+ * hardcoded to one brand and are NOT tenant-aware -- if this is ever
+ * revived, both have to come from the Tenant row.
+ */
 import { createTransport } from "nodemailer";
 
 const transporter = createTransport({

@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "a893ccdc-e708-4e73-ad9d-675bcac59a50"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.kerilosadel.funfsterneplatform"
+    }
+  }
+}

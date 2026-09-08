@@ -1,7 +1,7 @@
 import fp from "fastify-plugin";
 import type { FastifyInstance } from "fastify";
 import { ZodError } from "zod";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@funfsterne/db";
 
 // Several admin routes validate :id params with schema.parse(...) (throwing)
 // rather than safeParse, and Prisma throws its own errors for e.g. deleting
