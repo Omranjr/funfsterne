@@ -27,7 +27,7 @@ import { type ConsumerUser, PasswordSchema } from "@funfsterne/shared-types";
 import { KeyRound, RefreshCw, Users as UsersIcon } from "lucide-react";
 
 export default function UsersPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [users, setUsers] = useState<ConsumerUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -111,7 +111,7 @@ export default function UsersPage() {
                   </TableCell>
                   <TableCell>{user.username}</TableCell>
                   <TableCell>
-                    {new Date(user.createdAt).toLocaleDateString()}
+                    {new Date(user.createdAt).toLocaleDateString(i18n.language)}
                   </TableCell>
                   <TableCell className="text-right">
                     <Button

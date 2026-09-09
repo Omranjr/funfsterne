@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { LegalPageShell, TodoNotice } from "@/components/legal-page-shell";
+import { LegalPageShell } from "@/components/legal-page-shell";
 
 export const metadata: Metadata = {
   title: "Privacy Policy | Fünf Sterne Friseur",
@@ -8,12 +8,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPolicyPage() {
   return (
-    <LegalPageShell title="Privacy Policy" updated="10 August 2026">
-      <TodoNotice>
-        fill in the data retention period below before this page is linked
-        from the App Store listing.
-      </TodoNotice>
-
+    <LegalPageShell title="Privacy Policy" updated="9 September 2026">
       <p>
         This policy explains what data the Fünf Sterne Friseur mobile app
         collects, why, and what rights you have over it. Using the app
@@ -85,12 +80,27 @@ export default function PrivacyPolicyPage() {
 
       <h2>How long we keep it</h2>
       <p>
-        Your account (name, username, password) is kept until you delete it.
-        [Describe the retention period for redemption/push-token records
-        specifically here — e.g. kept for as long as your account exists,
-        or a defined period after a discount program ends.] You can delete
-        your account at any time from the Account tab in the app, or see
-        &quot;Your rights&quot; below for other options.
+        Your account (name, username, password) is kept until you delete
+        it. Everything else is deleted automatically once we no longer need
+        it, on a 12-month schedule:
+      </p>
+      <ul>
+        <li>
+          <strong>Notification records.</strong> The identifier that lets us
+          send you a notification is deleted after 12 months without opening
+          the app. Opening it again registers a new one, so nothing is lost
+          if you come back.
+        </li>
+        <li>
+          <strong>Discount redemptions.</strong> A record that you used a
+          particular offer is deleted 12 months after that offer ends. While
+          an offer is still running we keep it, because it is what stops the
+          same offer being claimed twice.
+        </li>
+      </ul>
+      <p>
+        You can delete your account at any time from the Account tab in the
+        app, or see &quot;Your rights&quot; below for other options.
       </p>
 
       <h2>Who else sees this data</h2>

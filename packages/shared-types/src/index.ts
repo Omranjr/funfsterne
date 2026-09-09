@@ -97,8 +97,16 @@ export type ProductBranchAvailability = z.infer<
   typeof ProductBranchAvailabilitySchema
 >;
 
+// `productId` is omitted because this is the body of
+// `PUT /admin/products/:id/availability`, where the path already names the
+// product -- and the route handler reads it from there, never from the body.
+// Requiring it here meant every availability write from the admin was
+// rejected as an invalid payload, so a product's branch coverage could not
+// be set at all: the client had no reason to send a field the URL already
+// carried. Leaving it out also removes the chance of a body that disagrees
+// with the path.
 export const UpsertProductBranchAvailabilitySchema =
-  ProductBranchAvailabilitySchema.omit({ id: true });
+  ProductBranchAvailabilitySchema.omit({ id: true, productId: true });
 
 export type UpsertProductBranchAvailability = z.infer<
   typeof UpsertProductBranchAvailabilitySchema

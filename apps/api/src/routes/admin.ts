@@ -28,6 +28,7 @@ import {
   type VisitStatsGranularity,
   type EngagementPeriod,
 } from "../services/loyalty.service.js";
+import { runRetentionCleanup } from "../services/retention.service.js";
 import { serializePrisma } from "../serializers.js";
 
 export async function adminRoutes(app: FastifyInstance) {
@@ -404,6 +405,22 @@ export async function adminRoutes(app: FastifyInstance) {
       discount: serializePrisma(discount),
       redemptions: serializePrisma(redemptions),
     };
+  });
+
+  // ── Data retention ───────────────────────────────────────────────────────
+  // The sweep runs on a timer; these exist so it can be inspected and proven
+  // rather than taken on trust -- and so a pass can be forced without waiting
+  // for the next tick.
+
+  // Dry run: reports exactly what a real pass would touch, and writes nothing.
+  app.get("/retention/preview", async () => {
+    const report = await runRetentionCleanup(app, { dryRun: true });
+    return { ...report, cutoff: report.cutoff.toISOString() };
+  });
+
+  app.post("/retention/run", async () => {
+    const report = await runRetentionCleanup(app);
+    return { ...report, cutoff: report.cutoff.toISOString() };
   });
 
   // ── Consumer users ───────────────────────────────────────────────────────

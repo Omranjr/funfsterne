@@ -1,0 +1,43 @@
+# Local Postgres for development and testing.
+#
+# The point of this file is that `apps/api/.env` holds production Supabase
+# credentials, so anything exercised against the default configuration --
+# creating a product, awarding loyalty points, sending a broadcast -- hits
+# real customers. This gives that work somewhere safe to happen.
+#
+#   docker compose up -d db
+#
+# Then point the API at it (the shell variable wins over `.env`, so nothing
+# in that file needs editing):
+#
+#   DATABASE_URL=postgresql://funfsterne:funfsterne@localhost:5433/funfsterne \
+#   DIRECT_URL=postgresql://funfsterne:funfsterne@localhost:5433/funfsterne \
+#     npx prisma db push
+#
+# Disposable by design: `docker compose down -v` throws the data away.
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: funfsterne-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: funfsterne
+      POSTGRES_PASSWORD: funfsterne
+      POSTGRES_DB: funfsterne
+    ports:
+      # 5433 on the host, so this cannot collide with a Postgres someone
+      # already has on the default port.
+      - "5433:5432"
+    volumes:
+      - funfsterne-db-data:/var/lib/postgresql/data
+    healthcheck:
+      # Compose waits for this before reporting the service healthy, which
+      # is what makes `up -d && prisma db push` reliable rather than racy.
+      test: ["CMD-SHELL", "pg_isready -U funfsterne -d funfsterne"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  funfsterne-db-data:

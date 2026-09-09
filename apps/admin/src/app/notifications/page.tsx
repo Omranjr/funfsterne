@@ -71,7 +71,7 @@ function pickLeastActive(list: CustomerVisitSummary[]): CustomerVisitSummary[] {
 }
 
 export default function NotificationsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [codes, setCodes] = useState<DiscountCode[]>([]);
   const [recipientCount, setRecipientCount] = useState<number | null>(null);
@@ -501,7 +501,7 @@ export default function NotificationsPage() {
                 {notifications.map((n) => (
                   <TableRow key={n.id}>
                     <TableCell>
-                      {new Date(n.sentAt).toLocaleString()}
+                      {new Date(n.sentAt).toLocaleString(i18n.language)}
                     </TableCell>
                     <TableCell className="font-medium">{n.title}</TableCell>
                     <TableCell>{n.body}</TableCell>

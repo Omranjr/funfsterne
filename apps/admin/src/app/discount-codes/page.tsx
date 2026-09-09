@@ -42,7 +42,7 @@ import { Pencil, Plus, RefreshCw } from "lucide-react";
 const types = DiscountCodeTypeSchema.options;
 
 export default function DiscountCodesPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [codes, setCodes] = useState<DiscountCode[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -203,7 +203,7 @@ export default function DiscountCodesPage() {
                   </TableCell>
                   <TableCell>
                     {code.expiresAt
-                      ? new Date(code.expiresAt).toLocaleDateString()
+                      ? new Date(code.expiresAt).toLocaleDateString(i18n.language)
                       : "—"}
                   </TableCell>
                   <TableCell>

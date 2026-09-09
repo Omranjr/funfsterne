@@ -118,11 +118,21 @@ model PushToken {
   token     String        @unique
   platform  Platform
   createdAt DateTime      @default(now())
+  // Bumped by the register upsert, which the app runs on every foreground --
+  // so this is "last time we saw this device", which is what retention needs.
+  // `createdAt` alone cannot tell a token refreshed daily for two years apart
+  // from one whose phone was wiped the week it was issued.
+  //
+  // The `@default(now())` is there for the backfill: rows that already exist
+  // when this column is added get today's date, i.e. a full retention window
+  // starting at the deploy, rather than being swept on the very first run.
+  updatedAt DateTime      @default(now()) @updatedAt
 
   @@unique([deviceId, token])
   @@index([deviceId])
   @@index([platform])
   @@index([userId])
+  @@index([updatedAt])
 }
 
 model DiscountCodeRedemption {
