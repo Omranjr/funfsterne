@@ -136,9 +136,31 @@ export async function deleteConsumerAccount(
   app: FastifyInstance,
   userId: string,
 ): Promise<void> {
-  // PushToken/DiscountCodeRedemption rows are kept (onDelete: SetNull on the
-  // userId relation) so the shop's aggregate usage stats survive -- only the
-  // personally-identifying account (name, username, password) is removed,
-  // matching what the account-deletion flow promises the user.
-  await app.prisma.consumerUser.delete({ where: { id: userId } });
+  // Push tokens go with the account. The schema's `SetNull` would otherwise
+  // leave the row behind with a null userId, and a broadcast selects *every*
+  // token row -- so someone who deleted their account carried on receiving
+  // the shop's marketing on their phone, with no account left to turn it off
+  // from and no remedy short of uninstalling. Deleting is also the honest
+  // reading of what "delete my account" promises.
+  //
+  // Deliberately NOT extended to the other tables that reference the user:
+  //
+  //   DiscountCodeRedemption keeps its row (userId nulled). The deviceId on
+  //   it is what stops a one-per-customer coupon being claimed again, so
+  //   deleting these would turn "delete my account" into a way to farm
+  //   offers. What identifies the person is dropped; what enforces the offer
+  //   stays.
+  //
+  //   LoyaltyTransaction keeps its row (userId nulled) as anonymous visit
+  //   history for the shop's own analytics -- see the note on the model.
+  //
+  //   LoyaltyReward cascades away, because an ACTIVE voucher with no account
+  //   behind it cannot be verified in person anyway.
+  //
+  // One transaction so an account can never survive with its tokens already
+  // gone, or vice versa.
+  await app.prisma.$transaction([
+    app.prisma.pushToken.deleteMany({ where: { userId } }),
+    app.prisma.consumerUser.delete({ where: { id: userId } }),
+  ]);
 }

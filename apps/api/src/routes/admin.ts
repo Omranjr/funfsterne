@@ -29,6 +29,10 @@ import {
   type EngagementPeriod,
 } from "../services/loyalty.service.js";
 import { runRetentionCleanup } from "../services/retention.service.js";
+import {
+  checkPendingReceipts,
+  encodeTicket,
+} from "../services/notification-delivery.service.js";
 import { serializePrisma } from "../serializers.js";
 
 export async function adminRoutes(app: FastifyInstance) {
@@ -361,12 +365,13 @@ export async function adminRoutes(app: FastifyInstance) {
         : await app.prisma.pushToken.findMany();
 
     const tokens = pushTokens.map((pt) => pt.token);
-    const { sent, failed } = await sendPushNotifications(
-      tokens,
-      title,
-      body,
-      discountCodeId ? { discountCodeId } : undefined,
-    );
+    const { queued, failed, tickets, transportError } =
+      await sendPushNotifications(
+        tokens,
+        title,
+        body,
+        discountCodeId ? { discountCodeId } : undefined,
+      );
 
     const notification = await app.prisma.notification.create({
       data: {
@@ -375,14 +380,24 @@ export async function adminRoutes(app: FastifyInstance) {
         discountCodeId,
         audience: target === "users" ? "SEGMENT" : "ALL",
         sentAt: new Date(),
-        sentToCount: sent.length,
+        // Queued, not delivered -- `deliveredCount` is filled in later by
+        // the receipt check.
+        sentToCount: queued.length,
+        ticketIds: tickets.map(encodeTicket),
+        // A transport failure is knowable immediately and is almost always
+        // a misconfiguration (bad EXPO_ACCESS_TOKEN), so record it now
+        // rather than waiting for a receipt that will never come.
+        deliveryErrors: transportError ? ["TransportError"] : [],
       },
     });
 
     return {
       notification: serializePrisma(notification),
-      sent: sent.length,
+      // `queued` is deliberately not called `sent`: Expo accepting a message
+      // says nothing about Apple or Google delivering it.
+      queued: queued.length,
       failed: failed.length,
+      transportError,
     };
   });
 
@@ -416,6 +431,13 @@ export async function adminRoutes(app: FastifyInstance) {
   app.get("/retention/preview", async () => {
     const report = await runRetentionCleanup(app, { dryRun: true });
     return { ...report, cutoff: report.cutoff.toISOString() };
+  });
+
+  // Forces the receipt check instead of waiting for the next tick. Receipts
+  // are only meaningful ~15 minutes after a send, so this mostly matters when
+  // debugging a delivery problem.
+  app.post("/notifications/check-delivery", async () => {
+    return checkPendingReceipts(app);
   });
 
   app.post("/retention/run", async () => {

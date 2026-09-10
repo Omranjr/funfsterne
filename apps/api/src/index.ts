@@ -14,6 +14,7 @@ import { consumerAuthRoutes } from "./routes/consumer-auth.js";
 import { loyaltyRoutes } from "./routes/loyalty.js";
 import { uploadRoutes } from "./routes/upload.js";
 import { startRetentionSchedule } from "./services/retention.service.js";
+import { startDeliveryCheckSchedule } from "./services/notification-delivery.service.js";
 
 const app = Fastify({
   logger: true,
@@ -48,6 +49,7 @@ async function main() {
   // Started only after the server is accepting requests, so housekeeping can
   // never delay or fail a boot.
   startRetentionSchedule(app);
+  startDeliveryCheckSchedule(app);
 }
 
 main().catch((err) => {

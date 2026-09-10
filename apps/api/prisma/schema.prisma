@@ -169,7 +169,28 @@ model Notification {
   // therefore broadcasts) migrate to the correct value automatically.
   audience       NotificationAudience @default(ALL)
   sentAt         DateTime      @default(now())
+  // Devices Expo ACCEPTED the message for. This is a queue count, not a
+  // delivery count -- the fields below are what say whether it arrived.
   sentToCount    Int           @default(0)
+
+  // Expo returns a ticket per message immediately, but the real outcome
+  // (APNs/FCM accepted it, the token is dead, the push credentials are
+  // rejected) only shows up in a *receipt* fetched later. Ticket ids are
+  // kept here until that check runs; Expo discards them after 24h, so a
+  // notification whose receipts were never fetched simply stays unknown.
+  //
+  // Each entry is "<ticketId>|<pushToken>". The token rides along because a
+  // receipt only identifies itself by ticket id, and a `DeviceNotRegistered`
+  // result is only actionable if you know which row to delete. Expo tokens
+  // are of the form `ExponentPushToken[...]` and never contain "|".
+  ticketIds        String[]  @default([])
+  deliveryCheckedAt DateTime?
+  deliveredCount   Int       @default(0)
+  failedCount      Int       @default(0)
+  // Distinct Expo error codes seen, e.g. "InvalidCredentials",
+  // "DeviceNotRegistered". Surfaced in the admin so a silent, total
+  // delivery failure is visible instead of looking like a successful send.
+  deliveryErrors   String[]  @default([])
 
   @@index([discountCodeId])
   @@index([sentAt])

@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import Svg, { Line as SvgLine } from "react-native-svg";
 import * as Haptics from "expo-haptics";
+import { useFocusEffect } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/contexts/ThemeContext";
 import { typography, borderRadius, SHARED_TOKENS, screenTopPadding } from "@/constants/theme";
@@ -73,12 +74,42 @@ function describeExpiry(t: TFunction, expiresAt: string | null): string | null {
   return t("offers.expires", { date: d.toLocaleDateString() });
 }
 
+
+/**
+ * How out of date the offers list may be before a tab visit refetches it.
+ *
+ * Shorter than the global five-minute `staleTime` because this is the one
+ * screen whose whole purpose is showing something the shop just added, and
+ * the payload is a handful of rows. Long enough that flicking between tabs
+ * does not talk to the server at all.
+ */
+const OFFERS_STALE_MS = 60 * 1000;
+
 export default function OffersScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const { data, isLoading, refetch, isRefetching, error } = useDiscountCodes();
+  const { data, isLoading, refetch, isRefetching, error, dataUpdatedAt } =
+    useDiscountCodes();
+
+  // Offers is a tab route, so this screen mounts once and then stays mounted
+  // for the life of the app -- `refetchOnMount` fires exactly one time, on
+  // the first visit. Without something here, a coupon the shop adds while
+  // the app is open never appears, and pull-to-refresh does not rescue that:
+  // a customer has no reason to pull for an offer they do not know exists.
+  //
+  // Deliberately gated on staleness rather than calling `refetch()` outright.
+  // `refetch()` ignores `staleTime`, so it would fire a request on every
+  // single tab tap; this fires at most once per stale window, matching what
+  // `refetchOnWindowFocus` does everywhere else. Someone flicking between
+  // tabs costs nothing, and the list is still never more than a few minutes
+  // behind.
+  useFocusEffect(
+    useCallback(() => {
+      if (Date.now() - dataUpdatedAt > OFFERS_STALE_MS) refetch();
+    }, [refetch, dataUpdatedAt]),
+  );
 
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [cardStates, setCardStates] = useState<Record<string, CardState>>({});
@@ -204,6 +235,8 @@ export default function OffersScreen() {
         <EmptyState
           title={t("offers.errorTitle")}
           message={t("offers.errorMessage")}
+          actionTitle={t("common.retry")}
+          onAction={onRefresh}
         />
       </Ground>
     );
@@ -667,6 +700,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: SCREEN_GUTTER,
     gap: 14,
     paddingBottom: 32,
+    // Without this the content box is only as tall as its children, so on a
+    // short list (and especially the empty state) there is nothing to drag
+    // and pull-to-refresh cannot be triggered at all -- exactly when the
+    // customer most wants to check for a new offer.
+    flexGrow: 1,
   },
   // Reference rhythm: 20 between title and subtitle, 20 down to the first
   // card, 14 between cards. The container's 14 gap carries the last one.

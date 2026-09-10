@@ -256,6 +256,12 @@
     "noneReachable": "None of the selected customers have the app installed with notifications enabled — this send would reach nobody.",
     "loadCustomersError": "Could not load the customer list",
     "selectAtLeastOne": "Select at least one customer to target.",
-    "targetedIntro": "Pick who should receive this. Useful for winning back customers who haven't visited in a while."
+    "targetedIntro": "Pick who should receive this. Useful for winning back customers who haven't visited in a while.",
+    "delivery": "Delivery",
+    "deliveryPending": "Checking…",
+    "deliveryOk": "Delivered to {{delivered}}",
+    "deliveryPartial": "{{delivered}} delivered, {{failed}} failed",
+    "deliveryFailed": "Not delivered",
+    "deliveryUnknown": "Not tracked"
   }
 }

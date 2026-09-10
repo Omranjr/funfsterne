@@ -266,7 +266,18 @@ export const NotificationSchema = z.object({
   discountCodeId: z.string().optional(),
   audience: NotificationAudienceSchema.default("ALL"),
   sentAt: z.coerce.date(),
+  // Messages Expo accepted for delivery. A queue count, not proof of arrival.
   sentToCount: z.number().int().nonnegative().default(0),
+
+  // Filled in by the receipt check ~15 minutes after sending. Until then
+  // `deliveryCheckedAt` is null and the outcome is genuinely unknown -- which
+  // the admin shows as "checking", not as success. Optional because
+  // `CreateNotificationSchema` omits them and older rows predate the fields.
+  deliveryCheckedAt: z.coerce.date().nullish(),
+  deliveredCount: z.number().int().nonnegative().default(0),
+  failedCount: z.number().int().nonnegative().default(0),
+  /** Expo error codes, e.g. "InvalidCredentials", "DeviceNotRegistered". */
+  deliveryErrors: z.array(z.string()).default([]),
 });
 
 export type Notification = z.infer<typeof NotificationSchema>;
@@ -274,6 +285,10 @@ export type Notification = z.infer<typeof NotificationSchema>;
 export const CreateNotificationSchema = NotificationSchema.omit({
   id: true,
   sentAt: true,
+  deliveryCheckedAt: true,
+  deliveredCount: true,
+  failedCount: true,
+  deliveryErrors: true,
   sentToCount: true,
 });
 

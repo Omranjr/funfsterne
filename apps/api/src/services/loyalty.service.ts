@@ -32,20 +32,31 @@ export async function awardLoyaltyPoints(
     return { ok: false, errorCode: "USER_NOT_FOUND" };
   }
 
-  // Daily scan limit is temporarily disabled for testing so staff can
-  // award points repeatedly during QA / demos. Re-enable by uncommenting
-  // the block below once testing is complete.
+  // One earn per customer per calendar day. Each scan is worth
+  // POINTS_PER_VISIT points, and points convert straight to euros at
+  // POINTS_PER_EURO -- so without this, a double-tap at the till silently
+  // hands out real money, and anyone with an admin login can mint vouchers
+  // by scanning the same customer repeatedly.
   //
-  // const lastEarn = await app.prisma.loyaltyTransaction.findFirst({
-  //   where: { userId: args.userId, type: "EARN" },
-  //   orderBy: { createdAt: "desc" },
-  //   select: { createdAt: true },
-  // });
-  //
-  // const now = new Date();
-  // if (lastEarn && businessDateKey(lastEarn.createdAt) === businessDateKey(now)) {
-  //   return { ok: false, errorCode: "ALREADY_SCANNED_TODAY" };
-  // }
+  // Enforced unless LOYALTY_DISABLE_DAILY_LIMIT is explicitly set, which
+  // exists so QA and in-person demos can scan the same test account over and
+  // over. Defaulting to enforced matters more than the convenience: an unset
+  // variable in production must never be the thing standing between the shop
+  // and unlimited free haircuts.
+  if (process.env.LOYALTY_DISABLE_DAILY_LIMIT !== "1") {
+    const lastEarn = await app.prisma.loyaltyTransaction.findFirst({
+      where: { userId: args.userId, type: "EARN" },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true },
+    });
+
+    if (
+      lastEarn &&
+      businessDateKey(lastEarn.createdAt) === businessDateKey(new Date())
+    ) {
+      return { ok: false, errorCode: "ALREADY_SCANNED_TODAY" };
+    }
+  }
 
   const [, updated] = await app.prisma.$transaction([
     app.prisma.loyaltyTransaction.create({

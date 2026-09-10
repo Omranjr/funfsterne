@@ -495,6 +495,7 @@ export default function NotificationsPage() {
                   <TableHead>{t("notifications.discountCode")}</TableHead>
                   <TableHead>{t("notifications.audience")}</TableHead>
                   <TableHead className="text-right">{t("notifications.sentTo")}</TableHead>
+                  <TableHead>{t("notifications.delivery")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -518,6 +519,9 @@ export default function NotificationsPage() {
                     <TableCell className="text-right tabular-nums">
                       {n.sentToCount}
                     </TableCell>
+                    <TableCell>
+                      <DeliveryStatus notification={n} />
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -526,5 +530,65 @@ export default function NotificationsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+
+/**
+ * What actually happened to a broadcast, as opposed to what was queued.
+ *
+ * `sentToCount` only ever meant "Expo accepted this many messages". A dead
+ * APNs key produces a confident-looking "1" there while every message is
+ * rejected minutes later, which is exactly how a total delivery failure went
+ * unnoticed. The verdict below comes from Expo's receipts, fetched about
+ * fifteen minutes after sending -- so "pending" is the honest answer until
+ * then, not a failure.
+ */
+function DeliveryStatus({ notification: n }: { notification: Notification }) {
+  const { t } = useTranslation();
+  const errors = n.deliveryErrors ?? [];
+
+  if (errors.length > 0 && !n.deliveryCheckedAt) {
+    // Transport failures are known at send time -- no need to wait.
+    return (
+      <span className="text-destructive text-sm" title={errors.join(", ")}>
+        {t("notifications.deliveryFailed")} · {errors.join(", ")}
+      </span>
+    );
+  }
+
+  if (!n.deliveryCheckedAt) {
+    // The receipt sweep runs every ten minutes, so anything still unchecked
+    // well past that was sent before delivery tracking existed and never had
+    // ticket ids to look up. Saying "checking" about those would be a lie
+    // that never resolves -- their outcome is simply unknown.
+    const ageMs = Date.now() - new Date(n.sentAt).getTime();
+    const tooOldToBePending = ageMs > 60 * 60 * 1000;
+
+    return (
+      <span className="text-muted-foreground text-sm">
+        {tooOldToBePending
+          ? t("notifications.deliveryUnknown")
+          : t("notifications.deliveryPending")}
+      </span>
+    );
+  }
+
+  const delivered = n.deliveredCount ?? 0;
+  const failed = n.failedCount ?? 0;
+
+  if (failed > 0) {
+    return (
+      <span className="text-destructive text-sm" title={errors.join(", ")}>
+        {t("notifications.deliveryPartial", { delivered, failed })}
+        {errors.length > 0 ? ` · ${errors.join(", ")}` : ""}
+      </span>
+    );
+  }
+
+  return (
+    <span className="text-sm">
+      {t("notifications.deliveryOk", { delivered })}
+    </span>
   );
 }

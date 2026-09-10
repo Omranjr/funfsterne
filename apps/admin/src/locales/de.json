@@ -256,6 +256,12 @@
     "noneReachable": "Keiner der ausgewählten Kunden hat die App mit aktivierten Benachrichtigungen — dieser Versand würde niemanden erreichen.",
     "loadCustomersError": "Kundenliste konnte nicht geladen werden",
     "selectAtLeastOne": "Bitte wählen Sie mindestens einen Kunden aus.",
-    "targetedIntro": "Wählen Sie die Empfänger aus. Nützlich, um Kunden zurückzugewinnen, die länger nicht da waren."
+    "targetedIntro": "Wählen Sie die Empfänger aus. Nützlich, um Kunden zurückzugewinnen, die länger nicht da waren.",
+    "delivery": "Zustellung",
+    "deliveryPending": "Wird geprüft…",
+    "deliveryOk": "An {{delivered}} zugestellt",
+    "deliveryPartial": "{{delivered}} zugestellt, {{failed}} fehlgeschlagen",
+    "deliveryFailed": "Nicht zugestellt",
+    "deliveryUnknown": "Nicht erfasst"
   }
 }

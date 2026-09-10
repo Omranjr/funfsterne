@@ -5,9 +5,16 @@ import type { Platform as PlatformType } from "@funfsterne/shared-types";
 
 const extra = Constants.expoConfig?.extra ?? {};
 
+// EXPO_PUBLIC_API_BASE_URL is checked first so a build profile or a local
+// dev session can actually redirect the app. It used to come second, behind
+// `extra.apiBaseUrl` in app.json -- which is always set, so the env var could
+// never win and the `env` blocks in all three eas.json profiles were dead
+// config. Every existing profile sets it to the same host app.json names, so
+// this changes nothing about what a build talks to; it just makes pointing at
+// a local or staging API possible without editing app.json.
 export const API_BASE_URL =
-  (extra.apiBaseUrl as string | undefined) ??
   process.env.EXPO_PUBLIC_API_BASE_URL ??
+  (extra.apiBaseUrl as string | undefined) ??
   "https://funfsterne-admin.onrender.com";
 
 // Plain fetch() has no default timeout -- on a dropped/stalled connection
