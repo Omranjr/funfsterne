@@ -114,7 +114,8 @@
     "rewardMarkedUsed": "Prämie als verwendet markiert",
     "couldNotMarkUsed": "Prämie konnte nicht als verwendet markiert werden",
     "pleaseTryAgain": "Bitte versuchen Sie es erneut.",
-    "customer": "Kunde"
+    "customer": "Kunde",
+    "couldNotLoadBranches": "Filialen konnten nicht geladen werden. Prüfen Sie die Verbindung und laden Sie die Seite neu."
   },
   "users": {
     "title": "Benutzer",

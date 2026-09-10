@@ -49,8 +49,12 @@ export default function LoyaltyScanPage() {
   const processingRef = useRef(false);
 
   useEffect(() => {
-    apiFetch("/admin/branches").then(async (res) => {
-      if (res.ok) {
+    // Unhandled before: a failed branch load rejected into nothing, leaving
+    // `branchId` null. The scan button is disabled without one, so the page
+    // simply sat there looking broken with no explanation.
+    apiFetch("/admin/branches")
+      .then(async (res) => {
+        if (!res.ok) throw new Error("branches request failed");
         const data = (await res.json()) as Branch[];
         setBranches(data);
         const stored = localStorage.getItem(BRANCH_STORAGE_KEY);
@@ -59,9 +63,11 @@ export default function LoyaltyScanPage() {
         } else if (data.length > 0) {
           setBranchId(data[0].id);
         }
-      }
-    });
-  }, []);
+      })
+      .catch(() => {
+        setCameraError(t("loyaltyScan.couldNotLoadBranches"));
+      });
+  }, [t]);
 
   const handleBranchChange = useCallback((value: string | null) => {
     if (!value) return;
@@ -83,35 +89,49 @@ export default function LoyaltyScanPage() {
 
       const userId = text.slice(QR_PREFIX.length);
 
-      const res = await apiFetch("/admin/loyalty/scan", {
-        method: "POST",
-        body: JSON.stringify({ userId, branchId }),
-      });
-
-      if (res.ok) {
-        const data = (await res.json()) as {
-          customer: { firstName: string; lastName: string } | null;
-          balance: number;
-          activeRewards: ActiveReward[];
-        };
-        setResult({
-          status: "success",
-          customer: data.customer,
-          balance: data.balance,
-          activeRewards: data.activeRewards,
+      try {
+        const res = await apiFetch("/admin/loyalty/scan", {
+          method: "POST",
+          body: JSON.stringify({ userId, branchId }),
         });
-      } else {
-        const body = (await res.json().catch(() => ({}))) as { errorCode?: string };
-        const message =
-          body.errorCode === "ALREADY_SCANNED_TODAY"
-            ? t("loyaltyScan.alreadyScannedToday")
-            : body.errorCode === "USER_NOT_FOUND"
-              ? t("loyaltyScan.noAccountFound")
-              : t("loyaltyScan.couldNotAward");
-        setResult({ status: "error", message });
-      }
 
-      processingRef.current = false;
+        if (res.ok) {
+          const data = (await res.json()) as {
+            customer: { firstName: string; lastName: string } | null;
+            balance: number;
+            activeRewards: ActiveReward[];
+          };
+          setResult({
+            status: "success",
+            customer: data.customer,
+            balance: data.balance,
+            activeRewards: data.activeRewards,
+          });
+        } else {
+          const body = (await res.json().catch(() => ({}))) as { errorCode?: string };
+          const message =
+            body.errorCode === "ALREADY_SCANNED_TODAY"
+              ? t("loyaltyScan.alreadyScannedToday")
+              : body.errorCode === "USER_NOT_FOUND"
+                ? t("loyaltyScan.noAccountFound")
+                : t("loyaltyScan.couldNotAward");
+          setResult({ status: "error", message });
+        }
+      } catch {
+        // A dropped connection used to escape here. The camera is already
+        // stopped by this point and `processingRef` stayed true, so every
+        // later scan hit the guard at the top and returned silently -- the
+        // scanner was bricked until the page was reloaded, with nothing on
+        // screen to say why. At a till, mid-queue.
+        setResult({
+          status: "error",
+          message: t("loyaltyScan.couldNotAward"),
+        });
+      } finally {
+        // Must run on every path, or the guard above locks the scanner out
+        // permanently.
+        processingRef.current = false;
+      }
     },
     [branchId, t],
   );
@@ -163,24 +183,34 @@ export default function LoyaltyScanPage() {
   const handleRedeemReward = useCallback(
     async (rewardId: string) => {
       setRedeemingId(rewardId);
-      const res = await apiFetch(`/admin/loyalty/rewards/${rewardId}/redeem`, {
-        method: "POST",
-        body: JSON.stringify({ branchId }),
-      });
-      setRedeemingId(null);
+      try {
+        const res = await apiFetch(`/admin/loyalty/rewards/${rewardId}/redeem`, {
+          method: "POST",
+          body: JSON.stringify({ branchId }),
+        });
 
-      if (res.ok) {
-        toast.success(t("loyaltyScan.rewardMarkedUsed"));
-        if (result.status === "success") {
-          setResult({
-            ...result,
-            activeRewards: result.activeRewards.filter((r) => r.id !== rewardId),
+        if (res.ok) {
+          toast.success(t("loyaltyScan.rewardMarkedUsed"));
+          if (result.status === "success") {
+            setResult({
+              ...result,
+              activeRewards: result.activeRewards.filter((r) => r.id !== rewardId),
+            });
+          }
+        } else {
+          toast.error(t("loyaltyScan.couldNotMarkUsed"), {
+            description: t("loyaltyScan.pleaseTryAgain"),
           });
         }
-      } else {
+      } catch {
+        // A dropped connection escaped before this, so `redeemingId` was
+        // never cleared: that voucher's button stayed in its pending state
+        // for good, with no toast to say anything had gone wrong.
         toast.error(t("loyaltyScan.couldNotMarkUsed"), {
           description: t("loyaltyScan.pleaseTryAgain"),
         });
+      } finally {
+        setRedeemingId(null);
       }
     },
     [branchId, result, t],

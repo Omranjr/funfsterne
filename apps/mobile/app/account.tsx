@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, ScrollView, Alert, Linking, Pressable } from "r
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
+import { PRIVACY_URL } from "@/constants/links";
+import { logSwallowed } from "@/lib/log";
 import { User, ChevronRight } from "lucide-react-native";
 import { useTheme } from "@/contexts/ThemeContext";
 import { typography, screenTopPadding } from "@/constants/theme";
@@ -10,7 +12,23 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, Button, ThemeToggle, Ground } from "@/components";
 import { SUPPORTED_LANGUAGES } from "@/lib/i18n";
 
-const PRIVACY_URL = "https://funfsterne-admin-eight.vercel.app/privacy";
+
+
+/**
+ * Opens the privacy policy, and says so if it cannot.
+ *
+ * Previously `.catch(() => {})` -- on a device with no browser able to
+ * handle the URL the row simply did nothing, which is both confusing and a
+ * problem for App Review, since Apple checks this link resolves.
+ */
+async function openPrivacyPolicy(t: (key: string) => string): Promise<void> {
+  try {
+    await Linking.openURL(PRIVACY_URL);
+  } catch (error) {
+    logSwallowed("open-privacy-policy", error);
+    Alert.alert(t("common.linkFailed"));
+  }
+}
 
 export default function AccountScreen() {
   const { theme } = useTheme();
@@ -32,10 +50,16 @@ export default function AccountScreen() {
 
   const confirmDelete = useCallback(async () => {
     setDeleting(true);
-    const result = await deleteAccount();
-    setDeleting(false);
-    if (!result.ok) {
-      Alert.alert(t("account.deleteErrorTitle"), result.error);
+    try {
+      const result = await deleteAccount();
+      if (!result.ok) {
+        Alert.alert(t("account.deleteErrorTitle"), result.error);
+      }
+    } finally {
+      // `deleteAccount` always resolves today, but the button is disabled
+      // off this flag -- if that ever changes, the row would sit on
+      // "Deleting…" with no way back.
+      setDeleting(false);
     }
     // On success, isAuthenticated flips false and the root layout's boot
     // sequence sends the user back to sign-up/log-in on its own.
@@ -111,7 +135,7 @@ export default function AccountScreen() {
       </View>
 
       <Text
-        onPress={() => Linking.openURL(PRIVACY_URL).catch(() => {})}
+        onPress={() => { void openPrivacyPolicy(t); }}
         accessibilityRole="link"
         style={[typography.micro, styles.privacyLink, { color: theme.textMuted }]}
       >

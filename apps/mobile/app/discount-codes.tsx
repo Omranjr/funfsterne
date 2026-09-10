@@ -95,7 +95,7 @@ export default function OffersScreen() {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const { data, isLoading, refetch, isRefetching, error, dataUpdatedAt } =
+  const { data, isLoading, refetch, isRefetching, error, dataUpdatedAt, isStale } =
     useDiscountCodes();
 
   // Offers is a tab route, so this screen mounts once and then stays mounted
@@ -112,8 +112,13 @@ export default function OffersScreen() {
   // behind.
   useFocusEffect(
     useCallback(() => {
-      if (Date.now() - dataUpdatedAt > OFFERS_STALE_MS) refetch();
-    }, [refetch, dataUpdatedAt]),
+      // `isStale` covers the case the clock cannot: redeeming a coupon
+      // invalidates this query with `refetchType: "none"` so the cut
+      // animation can finish, which leaves the data marked stale while
+      // `dataUpdatedAt` is still seconds old. Without this the redeemed
+      // coupon stayed on the list until the 60s window happened to pass.
+      if (isStale || Date.now() - dataUpdatedAt > OFFERS_STALE_MS) refetch();
+    }, [refetch, isStale, dataUpdatedAt]),
   );
 
   const [deviceId, setDeviceId] = useState<string | null>(null);
@@ -450,7 +455,18 @@ function RazorCouponCard({
           razorX.value = x;
           cutProgress.value = x / track;
         })
-        .onEnd(() => {
+        .onEnd((_event, success) => {
+          // `onEnd` fires for CANCELLED and FAILED too, not just a clean
+          // finger-lift -- `success` is what tells them apart. Ignoring it
+          // meant a drag interrupted past the threshold (an incoming call,
+          // pulling down the notification shade) redeemed the coupon
+          // anyway. Coupons are single-use, so that is not recoverable.
+          if (!success) {
+            razorX.value = withSpring(0, { damping: 18, stiffness: 180 });
+            cutProgress.value = withTiming(0, { duration: 200 });
+            return;
+          }
+
           if (razorX.value >= track * CUT_THRESHOLD) {
             // Past the threshold the cut finishes on its own.
             razorX.value = withTiming(track, {

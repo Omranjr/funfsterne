@@ -33,7 +33,11 @@ import {
   PERSIST_BUSTER,
   PERSIST_MAX_AGE,
 } from "@/lib/persist-client";
-import { onNotificationResponse, toStatus } from "@/hooks/useNotifications";
+import {
+  onNotificationResponse,
+  consumeInitialNotificationResponse,
+  toStatus,
+} from "@/hooks/useNotifications";
 import {
   SignUpScreen,
   LogInScreen,
@@ -44,6 +48,7 @@ import { hasBeenPrompted } from "@/lib/notification-permission";
 import { useAppFonts } from "@/hooks/useFonts";
 import { usePushTokenSync } from "@/hooks/usePushTokenSync";
 import { initI18n } from "@/lib/i18n";
+import { logSwallowed } from "@/lib/log";
 import { useTranslation } from "react-i18next";
 
 /**
@@ -115,6 +120,12 @@ function NotificationRouter() {
       }
     })();
 
+    // The tap that launched a closed app is delivered only through
+    // getLastNotificationResponseAsync -- the listener below never sees it.
+    void consumeInitialNotificationResponse(() => {
+      if (!cancelled) router.push("/discount-codes");
+    });
+
     const unsubscribe = onNotificationResponse(() => {
       router.push("/discount-codes");
     });
@@ -132,6 +143,22 @@ function NotificationRouter() {
 SplashScreen.preventAutoHideAsync().catch(() => {
   // ignore
 });
+
+/**
+ * Hard ceiling on how long the native splash may stay up.
+ *
+ * `BootSequence` hides it as soon as auth resolves, but `BootSequence` is
+ * itself gated behind fonts AND i18n -- so anything that keeps either from
+ * settling means nothing ever calls `hideAsync`, and the native splash
+ * (the same owner photo the animated splash uses, which is why the two are
+ * indistinguishable) covers the app forever. That is a total outage from a
+ * failure in a purely cosmetic dependency.
+ *
+ * Generous enough that a healthy boot never reaches it. If it does fire,
+ * the customer sees the loading indicator underneath instead of a frozen
+ * photo -- still wrong, but visibly alive and recoverable.
+ */
+const NATIVE_SPLASH_MAX_MS = 8000;
 
 function AppNavigator() {
   const { theme } = useTheme();
@@ -245,13 +272,27 @@ function BootSequence() {
   const { isLoading, isAuthenticated } = useAuth();
   const [authMode, setAuthMode] = useState<"signUp" | "logIn">("signUp");
 
+  // Hand the native splash over to the animated one the moment this
+  // component can paint -- NOT when auth finishes.
+  //
+  // Waiting on `!isLoading` meant the native splash stayed up for the whole
+  // session check. That check only runs when a token exists, and on iOS the
+  // token lives in the Keychain, which survives deleting the app (the note
+  // in lib/notification-permission.ts spells this out). So the very first
+  // launch after reinstalling finds an old token, validates it against a
+  // backend that is usually asleep, and holds the splash for the entire
+  // round trip -- tens of seconds of a frozen photo that looks identical to
+  // the animated splash, because it is the same image.
+  //
+  // Nothing is exposed by hiding early: BrandedIntroGate renders the
+  // animated splash over whatever is beneath it, including the loading
+  // spinner this component shows while `isLoading` is true. The handoff is
+  // invisible, and the gate has its own cap so it always clears.
   useEffect(() => {
-    if (!isLoading) {
-      SplashScreen.hideAsync().catch(() => {
-        // ignore
-      });
-    }
-  }, [isLoading]);
+    SplashScreen.hideAsync().catch(() => {
+      // Already hidden, or unavailable -- neither is a problem.
+    });
+  }, []);
 
   // BrandedIntroGate now wraps every path (auth screens included, not just
   // the post-login app) so the branded loading animation always plays
@@ -292,16 +333,38 @@ export default function RootLayout() {
   const { fontsLoaded, fontError } = useAppFonts();
   const [i18nReady, setI18nReady] = useState(false);
 
+  // Runs from the one component that is never gated behind anything.
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      SplashScreen.hideAsync().catch(() => {
+        // Already hidden, or the module is unavailable. Either is fine.
+      });
+    }, NATIVE_SPLASH_MAX_MS);
+    return () => clearTimeout(handle);
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
-    initI18n().then(() => {
-      // If initI18n triggered a native RTL mismatch fix, it also calls
-      // Updates.reloadAsync() -- this session is being torn down, so
-      // there's no point flipping i18nReady here (and in the (rare) case
-      // reload isn't available, proceeding with a language whose RTL
-      // flag doesn't yet match the native layout would look broken).
-      if (!cancelled) setI18nReady(true);
-    });
+    initI18n()
+      .catch((error) => {
+        // Without this the app hangs on the bare spinner below, forever,
+        // with no branding and no way out -- `initI18n` touches
+        // AsyncStorage twice and `changeLanguage` once, any of which can
+        // reject. i18next is already initialised at module load with
+        // English resources and `lng: "en"`, so carrying on simply means
+        // the customer gets English instead of their stored preference.
+        // The same reasoning the font gate below already applies: a visual
+        // downgrade beats a dead end.
+        logSwallowed("i18n-init", error);
+      })
+      .finally(() => {
+        // If initI18n triggered a native RTL mismatch fix, it also calls
+        // Updates.reloadAsync() -- this session is being torn down, so
+        // there's no point flipping i18nReady here (and in the (rare) case
+        // reload isn't available, proceeding with a language whose RTL
+        // flag doesn't yet match the native layout would look broken).
+        if (!cancelled) setI18nReady(true);
+      });
     return () => {
       cancelled = true;
     };

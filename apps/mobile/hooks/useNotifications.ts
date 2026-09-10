@@ -7,6 +7,7 @@ import {
   getPermissionsAsync,
   getExpoPushTokenAsync,
   addNotificationResponseReceivedListener,
+  getLastNotificationResponseAsync,
   setNotificationHandler,
   type EventSubscription,
   type NotificationResponse,
@@ -145,17 +146,52 @@ export function useExpoPushToken() {
  * the callback is invoked. The callback is responsible for the actual
  * navigation — this hook only detects the relevant payload.
  */
+/**
+ * True when a notification payload is one we route on.
+ */
+function isRoutablePayload(data: unknown): boolean {
+  if (!data || typeof data !== "object") return false;
+  const d = data as { discountCodeId?: unknown; url?: unknown };
+  return Boolean(d.discountCodeId || d.url);
+}
+
+/**
+ * Handles the notification tap that *launched* the app.
+ *
+ * `addNotificationResponseReceivedListener` only fires while the app is
+ * already running. When the app is closed -- the normal case for a
+ * marketing push -- the tap that opened it is delivered here instead, and
+ * nowhere else. Without this the whole point of attaching a discount code
+ * to a broadcast was lost: the customer tapped the offer and landed on the
+ * home screen with no idea where it went.
+ *
+ * Returns true if it navigated, so the caller can avoid double-handling.
+ */
+export async function consumeInitialNotificationResponse(
+  onDiscountCodeNotification: () => void
+): Promise<boolean> {
+  try {
+    const response = await getLastNotificationResponseAsync();
+    if (!response) return false;
+    if (!isRoutablePayload(response.notification.request.content.data)) {
+      return false;
+    }
+    onDiscountCodeNotification();
+    return true;
+  } catch (error) {
+    // A failure to read the launch payload must never stop the app booting.
+    logSwallowed("initial-notification-response", error);
+    return false;
+  }
+}
+
 export function onNotificationResponse(
   onDiscountCodeNotification: () => void
 ): () => void {
   const subscription: EventSubscription =
     addNotificationResponseReceivedListener(
       (response: NotificationResponse) => {
-        const data = response.notification.request.content.data as
-          | { discountCodeId?: string; url?: string }
-          | undefined;
-        if (!data) return;
-        if (data.discountCodeId || data.url) {
+        if (isRoutablePayload(response.notification.request.content.data)) {
           onDiscountCodeNotification();
         }
       }

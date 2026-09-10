@@ -1,14 +1,15 @@
 import { useState, useCallback, useMemo } from "react";
 import {
-  View,
-  Text,
+  Alert,
+  FlatList,
+  Linking,
+  RefreshControl,
   ScrollView,
   StyleSheet,
-  FlatList,
+  Text,
   TouchableOpacity,
-  RefreshControl,
+  View,
   useWindowDimensions,
-  Linking,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
@@ -16,6 +17,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useIsFocused } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
+import { PRIVACY_URL } from "@/constants/links";
+import { logSwallowed } from "@/lib/log";
 import { useTheme } from "@/contexts/ThemeContext";
 import { typography, borderRadius, SHARED_TOKENS } from "@/constants/theme";
 import {
@@ -32,7 +35,6 @@ import { useProducts, useBranches, useCategoryImages } from "@/hooks/usePublicDa
 import { useLoyaltyMe } from "@/hooks/usePublicData";
 import { type ProductCategory, type Branch, type Product } from "@funfsterne/shared-types";
 
-const PRIVACY_URL = "https://funfsterne-admin-eight.vercel.app/privacy";
 
 const CATEGORIES: { key: ProductCategory }[] = [
   { key: "HAIR" },
@@ -47,6 +49,23 @@ const SHEET_OVERLAP = 46;
 const CATEGORY_TILE_WIDTH = 134;
 const CATEGORY_TILE_HEIGHT = 176;
 const GUTTER = 22;
+
+
+/**
+ * Opens the privacy policy, and says so if it cannot.
+ *
+ * Previously `.catch(() => {})` -- on a device with no browser able to
+ * handle the URL the row simply did nothing, which is both confusing and a
+ * problem for App Review, since Apple checks this link resolves.
+ */
+async function openPrivacyPolicy(t: (key: string) => string): Promise<void> {
+  try {
+    await Linking.openURL(PRIVACY_URL);
+  } catch (error) {
+    logSwallowed("open-privacy-policy", error);
+    Alert.alert(t("common.linkFailed"));
+  }
+}
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -286,7 +305,7 @@ export default function HomeScreen() {
           </View>
 
           <TouchableOpacity
-            onPress={() => Linking.openURL(PRIVACY_URL).catch(() => {})}
+            onPress={() => { void openPrivacyPolicy(t); }}
             accessibilityRole="button"
             accessibilityLabel={t("home.privacyPolicy")}
             style={styles.privacyLink}

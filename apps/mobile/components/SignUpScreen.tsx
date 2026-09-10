@@ -98,11 +98,16 @@ export function SignUpScreen({ onSwitchToLogIn, testID }: SignUpScreenProps) {
 
     setFieldErrors({});
     setSubmitting(true);
-    const result = await register(parse.data);
-    setSubmitting(false);
-
-    if (!result.ok) {
-      setFormError(result.error);
+    try {
+      const result = await register(parse.data);
+      if (!result.ok) {
+        setFormError(result.error);
+      }
+    } finally {
+      // `register` is written to always resolve, but the button is disabled
+      // off this flag -- if that ever stops being true, the screen would
+      // lock on "Creating account…" with no way forward.
+      setSubmitting(false);
     }
     // On success, AuthContext's isAuthenticated flips true and the root
     // layout's boot sequence advances past this screen on its own.

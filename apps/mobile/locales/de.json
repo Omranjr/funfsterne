@@ -14,7 +14,8 @@
     "themeDark": "Dunkel",
     "changeAppearance": "Erscheinungsbild ändern",
     "crashTitle": "Etwas ist schiefgelaufen",
-    "crashMessage": "Bitte versuchen Sie es erneut. Wenn das Problem weiterhin auftritt, starten Sie die App neu."
+    "crashMessage": "Bitte versuchen Sie es erneut. Wenn das Problem weiterhin auftritt, starten Sie die App neu.",
+    "linkFailed": "Der Link konnte nicht geöffnet werden. Bitte versuchen Sie es erneut."
   },
   "tabs": {
     "home": "Start",

@@ -34,14 +34,42 @@ export function apiHeaders(): Record<string, string> {
   return headers;
 }
 
+/**
+ * Body returned when the request never reached the server.
+ */
+const NETWORK_FAILURE_BODY = JSON.stringify({
+  error: "Could not reach the server.",
+});
+
 export async function apiFetch(path: string, init?: RequestInit) {
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    headers: {
-      ...apiHeaders(),
-      ...(init?.headers ?? {}),
-    },
-  });
+  let res: Response;
+
+  try {
+    res = await fetch(`${API_BASE_URL}${path}`, {
+      ...init,
+      headers: {
+        ...apiHeaders(),
+        ...(init?.headers ?? {}),
+      },
+    });
+  } catch {
+    // A dropped connection used to reject out of here, past every caller's
+    // `if (!res.ok)` branch and straight out of the handler -- so the
+    // `setLoading(false)` / `setDeleting(false)` line after the await never
+    // ran. The result was a page stuck on its skeleton, a confirm dialog
+    // whose button spun forever, or a save button that never came back,
+    // none of them showing an error. Thirteen handlers had this shape.
+    //
+    // Returning a failed Response instead routes a network failure through
+    // the not-ok path each caller already has, which already reports the
+    // error and already clears the flag. Fixing it here rather than in
+    // thirteen places also means the fourteenth handler is born correct.
+    return new Response(NETWORK_FAILURE_BODY, {
+      status: 503,
+      statusText: "Service Unavailable",
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 
   // Every call through here is an authenticated admin request — signing in
   // uses fetch() directly — so a 401 always means the stored token is no

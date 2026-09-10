@@ -35,3 +35,40 @@ export function formatPrice(
   }
   return num.toFixed(fractionDigits);
 }
+
+
+/**
+ * Formats an amount as euros the way the customer's language writes them.
+ *
+ * German puts the symbol last and uses a comma: "28,00 €". English puts it
+ * first with a point: "€28.00". Hardcoding "€" + toFixed(2) produced the
+ * English form for everyone, which is a small thing that consistently reads
+ * as "not built here" to a German customer.
+ *
+ * Falls back to the plain "€28.00" form if the runtime has no usable Intl
+ * data. Money must always render: a thrown formatter would blank a price
+ * tag, which is far worse than the wrong separator.
+ */
+export function formatCurrency(
+  value: unknown,
+  locale: string,
+  options: { fallback?: string } = {},
+): string {
+  const { fallback = "—" } = options;
+  const plain = formatPrice(value, { fallback });
+  if (plain === fallback) return fallback;
+
+  const num = Number(plain);
+  if (!Number.isFinite(num)) return fallback;
+
+  try {
+    return num.toLocaleString(locale, {
+      style: "currency",
+      currency: "EUR",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  } catch {
+    return `€${plain}`;
+  }
+}

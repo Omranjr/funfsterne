@@ -42,11 +42,15 @@ export function LogInScreen({ onSwitchToSignUp, testID }: LogInScreenProps) {
     }
 
     setSubmitting(true);
-    const result = await login({ username: username.trim(), password });
-    setSubmitting(false);
-
-    if (!result.ok) {
-      setFormError(result.error);
+    try {
+      const result = await login({ username: username.trim(), password });
+      if (!result.ok) {
+        setFormError(result.error);
+      }
+    } finally {
+      // Same guard as sign-up: the button is disabled off this flag, so an
+      // unexpected throw would strand the screen on "Signing in…".
+      setSubmitting(false);
     }
   }, [username, password, login, t]);
 

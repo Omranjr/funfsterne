@@ -14,7 +14,8 @@
     "themeDark": "Dark",
     "changeAppearance": "Change appearance",
     "crashTitle": "Something went wrong",
-    "crashMessage": "Please try again. If this keeps happening, restart the app."
+    "crashMessage": "Please try again. If this keeps happening, restart the app.",
+    "linkFailed": "Could not open the link. Please try again."
   },
   "tabs": {
     "home": "Home",

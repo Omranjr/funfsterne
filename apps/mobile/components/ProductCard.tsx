@@ -21,7 +21,7 @@ import { typography, borderRadius } from "@/constants/theme";
 import { CachedImage } from "./CachedImage";
 import { CardWash } from "./CardWash";
 import { StripePlaceholder } from "./StripePlaceholder";
-import { formatPrice } from "@/lib/format-price";
+import { formatCurrency } from "@/lib/format-price";
 
 export interface ProductCardProps {
   name: string;
@@ -68,7 +68,7 @@ export function ProductCard({
   testID,
 }: ProductCardProps) {
   const { theme } = useTheme();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const scale = useSharedValue(1);
   const isDark = theme.mode === "dark";
   const isGrid = variant === "grid";
@@ -85,7 +85,7 @@ export function ProductCard({
     scale.value = withSpring(1, { stiffness: 400, damping: 20 });
   }, [scale]);
 
-  const accessibilityLabel = [name, category, `€${formatPrice(price)}`]
+  const accessibilityLabel = [name, category, formatCurrency(price, i18n.language)]
     .filter(Boolean)
     .join(", ");
 
@@ -189,7 +189,7 @@ export function ProductCard({
 
         <View style={[styles.priceRow, isGrid && styles.priceRowGrid]}>
           <Text style={[typography.price, { color: theme.goldText }]}>
-            €{formatPrice(price)}
+            {formatCurrency(price, i18n.language)}
           </Text>
           {isNew ? (
             <Text

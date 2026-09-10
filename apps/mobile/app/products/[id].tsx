@@ -18,18 +18,17 @@ import { ChevronLeft, Share2, MapPin, MessageCircle } from "lucide-react-native"
 import { useTheme } from "@/contexts/ThemeContext";
 import { Badge, CachedImage, EmptyState, ProductDetailSkeleton } from "@/components";
 import { useProduct, useBranches } from "@/hooks/usePublicData";
-import { formatPrice } from "@/lib/format-price";
+import { formatCurrency } from "@/lib/format-price";
 import { logSwallowed } from "@/lib/log";
+import { SHOP_INSTAGRAM, SHOP_PHONE } from "@/constants/links";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-const SHOP_INSTAGRAM = "https://instagram.com/mido.barbar7";
-const SHOP_PHONE = "+4928234198333";
 
 export default function ProductDetailsScreen() {
   const router = useRouter();
   const { theme } = useTheme();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
 
@@ -216,7 +215,7 @@ export default function ProductDetailsScreen() {
           </View>
 
           <Text style={[styles.price, { color: theme.gold }]}>
-            €{formatPrice(product.basePrice)}
+            {formatCurrency(product.basePrice, i18n.language)}
           </Text>
 
           {product.description ? (

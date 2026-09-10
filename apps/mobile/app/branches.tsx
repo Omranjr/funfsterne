@@ -7,15 +7,21 @@ import {
   RefreshControl,
 } from "react-native";
 import { MapPin } from "lucide-react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/contexts/ThemeContext";
-import { typography } from "@/constants/theme";
+import { typography, screenTopPadding } from "@/constants/theme";
 import { Card, EmptyState, BranchPillSkeleton, Ground } from "@/components";
 import { useBranches } from "@/hooks/usePublicData";
 
 export default function BranchesScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
+  // This screen has no navigation header and the root SafeAreaView
+  // deliberately does not claim the top edge (so Home's hero can run
+  // full-bleed), so the inset has to be applied here or the title sits
+  // underneath the status bar.
+  const insets = useSafeAreaInsets();
   const {
     data: branches,
     isLoading,
@@ -31,7 +37,12 @@ export default function BranchesScreen() {
   if (isLoading) {
     return (
       <Ground style={styles.container}>
-        <Text style={[styles.title, { color: theme.text, paddingTop: 12 }]}>
+        <Text
+          style={[
+            styles.title,
+            { color: theme.text, paddingTop: screenTopPadding(insets.top) },
+          ]}
+        >
           {t("branches.title")}
         </Text>
         <BranchPillSkeleton count={6} />
@@ -39,7 +50,11 @@ export default function BranchesScreen() {
     );
   }
 
-  if (error) {
+  // A failed background revalidation still sets `error` while the cached
+  // list is perfectly good -- every other screen guards this, and without it
+  // a pull-to-refresh on a weak connection replaced a working list with a
+  // full-screen error.
+  if (error && !branches?.length) {
     return (
       <Ground style={styles.container}>
         <EmptyState
@@ -70,7 +85,7 @@ export default function BranchesScreen() {
         keyExtractor={(b) => b.id}
         contentContainerStyle={[
           styles.content,
-          { paddingTop: 12 },
+          { paddingTop: screenTopPadding(insets.top) },
         ]}
         showsVerticalScrollIndicator={false}
         refreshControl={

@@ -114,7 +114,8 @@
     "rewardMarkedUsed": "Reward marked as used",
     "couldNotMarkUsed": "Could not mark reward as used",
     "pleaseTryAgain": "Please try again.",
-    "customer": "Customer"
+    "customer": "Customer",
+    "couldNotLoadBranches": "Could not load branches. Check your connection and reload the page."
   },
   "users": {
     "title": "Users",

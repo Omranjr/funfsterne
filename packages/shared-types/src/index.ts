@@ -197,9 +197,22 @@ export type DiscountCodeRedemption = z.infer<typeof DiscountCodeRedemptionSchema
 // distinct from an email address even though we don't collect one).
 const USERNAME_PATTERN = /^[a-zA-Z0-9._]+$/;
 
+/**
+ * Usernames are matched case-insensitively, so they are stored lowercased.
+ *
+ * The lookup is an exact `findUnique`, which made "Ahmad" and "ahmad" two
+ * different accounts and made signing in fail on a capital letter. These
+ * accounts carry no email or phone, so the only recovery is asking the shop
+ * to reset the password by hand -- a support call for a shift key.
+ *
+ * Lowercasing here rather than at each call site means registration and
+ * sign-in cannot drift apart. Nothing displays the username to the
+ * customer (the app greets them by first name), so nothing is lost.
+ */
 export const UsernameSchema = z
   .string()
   .trim()
+  .toLowerCase()
   .min(3, "Username must be at least 3 characters")
   .max(30, "Username must be at most 30 characters")
   .regex(USERNAME_PATTERN, "Username can only contain letters, numbers, \".\" and \"_\"");
@@ -236,7 +249,12 @@ export const RegisterConsumerUserSchema = z.object({
 export type RegisterConsumerUser = z.infer<typeof RegisterConsumerUserSchema>;
 
 export const LoginConsumerUserSchema = z.object({
-  username: z.string().min(1),
+  // Normalised the same way registration does, or a capital letter at
+  // sign-in would miss the row it created. Deliberately not reusing
+  // UsernameSchema: its length and character rules belong to *choosing* a
+  // name, and tightening them later must never lock out an existing
+  // account that was valid when it was made.
+  username: z.string().trim().toLowerCase().min(1),
   password: z.string().min(1),
 });
 
