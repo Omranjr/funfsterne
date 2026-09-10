@@ -181,6 +181,7 @@ export default function BranchesPage() {
                     <Button
                       variant="ghost"
                       size="icon"
+                      aria-label={`${t("common.edit")}: ${branch.name}`}
                       onClick={() => {
                         setEditing(branch);
                         setDialogOpen(true);

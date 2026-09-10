@@ -2,6 +2,7 @@ import { Component, type ReactNode } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Button } from "./Button";
 import { darkTheme } from "@/constants/theme";
+import i18n from "@/lib/i18n";
 
 // Read straight off darkTheme rather than through useTheme(): this
 // boundary wraps the providers themselves, so it must still render if the
@@ -13,6 +14,30 @@ const COLORS = {
   textMuted: darkTheme.textMuted,
   gold: darkTheme.gold,
 };
+
+/**
+ * Translates, but never at the cost of rendering.
+ *
+ * This boundary is the last thing standing between a crash and a blank
+ * screen, and it wraps the providers -- i18n included. So it cannot use the
+ * `useTranslation` hook (it is a class, and the provider may be the thing
+ * that failed), and it cannot assume i18n initialised at all: before
+ * `initI18n` resolves, `t()` hands back the key itself, which would put
+ * "common.crashTitle" in front of the customer.
+ *
+ * Falls back to English rather than showing a key, and swallows anything
+ * thrown on the way -- an exception here would replace the error screen with
+ * no screen.
+ */
+function translate(key: string, fallback: string): string {
+  try {
+    if (!i18n.isInitialized) return fallback;
+    const value = i18n.t(key);
+    return typeof value === "string" && value !== key ? value : fallback;
+  } catch {
+    return fallback;
+  }
+}
 
 interface Props {
   children: ReactNode;
@@ -44,12 +69,19 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <View style={[styles.container, { backgroundColor: COLORS.background }]}>
           <Text style={[styles.title, { color: COLORS.text }]}>
-            Something went wrong
+            {translate("common.crashTitle", "Something went wrong")}
           </Text>
           <Text style={[styles.message, { color: COLORS.textMuted }]}>
-            Please try again. If this keeps happening, restart the app.
+            {translate(
+              "common.crashMessage",
+              "Please try again. If this keeps happening, restart the app.",
+            )}
           </Text>
-          <Button title="Try again" variant="primary" onPress={this.handleReset} />
+          <Button
+            title={translate("common.tryAgain", "Try again")}
+            variant="primary"
+            onPress={this.handleReset}
+          />
         </View>
       );
     }

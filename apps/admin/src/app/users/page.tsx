@@ -118,6 +118,7 @@ export default function UsersPage() {
                       variant="ghost"
                       size="icon"
                       title={t("users.resetPassword")}
+                      aria-label={`${t("users.resetPassword")}: ${user.username}`}
                       onClick={() => {
                         setResetTarget(user);
                         setDialogOpen(true);

@@ -47,15 +47,18 @@ function describeTransaction(
   return note ?? t("loyalty.visit");
 }
 
-function formatDate(iso: string): string {
+// `undefined` as the locale follows the device, not the language the
+// customer picked in the app -- so someone running the app in German on an
+// English phone saw English dates. i18n.language is the app's own choice.
+function formatDate(iso: string, locale: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  return d.toLocaleDateString(locale, { month: "short", day: "numeric" });
 }
 
 export default function LoyaltyScreen() {
   const { theme } = useTheme();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { data, isLoading, isRefetching, refetch, error } = useLoyaltyMe();
@@ -115,6 +118,11 @@ export default function LoyaltyScreen() {
     // bar never opens with a misleading fill-from-empty flash. Motion is
     // reserved for the one moment it actually means something: a fresh
     // scan raised the balance.
+    // Also clears any banner still on screen. The celebrate branch above
+    // returns a cleanup that cancels its dismiss timer, so a balance change
+    // arriving mid-celebration (redeeming right after a scan is the obvious
+    // one) cancelled the timer and left the banner up permanently.
+    setCelebration(null);
     progressWidth.value = progressPct / 100;
     lastBalanceRef.current = data.balance;
   }, [data, progressPct, celebrationScale, progressWidth]);
@@ -176,7 +184,12 @@ export default function LoyaltyScreen() {
   if (error && !data) {
     return (
       <Ground style={styles.center}>
-        <EmptyState title={t("loyalty.loadErrorTitle")} message={t("loyalty.loadErrorMessage")} />
+        <EmptyState
+          title={t("loyalty.loadErrorTitle")}
+          message={t("loyalty.loadErrorMessage")}
+          actionTitle={t("common.retry")}
+          onAction={refetch}
+        />
       </Ground>
     );
   }
@@ -307,7 +320,7 @@ export default function LoyaltyScreen() {
                     : t("loyalty.redeemedReward")}
                 </Text>
                 <Text style={[styles.historyDate, { color: theme.textMuted }]}>
-                  {formatDate(tx.createdAt)}
+                  {formatDate(tx.createdAt, i18n.language)}
                 </Text>
               </View>
               <Text
@@ -334,7 +347,7 @@ export default function LoyaltyScreen() {
                 {t("loyalty.voucher", { value: reward.eurosValue })}
               </Text>
               <Text style={[styles.historyDate, { color: theme.textMuted }]}>
-                {reward.redeemedAt ? formatDate(reward.redeemedAt) : ""}
+                {reward.redeemedAt ? formatDate(reward.redeemedAt, i18n.language) : ""}
               </Text>
             </View>
           ))}

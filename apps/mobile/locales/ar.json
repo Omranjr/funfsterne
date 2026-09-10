@@ -12,7 +12,9 @@
     "themeSystem": "النظام",
     "themeLight": "فاتح",
     "themeDark": "داكن",
-    "changeAppearance": "تغيير المظهر"
+    "changeAppearance": "تغيير المظهر",
+    "crashTitle": "حدث خطأ ما",
+    "crashMessage": "يرجى المحاولة مرة أخرى. إذا استمرت المشكلة، أعد تشغيل التطبيق."
   },
   "tabs": {
     "home": "الرئيسية",

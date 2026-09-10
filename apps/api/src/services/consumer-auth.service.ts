@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import { Prisma } from "@prisma/client";
 import type { FastifyInstance } from "fastify";
 import type { ConsumerJwtPayload } from "../plugins/jwt.js";
 
@@ -31,6 +32,8 @@ export async function registerConsumer(
   app: FastifyInstance,
   input: RegisterConsumerInput,
 ): Promise<RegisterConsumerResult> {
+  // Fast path, for a clear answer without paying for a bcrypt hash first.
+  // It is NOT what guarantees uniqueness -- see the catch below.
   const existing = await app.prisma.consumerUser.findUnique({
     where: { username: input.username },
   });
@@ -40,14 +43,35 @@ export async function registerConsumer(
 
   const passwordHash = await bcrypt.hash(input.password, PASSWORD_HASH_ROUNDS);
 
-  const user = await app.prisma.consumerUser.create({
-    data: {
-      firstName: input.firstName,
-      lastName: input.lastName,
-      username: input.username,
-      passwordHash,
-    },
-  });
+  let user;
+  try {
+    user = await app.prisma.consumerUser.create({
+      data: {
+        firstName: input.firstName,
+        lastName: input.lastName,
+        username: input.username,
+        passwordHash,
+      },
+    });
+  } catch (err) {
+    // Two sign-ups racing for the same username both clear the read above --
+    // there is a real gap between it and this write, widened by the bcrypt
+    // hash in between. Postgres decides the winner at the unique index, and
+    // the loser gets P2002.
+    //
+    // Caught here so it answers as USERNAME_TAKEN. Left to the global error
+    // handler it became a generic 409 "Already exists" with no errorCode,
+    // and the app -- which switches on errorCode -- showed "something went
+    // wrong" for what is really just a taken name. A double-tap on Sign Up
+    // is enough to hit this.
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2002"
+    ) {
+      return { ok: false, errorCode: "USERNAME_TAKEN" };
+    }
+    throw err;
+  }
 
   return {
     ok: true,

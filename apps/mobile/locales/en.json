@@ -12,7 +12,9 @@
     "themeSystem": "System",
     "themeLight": "Light",
     "themeDark": "Dark",
-    "changeAppearance": "Change appearance"
+    "changeAppearance": "Change appearance",
+    "crashTitle": "Something went wrong",
+    "crashMessage": "Please try again. If this keeps happening, restart the app."
   },
   "tabs": {
     "home": "Home",

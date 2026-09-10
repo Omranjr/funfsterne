@@ -14,7 +14,10 @@
     "appearance": "Erscheinungsbild",
     "language": "Sprache",
     "signOut": "Abmelden",
-    "checkFormValues": "Bitte überprüfen Sie die Formularwerte."
+    "checkFormValues": "Bitte überprüfen Sie die Formularwerte.",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "removeImage": "Bild entfernen"
   },
   "productCategories": {
     "HAIR": "Haare",

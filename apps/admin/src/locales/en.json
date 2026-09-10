@@ -14,7 +14,10 @@
     "appearance": "Appearance",
     "language": "Language",
     "signOut": "Sign out",
-    "checkFormValues": "Please check the form values."
+    "checkFormValues": "Please check the form values.",
+    "edit": "Edit",
+    "delete": "Delete",
+    "removeImage": "Remove image"
   },
   "productCategories": {
     "HAIR": "Hair",

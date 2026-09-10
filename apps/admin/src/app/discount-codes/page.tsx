@@ -219,6 +219,7 @@ export default function DiscountCodesPage() {
                     <Button
                       variant="ghost"
                       size="icon"
+                      aria-label={`${t("common.edit")}: ${code.code}`}
                       onClick={() => {
                         setEditing(code);
                         setDialogOpen(true);

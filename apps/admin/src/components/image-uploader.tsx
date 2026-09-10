@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
+import { useTranslation } from "react-i18next";
 import { API_BASE_URL, apiHeaders } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Upload, X, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
@@ -21,6 +22,7 @@ export function ImageUploader({
   images: string[];
   onChange: (images: string[]) => void;
 }) {
+  const { t } = useTranslation();
   // We track in-flight + recently-failed files locally so we can show per-file
   // progress. Successfully uploaded files collapse into the `images` prop so
   // they persist with the form state.
@@ -220,6 +222,7 @@ export function ImageUploader({
                 type="button"
                 variant="destructive"
                 size="icon"
+                aria-label={t("common.removeImage")}
                 className="absolute right-0 top-0 h-5 w-5"
                 onClick={() => removeImage(url)}
               >

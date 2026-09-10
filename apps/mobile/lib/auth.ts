@@ -16,10 +16,35 @@ export async function getAuthToken(): Promise<string | null> {
   }
 }
 
-export async function setAuthToken(token: string): Promise<void> {
-  await SecureStore.setItemAsync(AUTH_TOKEN_KEY, token);
+/**
+ * Stores the session token, reporting whether it actually persisted.
+ *
+ * A Keychain write can fail (a simulator with no keystore, a device under
+ * storage pressure). Left to throw, it surfaced as a failed sign-in even
+ * though the account had already been created server-side -- the customer
+ * saw an error, tried again, and got "username already taken". Returning
+ * false instead lets the caller keep the in-memory session and carry on;
+ * the only cost is signing in again next launch.
+ */
+export async function setAuthToken(token: string): Promise<boolean> {
+  try {
+    await SecureStore.setItemAsync(AUTH_TOKEN_KEY, token);
+    return true;
+  } catch (error) {
+    logSwallowed("secure-store-write", error);
+    return false;
+  }
 }
 
+/**
+ * Best-effort delete. A throw here would reject `logout()`, leaving the user
+ * staring at a screen that did not respond -- worse than a token that
+ * lingers until it expires.
+ */
 export async function removeAuthToken(): Promise<void> {
-  await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY);
+  try {
+    await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY);
+  } catch (error) {
+    logSwallowed("secure-store-delete", error);
+  }
 }

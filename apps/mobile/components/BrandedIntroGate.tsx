@@ -30,16 +30,38 @@ export function BrandedIntroGate({ children }: BrandedIntroGateProps) {
   const [dismissed, setDismissed] = useState(false);
   const dismissRef = useRef<(() => void) | null>(null);
   const startedAtRef = useRef<number>(Date.now());
+  // The unmount timer lives in a ref so it can be cancelled if this gate
+  // goes away first (a crash caught by the boundary above, or a fast
+  // reload in development). An orphaned timer calling setState on an
+  // unmounted component is harmless in React 18, but it keeps the whole
+  // gate -- and the splash beneath it -- alive in memory for its duration,
+  // and leaving cleanup out is the kind of thing that stops being harmless
+  // the moment someone adds real work to the callback.
+  const unmountTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const triggerDismiss = () => {
+    // Guard against a second call: the min-wait effect and the max-wait cap
+    // can both fire, and two overlapping timers would leave one orphaned.
+    if (unmountTimerRef.current !== null) return;
+
     setDismissed(true);
     dismissRef.current?.();
     // Unmount after the fade-out finishes so the home screen reveals
     // smoothly underneath.
-    setTimeout(() => {
+    unmountTimerRef.current = setTimeout(() => {
+      unmountTimerRef.current = null;
       setVisible(false);
     }, FADE_OUT_MS);
   };
+
+  useEffect(() => {
+    return () => {
+      if (unmountTimerRef.current !== null) {
+        clearTimeout(unmountTimerRef.current);
+        unmountTimerRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (dismissed) return;

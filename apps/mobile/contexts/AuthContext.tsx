@@ -8,6 +8,8 @@ import {
 } from "react";
 import { Keyboard } from "react-native";
 import i18n from "@/lib/i18n";
+import { logSwallowed } from "@/lib/log";
+import { queryClient } from "@/lib/query-client";
 import {
   getAuthToken,
   setAuthToken,
@@ -20,6 +22,7 @@ import {
   getConsumerProfile,
   setUnauthorizedHandler,
   PublicApiError,
+  ApiError,
   type ConsumerProfile,
 } from "@/lib/api";
 
@@ -69,6 +72,25 @@ async function letIosNoticeThePassword(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, SAVE_PASSWORD_GRACE_MS));
 }
 
+/**
+ * Drops every cached response when the signed-in identity changes.
+ *
+ * Two of the cached queries are per-customer even though their keys are not:
+ * `["loyalty","me"]` is the point balance and visit history, and
+ * `["discount-codes","active"]` is filtered server-side to exclude coupons
+ * this customer already used. The cache is also written to AsyncStorage and
+ * kept for 24 hours, so without this the next person to sign in on a shared
+ * phone was shown the previous one's points and offers until the refetch
+ * landed -- and on a slow connection, for as long as that took.
+ *
+ * `clear()` rather than `invalidateQueries` on purpose: invalidating marks
+ * data stale but keeps serving it while refetching, which is exactly the
+ * window that must not exist here.
+ */
+function clearCachedUserData(): void {
+  queryClient.clear();
+}
+
 function describeError(err: unknown): string {
   if (err instanceof PublicApiError) {
     if (err.errorCode === "USERNAME_TAKEN") {
@@ -96,13 +118,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const profile = await getConsumerProfile();
         if (!cancelled) setUser(profile);
       } catch (err) {
-        // A 404 here means the account behind this token was deleted (e.g.
-        // via the account-deletion flow, possibly on another device) --
-        // the JWT signature alone can't reveal that, only the server can.
-        // Any other failure (network blip) is treated the same way: fail
-        // closed to the login screen rather than silently pretending to be
-        // authenticated with no profile data to show.
-        await removeAuthToken();
+        // Only the server gets to invalidate a token. 401 means the
+        // credential is dead; 404 means the account behind it was deleted,
+        // possibly from another device -- a JWT signature cannot reveal
+        // either on its own.
+        //
+        // Anything else is us failing to ask the question, not an answer.
+        // Discarding the token on a network error meant a cold backend --
+        // which routinely takes longer than a request timeout to wake --
+        // silently signed people out on launch. Now the token is kept and
+        // the user stays on the sign-in screen for this launch only;
+        // the next successful call restores them, and a genuinely dead
+        // token is caught by the 401 handler the moment any screen calls
+        // the API.
+        const rejected =
+          err instanceof ApiError && (err.status === 401 || err.status === 404);
+
+        if (rejected) {
+          await removeAuthToken();
+        } else {
+          logSwallowed("auth-boot-profile", err);
+        }
         if (!cancelled) setUser(null);
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -117,6 +153,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const res = await registerConsumerUser(input);
       await setAuthToken(res.token);
+      // Whatever is cached belongs to whoever was signed in before.
+      clearCachedUserData();
       await letIosNoticeThePassword();
       setUser(res.user);
       return { ok: true };
@@ -129,6 +167,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const res = await loginConsumerUser(input);
       await setAuthToken(res.token);
+      // Whatever is cached belongs to whoever was signed in before.
+      clearCachedUserData();
       await letIosNoticeThePassword();
       setUser(res.user);
       return { ok: true };
@@ -139,6 +179,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     await removeAuthToken();
+    clearCachedUserData();
     setUser(null);
   }, []);
 
@@ -158,6 +199,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await deleteConsumerAccountRequest();
       await removeAuthToken();
+      clearCachedUserData();
       setUser(null);
       return { ok: true };
     } catch (err) {

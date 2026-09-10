@@ -53,7 +53,12 @@ export default function DashboardPage() {
 
       const products = (await productsRes.json()) as unknown[];
       const branches = (await branchesRes.json()) as unknown[];
-      const codes = (await codesRes.json()) as { isActive: boolean }[];
+      const codes = (await codesRes.json()) as {
+        isActive: boolean;
+        expiresAt: string | null;
+        maxRedemptions: number | null;
+        currentRedemptions: number;
+      }[];
       const notifications = (await notificationsRes.json()) as { sentAt: string }[];
 
       const now = new Date();
@@ -65,7 +70,19 @@ export default function DashboardPage() {
       setStats({
         products: products.length,
         branches: branches.length,
-        activeDiscountCodes: codes.filter((c) => c.isActive).length,
+        // "Active" has to mean what the customer's app means by it, or this
+        // number quietly lies. The public endpoint drops codes that are
+        // switched off, past their expiry, OR fully redeemed -- counting only
+        // `isActive` here showed five live offers while the app was offering
+        // three, and there is no way to tell from the dashboard which is
+        // which. Kept in step with the filter in `routes/public.ts`.
+        activeDiscountCodes: codes.filter(
+          (c) =>
+            c.isActive &&
+            (c.expiresAt === null || new Date(c.expiresAt) > now) &&
+            (c.maxRedemptions === null ||
+              c.currentRedemptions < c.maxRedemptions),
+        ).length,
         notificationsThisMonth,
       });
     } catch {

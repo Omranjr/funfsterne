@@ -60,9 +60,29 @@ async function fetchWithTimeout(
   }
 }
 
+/**
+ * Thrown by `apiFetch` so callers can tell *why* a request failed.
+ *
+ * The distinction matters most at boot: "the server says this token is dead"
+ * must sign the user out, while "I could not reach the server" must not.
+ * Without a status to check, both looked identical and the safe-seeming
+ * choice -- discard the token -- logged people out over a flaky connection.
+ */
+export class ApiError extends Error {
+  /** HTTP status, or 0 when the request never got an answer at all. */
+  readonly status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
 export async function apiFetch<T>(
   path: string,
-  init?: RequestInit
+  init?: RequestInit,
+  timeoutMs?: number
 ): Promise<T> {
   const url = `${API_BASE_URL}${path}`;
   const token = await getAuthToken();
@@ -76,13 +96,30 @@ export async function apiFetch<T>(
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetchWithTimeout(url, {
-    ...init,
-    headers,
-  });
+  let response: Response;
+  try {
+    response = await fetchWithTimeout(url, { ...init, headers }, timeoutMs);
+  } catch (err) {
+    // Status 0 == never reached the server. Callers must not read this as a
+    // verdict on the credentials they sent.
+    throw new ApiError(
+      0,
+      err instanceof Error ? err.message : "Network request failed"
+    );
+  }
 
   if (!response.ok) {
-    throw new Error(`API error: ${response.status} ${response.statusText}`);
+    // Same rule as publicApiFetch: a 401 on a request that carried a token
+    // means the stored credential is finished. Sign-in/sign-up answer 401
+    // for a wrong password and are excluded there; nothing on this path is
+    // an auth endpoint.
+    if (response.status === 401 && token) {
+      onUnauthorized?.();
+    }
+    throw new ApiError(
+      response.status,
+      `API error: ${response.status} ${response.statusText}`
+    );
   }
 
   // 204 No Content (e.g. DELETE /public/auth/account) has no body -- calling
@@ -377,8 +414,21 @@ export type ConsumerProfile = {
   username: string;
 };
 
+/**
+ * Confirms a stored token still belongs to a live account.
+ *
+ * Given the cold-start budget deliberately: this runs on every launch, and
+ * the backend sleeps when idle. On the 20s default it simply timed out
+ * whenever the server was cold, and the caller -- unable to tell a timeout
+ * from a rejection -- discarded the token. The practical effect was that
+ * opening the app after a quiet spell signed you out.
+ */
 export function getConsumerProfile(): Promise<ConsumerProfile> {
-  return apiFetch<ConsumerProfile>("/public/auth/me", { method: "GET" });
+  return apiFetch<ConsumerProfile>(
+    "/public/auth/me",
+    { method: "GET" },
+    COLD_START_TIMEOUT_MS
+  );
 }
 
 // ---------------------------------------------------------------------------

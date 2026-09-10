@@ -14,7 +14,10 @@
     "appearance": "المظهر",
     "language": "اللغة",
     "signOut": "تسجيل الخروج",
-    "checkFormValues": "يرجى التحقق من قيم النموذج."
+    "checkFormValues": "يرجى التحقق من قيم النموذج.",
+    "edit": "تعديل",
+    "delete": "حذف",
+    "removeImage": "إزالة الصورة"
   },
   "productCategories": {
     "HAIR": "الشعر",

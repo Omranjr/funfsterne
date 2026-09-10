@@ -77,13 +77,26 @@ function generateUuidV4(): string {
  */
 let inflight: Promise<string> | null = null;
 
+/**
+ * Remembers the id for the life of the process.
+ *
+ * Matters when SecureStore is unavailable: without it, every call fell
+ * through to generating a *fresh* uuid, so the "one redemption per device"
+ * check the backend performs was keyed on a value that changed between
+ * requests. Caching keeps the id stable for the session even when nothing
+ * can be persisted.
+ */
+let cached: string | null = null;
+
 export async function getOrCreateDeviceId(): Promise<string> {
+  if (cached) return cached;
   if (inflight) return inflight;
 
   inflight = (async () => {
     try {
       const existing = await SecureStore.getItemAsync(DEVICE_ID_KEY);
       if (existing && existing.length > 0) {
+        cached = existing;
         return existing;
       }
     } catch {
@@ -99,6 +112,7 @@ export async function getOrCreateDeviceId(): Promise<string> {
       // If persist fails, still return the in-memory value for this session.
     }
 
+    cached = fresh;
     return fresh;
   })();
 

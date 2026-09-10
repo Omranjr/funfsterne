@@ -7,6 +7,7 @@ import {
   getPlatformType,
 } from "./useNotifications";
 import { logSwallowed } from "@/lib/log";
+import { useAuth } from "@/contexts/AuthContext";
 
 /**
  * Keeps the push token registered with the API for as long as the OS says
@@ -28,6 +29,12 @@ import { logSwallowed } from "@/lib/log";
  * `registeredRef` keeps it to one per token per session anyway.
  */
 export function usePushTokenSync(): void {
+  // Registration requires a signed-in consumer -- the endpoint reads the
+  // user from the JWT. Firing it while signed out earns a 401 on every
+  // foreground, which the unauthorized handler answers by logging out and
+  // clearing the query cache: pointless work that also throws away the
+  // persisted cache the next launch would have painted from.
+  const { isAuthenticated } = useAuth();
   const { status } = useNotificationPermission();
   const { refresh } = useExpoPushToken();
   const { mutateAsync: registerToken } = useRegisterPushToken();
@@ -38,7 +45,7 @@ export function usePushTokenSync(): void {
   const inFlightRef = useRef(false);
 
   const sync = useCallback(async () => {
-    if (status !== "granted" || inFlightRef.current) return;
+    if (!isAuthenticated || status !== "granted" || inFlightRef.current) return;
     inFlightRef.current = true;
     try {
       const token = await refresh();
@@ -53,7 +60,7 @@ export function usePushTokenSync(): void {
     } finally {
       inFlightRef.current = false;
     }
-  }, [status, refresh, registerToken]);
+  }, [isAuthenticated, status, refresh, registerToken]);
 
   useEffect(() => {
     sync();

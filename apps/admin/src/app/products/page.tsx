@@ -241,6 +241,7 @@ export default function ProductsPage() {
                     <Button
                       variant="ghost"
                       size="icon"
+                      aria-label={`${t("common.edit")}: ${product.name}`}
                       onClick={() => {
                         setEditing(product);
                         setDialogOpen(true);
@@ -251,6 +252,7 @@ export default function ProductsPage() {
                     <Button
                       variant="ghost"
                       size="icon"
+                      aria-label={`${t("common.delete")}: ${product.name}`}
                       onClick={() => setDeleteTarget(product)}
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />

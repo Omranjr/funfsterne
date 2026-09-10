@@ -12,7 +12,9 @@
     "themeSystem": "System",
     "themeLight": "Hell",
     "themeDark": "Dunkel",
-    "changeAppearance": "Erscheinungsbild ändern"
+    "changeAppearance": "Erscheinungsbild ändern",
+    "crashTitle": "Etwas ist schiefgelaufen",
+    "crashMessage": "Bitte versuchen Sie es erneut. Wenn das Problem weiterhin auftritt, starten Sie die App neu."
   },
   "tabs": {
     "home": "Start",

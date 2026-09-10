@@ -67,11 +67,16 @@ function formatDiscountValue(
   return t("offers.euroOff", { value: formatPrice(value) });
 }
 
-function describeExpiry(t: TFunction, expiresAt: string | null): string | null {
+// `locale` is the language the customer chose in the app, not the device's.
+function describeExpiry(
+  t: TFunction,
+  expiresAt: string | null,
+  locale: string,
+): string | null {
   if (!expiresAt) return null;
   const d = new Date(expiresAt);
   if (Number.isNaN(d.getTime())) return null;
-  return t("offers.expires", { date: d.toLocaleDateString() });
+  return t("offers.expires", { date: d.toLocaleDateString(locale) });
 }
 
 
@@ -351,7 +356,7 @@ function RazorCouponCard({
   onReset,
 }: RazorCouponCardProps) {
   const { theme } = useTheme();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const reduceMotion = useReduceMotion();
 
   // Travel available to the razor: the card's inner width, less where the
@@ -479,7 +484,7 @@ function RazorCouponCard({
     transform: [{ translateY: interpolate(splitProgress.value, [0, 1], [0, 6]) }],
   }));
 
-  const expiry = describeExpiry(t, code.expiresAt);
+  const expiry = describeExpiry(t, code.expiresAt, i18n.language);
   const meta = [expiry, code.scopeBranch?.name].filter(Boolean).join(" · ");
 
   return (
