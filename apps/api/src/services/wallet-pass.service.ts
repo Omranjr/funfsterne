@@ -176,10 +176,20 @@ function buildPassJson(
       // once, and repeating it here made the open card look like it had a
       // rendering fault.
       headerFields: [{ key: "membership", value: "MITGLIED" }],
-      primaryFields: [
+
+      // Left empty on purpose. On a storeCard with a strip image, Wallet draws
+      // the primary field *over* the strip at display size and puts its label
+      // underneath the value. A name there is rendered enormous, straight
+      // across the emblem, and no amount of artwork adjustment moves it --
+      // the layout is fixed by the format.
+      //
+      // So the strip carries the emblem alone, and the name moves down to a
+      // secondary field, which renders at a normal size below the strip and
+      // fills space that was otherwise empty.
+      primaryFields: [],
+      secondaryFields: [
         { key: "member", label: "TREUEKARTE", value: displayName },
       ],
-      secondaryFields: [],
       auxiliaryFields: [],
       backFields: [
         {
@@ -209,7 +219,8 @@ function buildPassJson(
         format: "PKBarcodeFormatQR",
         message: `${QR_PREFIX}${customer.id}`,
         messageEncoding: "iso-8859-1",
-        altText: displayName,
+        // No altText. Wallet prints it directly beneath the barcode, which
+        // repeated the name a second time on a card that already shows it.
       },
     ],
   };
