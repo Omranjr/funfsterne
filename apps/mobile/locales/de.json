@@ -144,7 +144,8 @@
     "errorGeneric": "Einlösen fehlgeschlagen. Bitte versuche es erneut.",
     "deviceIdError": "Geräte-ID konnte nicht gelesen werden. Bitte starte die App neu.",
     "dragHint": "ZIEHEN",
-    "razorSubtitle": "Ziehe den Rasierer über einen Gutschein, um ihn auf diesem Gerät einzulösen."
+    "razorSubtitle": "Ziehe den Rasierer über einen Gutschein, um ihn auf diesem Gerät einzulösen.",
+    "usedCodes": "Eingelöste Codes"
   },
   "account": {
     "title": "Konto",

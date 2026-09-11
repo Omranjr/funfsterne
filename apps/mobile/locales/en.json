@@ -144,7 +144,8 @@
     "errorGeneric": "Could not redeem. Please try again.",
     "deviceIdError": "Could not read device id. Please restart the app.",
     "dragHint": "DRAG",
-    "razorSubtitle": "Pull the razor across a coupon to redeem it on this device."
+    "razorSubtitle": "Pull the razor across a coupon to redeem it on this device.",
+    "usedCodes": "Used codes"
   },
   "account": {
     "title": "Account",

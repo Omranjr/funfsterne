@@ -254,6 +254,14 @@ export default function OffersScreen() {
 
   const codes = data ?? [];
 
+  // Live coupons first, then the ones this customer has already used.
+  // `status` comes from the API, which keeps a used coupon in the response
+  // precisely so it can appear here -- the customer asked to be able to look
+  // back at what they claimed. Sorting rather than filtering keeps both in a
+  // single scroll, with the usable ones always at the top.
+  const availableCodes = codes.filter((c) => c.status !== "redeemed");
+  const usedCodes = codes.filter((c) => c.status === "redeemed");
+
   return (
     <Ground>
       <ScrollView
@@ -276,13 +284,18 @@ export default function OffersScreen() {
           {t("offers.razorSubtitle")}
         </Text>
 
-        {codes.length === 0 ? (
+        {/*
+          Keyed on the available list, not the whole response: a customer
+          whose only coupons are used ones would otherwise get a bare "Used
+          codes" heading with no word about why nothing is on offer.
+        */}
+        {availableCodes.length === 0 ? (
           <EmptyState
             title={t("offers.emptyTitle")}
             message={t("offers.emptyMessage")}
           />
         ) : (
-          codes.map((code) => {
+          availableCodes.map((code) => {
             const state = cardStates[code.id] ?? "idle";
             const err = cardErrors[code.id];
             return (
@@ -301,6 +314,36 @@ export default function OffersScreen() {
             );
           })
         )}
+
+        {usedCodes.length > 0 ? (
+          <>
+            <Text
+              style={[
+                typography.micro,
+                styles.usedHeading,
+                { color: theme.textMuted },
+              ]}
+              allowFontScaling={false}
+            >
+              {t("offers.usedCodes")}
+            </Text>
+            {usedCodes.map((code) => (
+              // Forced into the card's "redeemed" state, which is the same
+              // settled look a coupon takes on the moment it is cut: dimmed,
+              // perforation closed, razor gone. The card already disables its
+              // pan gesture in that state, so these cannot be dragged.
+              <RazorCouponCard
+                key={code.id}
+                code={code}
+                state="redeemed"
+                error={undefined}
+                width={width}
+                onRedeem={noop}
+                onReset={noop}
+              />
+            ))}
+          </>
+        ) : null}
       </ScrollView>
     </Ground>
   );
@@ -317,6 +360,9 @@ interface RazorCouponCardProps {
 
 // Fraction of the perforation the razor must travel before the cut
 // completes on its own. Below this it springs back.
+/** Used coupons are inert -- nothing to redeem, nothing to reset. */
+const noop = () => {};
+
 const CUT_THRESHOLD = 0.6;
 
 // ── Coupon geometry (from the reference) ──────────────────────────────
@@ -716,6 +762,12 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: "center",
     justifyContent: "center",
+  },
+  usedHeading: {
+    textTransform: "uppercase",
+    letterSpacing: 1.4,
+    marginTop: 18,
+    marginBottom: 2,
   },
   content: {
     paddingHorizontal: SCREEN_GUTTER,

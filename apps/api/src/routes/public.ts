@@ -107,10 +107,21 @@ export async function publicRoutes(app: FastifyInstance) {
     },
   );
 
-  // Authenticated because the answer is now per-customer: a coupon this
-  // person has already used must not come back. Previously this was
-  // unauthenticated and returned every active code to everybody, so a
-  // redeemed coupon reappeared on the next load and the list only ever grew.
+  // Per-customer, and authenticated for that reason.
+  //
+  // Returns two kinds of coupon, tagged with `status` so the app can put them
+  // in its Active and Used tabs:
+  //
+  //   available -- live, unexpired, not yet at its redemption cap, and not
+  //                already used by this customer
+  //   redeemed  -- this customer has used it. Returned whatever state the
+  //                coupon is in now, because this is their own history: a
+  //                coupon they used should not vanish just because it later
+  //                expired or the shop switched it off.
+  //
+  // Everything else is left out. An expired or withdrawn coupon this customer
+  // never touched has no story to tell them, and showing it would grow the
+  // list forever -- which is the problem this endpoint was built to solve.
   app.get(
     "/discount-codes/active",
     { preHandler: consumerAuthMiddleware },
@@ -119,34 +130,63 @@ export async function publicRoutes(app: FastifyInstance) {
       const userId = request.consumer!.sub;
       const { deviceId } = request.query as { deviceId?: string };
 
+      // Matched on device as well as account when the client tells us its
+      // device id: redemptions made before accounts existed carry a deviceId
+      // but no userId, and those would otherwise look unused.
+      const mine = deviceId ? { OR: [{ userId }, { deviceId }] } : { userId };
+
       const codes = await app.prisma.discountCode.findMany({
         where: {
-          isActive: true,
-          // Expired codes already dropped out here, for every customer.
-          OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
-          // ...and now so does anything this customer has already redeemed.
-          // Matched on device as well as account when the client tells us
-          // its device id: redemptions made before accounts existed carry a
-          // deviceId but no userId, and those would otherwise still show up
-          // as available and fail on redeem.
+          OR: [
+            {
+              isActive: true,
+              OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+              redemptions: { none: mine },
+            },
+            { redemptions: { some: mine } },
+          ],
+        },
+        include: {
+          scopeBranch: true,
+          // Only this customer's own redemption, and only its timestamp --
+          // the app shows when they used it, and no one else's row is any of
+          // their business.
           redemptions: {
-            none: deviceId ? { OR: [{ userId }, { deviceId }] } : { userId },
+            where: mine,
+            select: { redeemedAt: true },
+            orderBy: { redeemedAt: "desc" },
+            take: 1,
           },
         },
-        include: { scopeBranch: true },
         orderBy: { code: "asc" },
       });
 
-      // Prisma cannot compare two columns of the same row in a `where`, so
-      // the "this code is fully used up" test happens here. Without it a
-      // code at its redemption cap stays on every customer's list and fails
-      // every time it is dragged.
-      const available = codes.filter(
-        (c) =>
-          c.maxRedemptions === null || c.currentRedemptions < c.maxRedemptions,
-      );
+      type CustomerCode = Omit<(typeof codes)[number], "redemptions"> & {
+        status: "available" | "redeemed";
+        /** When this customer used it, or null if they have not. */
+        redeemedAt: Date | null;
+      };
 
-      return serializePrisma(available);
+      const result = codes.flatMap<CustomerCode>(({ redemptions, ...code }) => {
+        const redeemedAt = redemptions[0]?.redeemedAt ?? null;
+
+        if (redeemedAt) {
+          return [{ ...code, status: "redeemed", redeemedAt }];
+        }
+
+        // Prisma cannot compare two columns of the same row in a `where`, so
+        // the "fully used up" test happens here. Without it a coupon at its
+        // cap stays on every customer's list and fails every time it is
+        // dragged.
+        const capped =
+          code.maxRedemptions !== null &&
+          code.currentRedemptions >= code.maxRedemptions;
+        if (capped) return [];
+
+        return [{ ...code, status: "available", redeemedAt: null }];
+      });
+
+      return serializePrisma(result);
     },
   );
 

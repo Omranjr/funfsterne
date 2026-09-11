@@ -294,6 +294,16 @@ export function registerPushToken(args: {
 // Returns the list of active discount codes (with optional scopeBranch joined).
 export type DiscountCodeType = "PERCENTAGE" | "FIXED";
 
+/**
+ * Whether this customer can still use a coupon.
+ *
+ * "redeemed" coupons are kept and shown in the Used tab rather than removed:
+ * the customer asked to be able to look back at what they have claimed. The
+ * API leaves out everything else -- expired or withdrawn coupons they never
+ * touched, which would only pad the list.
+ */
+export type DiscountCodeStatus = "available" | "redeemed";
+
 export type DiscountCode = {
   id: string;
   code: string;
@@ -304,6 +314,9 @@ export type DiscountCode = {
   currentRedemptions: number;
   isActive: boolean;
   scopeBranchId: string | null;
+  status: DiscountCodeStatus;
+  /** ISO timestamp of when this customer used it, or null. */
+  redeemedAt: string | null;
   scopeBranch?: {
     id: string;
     name: string;
