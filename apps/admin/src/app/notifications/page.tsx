@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { formatEuro } from "@/lib/format";
 import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -266,7 +267,7 @@ export default function NotificationsPage() {
                 <SelectItem value="none">{t("notifications.none")}</SelectItem>
                 {codes.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
-                    {c.code} ({c.type === "PERCENTAGE" ? `${c.value}%` : `€${c.value}`})
+                    {c.code} ({c.type === "PERCENTAGE" ? `${c.value}%` : formatEuro(c.value, i18n.language)})
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -491,9 +492,9 @@ export default function NotificationsPage() {
                 <TableRow>
                   <TableHead>{t("notifications.sentAt")}</TableHead>
                   <TableHead>{t("notifications.notificationTitle")}</TableHead>
-                  <TableHead>{t("notifications.body")}</TableHead>
-                  <TableHead>{t("notifications.discountCode")}</TableHead>
-                  <TableHead>{t("notifications.audience")}</TableHead>
+                  <TableHead className="hidden sm:table-cell">{t("notifications.body")}</TableHead>
+                  <TableHead className="hidden sm:table-cell">{t("notifications.discountCode")}</TableHead>
+                  <TableHead className="hidden sm:table-cell">{t("notifications.audience")}</TableHead>
                   <TableHead className="text-right">{t("notifications.sentTo")}</TableHead>
                   <TableHead>{t("notifications.delivery")}</TableHead>
                 </TableRow>
@@ -504,14 +505,18 @@ export default function NotificationsPage() {
                     <TableCell>
                       {new Date(n.sentAt).toLocaleString(i18n.language)}
                     </TableCell>
-                    <TableCell className="font-medium">{n.title}</TableCell>
-                    <TableCell>{n.body}</TableCell>
-                    <TableCell>
+                    <TableCell className="font-medium">
+                      <span className="block max-w-[8rem] break-words whitespace-normal sm:max-w-none sm:whitespace-nowrap">
+                        {n.title}
+                      </span>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell">{n.body}</TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       {n.discountCodeId
                         ? codes.find((c) => c.id === n.discountCodeId)?.code ?? "—"
                         : "—"}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       {n.audience === "SEGMENT"
                         ? t("notifications.audienceSegmentShort")
                         : t("notifications.audienceAllShort")}

@@ -219,7 +219,11 @@ export function ProductForm({
           <Label htmlFor="category">{t("products.category")}</Label>
           <Select value={category} onValueChange={(v) => setCategory(v as typeof category)}>
             <SelectTrigger id="category">
-              <SelectValue />
+              <SelectValue>
+                {(value: string | null) =>
+                  value ? t(`productCategories.${value}`) : ""
+                }
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {categories.map((c) => (

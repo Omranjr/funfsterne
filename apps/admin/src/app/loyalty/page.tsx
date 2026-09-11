@@ -227,7 +227,12 @@ export default function LoyaltyScanPage() {
         <label className="text-sm font-medium">{t("loyaltyScan.branch")}</label>
         <Select value={branchId} onValueChange={handleBranchChange}>
           <SelectTrigger>
-            <SelectValue placeholder={t("loyaltyScan.selectBranch")} />
+            <SelectValue placeholder={t("loyaltyScan.selectBranch")}>
+              {(value: string | null) =>
+                branches.find((b) => b.id === value)?.name ??
+                t("loyaltyScan.selectBranch")
+              }
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {branches.map((b) => (

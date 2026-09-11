@@ -99,7 +99,7 @@ export default function UsersPage() {
               <TableRow>
                 <TableHead>{t("common.name")}</TableHead>
                 <TableHead>{t("users.username")}</TableHead>
-                <TableHead>{t("users.joined")}</TableHead>
+                <TableHead className="hidden sm:table-cell">{t("users.joined")}</TableHead>
                 <TableHead className="text-right">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
@@ -110,7 +110,7 @@ export default function UsersPage() {
                     {user.firstName} {user.lastName}
                   </TableCell>
                   <TableCell>{user.username}</TableCell>
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     {new Date(user.createdAt).toLocaleDateString(i18n.language)}
                   </TableCell>
                   <TableCell className="text-right">

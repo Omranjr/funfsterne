@@ -159,8 +159,8 @@ export default function BranchesPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>{t("common.name")}</TableHead>
-                <TableHead>{t("branches.city")}</TableHead>
-                <TableHead>{t("branches.phone")}</TableHead>
+                <TableHead className="hidden sm:table-cell">{t("branches.city")}</TableHead>
+                <TableHead className="hidden sm:table-cell">{t("branches.phone")}</TableHead>
                 <TableHead>{t("common.active")}</TableHead>
                 <TableHead className="text-right">{t("common.actions")}</TableHead>
               </TableRow>
@@ -168,9 +168,13 @@ export default function BranchesPage() {
             <TableBody>
               {filtered.map((branch) => (
                 <TableRow key={branch.id}>
-                  <TableCell className="font-medium">{branch.name}</TableCell>
-                  <TableCell>{branch.city}</TableCell>
-                  <TableCell>{branch.phone ?? "—"}</TableCell>
+                  <TableCell className="font-medium">
+                    <span className="block max-w-[8rem] break-words whitespace-normal sm:max-w-none sm:whitespace-nowrap">
+                      {branch.name}
+                    </span>
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell">{branch.city}</TableCell>
+                  <TableCell className="hidden sm:table-cell">{branch.phone ?? "—"}</TableCell>
                   <TableCell>
                     <Switch
                       checked={branch.isActive}

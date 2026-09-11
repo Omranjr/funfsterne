@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { formatEuro } from "@/lib/format";
 import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -179,10 +180,10 @@ export default function DiscountCodesPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>{t("discountCodes.code")}</TableHead>
-                <TableHead>{t("discountCodes.type")}</TableHead>
+                <TableHead className="hidden sm:table-cell">{t("discountCodes.type")}</TableHead>
                 <TableHead>{t("discountCodes.value")}</TableHead>
-                <TableHead>{t("discountCodes.expiry")}</TableHead>
-                <TableHead>{t("discountCodes.redemptions")}</TableHead>
+                <TableHead className="hidden sm:table-cell">{t("discountCodes.expiry")}</TableHead>
+                <TableHead className="hidden sm:table-cell">{t("discountCodes.redemptions")}</TableHead>
                 <TableHead>{t("common.active")}</TableHead>
                 <TableHead className="text-right">{t("common.actions")}</TableHead>
               </TableRow>
@@ -191,7 +192,7 @@ export default function DiscountCodesPage() {
               {filtered.map((code) => (
                 <TableRow key={code.id}>
                   <TableCell className="font-medium">{code.code}</TableCell>
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     {code.type === "PERCENTAGE"
                       ? t("discountCodes.percentage")
                       : t("discountCodes.fixed")}
@@ -199,14 +200,14 @@ export default function DiscountCodesPage() {
                   <TableCell>
                     {code.type === "PERCENTAGE"
                       ? `${code.value}%`
-                      : `€${Number(code.value).toFixed(2)}`}
+                      : formatEuro(code.value, i18n.language)}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     {code.expiresAt
                       ? new Date(code.expiresAt).toLocaleDateString(i18n.language)
                       : "—"}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell whitespace-nowrap tabular-nums">
                     {code.currentRedemptions} / {code.maxRedemptions ?? "∞"}
                   </TableCell>
                   <TableCell>
@@ -325,7 +326,15 @@ function DiscountCodeForm({
           <Label htmlFor="type">{t("discountCodes.type")}</Label>
           <Select value={type} onValueChange={(v) => setType(v as typeof type)}>
             <SelectTrigger id="type">
-              <SelectValue />
+              <SelectValue>
+                {(value: string | null) =>
+                  value === "PERCENTAGE"
+                    ? t("discountCodes.percentage")
+                    : value === "FIXED"
+                      ? t("discountCodes.fixed")
+                      : ""
+                }
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {types.map((optionType) => (
@@ -383,7 +392,14 @@ function DiscountCodeForm({
           onValueChange={(v) => setScopeBranchId(v === "all" ? null : v)}
         >
           <SelectTrigger id="scopeBranchId">
-            <SelectValue />
+            <SelectValue>
+              {(value: string | null) =>
+                !value || value === "all"
+                  ? t("discountCodes.allBranches")
+                  : branches.find((b) => b.id === value)?.name ??
+                    t("discountCodes.allBranches")
+              }
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t("discountCodes.allBranches")}</SelectItem>

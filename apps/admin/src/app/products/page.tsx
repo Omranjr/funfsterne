@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { formatEuro } from "@/lib/format";
 import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,7 +47,7 @@ import { Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 const categories = ProductCategorySchema.options;
 
 export default function ProductsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -186,7 +187,13 @@ export default function ProductsPage() {
           onValueChange={(v) => setCategoryFilter(v as typeof categoryFilter)}
         >
           <SelectTrigger className="sm:w-56">
-            <SelectValue placeholder={t("products.filterByCategory")} />
+            <SelectValue placeholder={t("products.filterByCategory")}>
+              {(value: string | null) =>
+                !value || value === "all"
+                  ? t("products.allCategories")
+                  : t(`productCategories.${value}`)
+              }
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t("products.allCategories")}</SelectItem>
@@ -219,7 +226,7 @@ export default function ProductsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>{t("common.name")}</TableHead>
-                <TableHead>{t("products.category")}</TableHead>
+                <TableHead className="hidden sm:table-cell">{t("products.category")}</TableHead>
                 <TableHead>{t("products.price")}</TableHead>
                 <TableHead>{t("common.active")}</TableHead>
                 <TableHead className="text-right">{t("common.actions")}</TableHead>
@@ -228,9 +235,17 @@ export default function ProductsPage() {
             <TableBody>
               {filtered.map((product) => (
                 <TableRow key={product.id}>
-                  <TableCell className="font-medium">{product.name}</TableCell>
-                  <TableCell>{t(`productCategories.${product.category}`)}</TableCell>
-                  <TableCell>€{Number(product.basePrice).toFixed(2)}</TableCell>
+                  <TableCell className="font-medium">
+                    <span className="block max-w-[7rem] break-words whitespace-normal sm:max-w-none sm:whitespace-nowrap">
+                      {product.name}
+                    </span>
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell">
+                    {t(`productCategories.${product.category}`)}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap tabular-nums">
+                    {formatEuro(product.basePrice, i18n.language)}
+                  </TableCell>
                   <TableCell>
                     <Switch
                       checked={product.isActive}

@@ -80,7 +80,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen min-h-dvh bg-background">
       {/* Desktop sidebar */}
       <aside className="hidden w-64 flex-col border-e border-sidebar-border bg-sidebar p-4 lg:flex">
         <div className="mb-6 flex items-center justify-between">
@@ -112,7 +112,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Mobile header */}
-      <div className="flex flex-1 flex-col">
+      {/*
+        `min-w-0` is load-bearing, not tidying. A flex item defaults to
+        `min-width: auto`, which refuses to shrink below its content -- so a
+        wide table stretched this column, and with it the whole page, to 851px
+        on a 390px phone. The Table primitive already wraps itself in
+        `overflow-x-auto`, but that never engaged: its `w-full` resolved
+        against a parent that had already grown. Letting this column shrink is
+        what hands the overflow back to the table, where it belongs.
+      */}
+      <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between border-b bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/75 lg:hidden">
           <Wordmark />
           <div className="flex items-center gap-1">
@@ -147,7 +156,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 p-4 lg:p-8">{children}</main>
+        <main className="min-w-0 flex-1 p-4 lg:p-8">{children}</main>
       </div>
     </div>
   );
