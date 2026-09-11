@@ -12,6 +12,7 @@ import { adminRoutes } from "./routes/admin.js";
 import { publicRoutes } from "./routes/public.js";
 import { consumerAuthRoutes } from "./routes/consumer-auth.js";
 import { loyaltyRoutes } from "./routes/loyalty.js";
+import { walletPassRoutes } from "./routes/wallet-pass.js";
 import { uploadRoutes } from "./routes/upload.js";
 import { startRetentionSchedule } from "./services/retention.service.js";
 import { startDeliveryCheckSchedule } from "./services/notification-delivery.service.js";
@@ -33,7 +34,7 @@ import { startDeliveryCheckSchedule } from "./services/notification-delivery.ser
  * backstop: a build predating that change, or a future route that reaches
  * for the old parameter name, must not quietly start leaking again.
  */
-const REDACTED_QUERY_KEYS = new Set(["deviceId", "userId"]);
+const REDACTED_QUERY_KEYS = new Set(["deviceId", "userId", "token"]);
 
 /**
  * The request path with sensitive query values replaced. Keys are kept so
@@ -106,6 +107,7 @@ async function main() {
   await app.register(publicRoutes, { prefix: "/public" });
   await app.register(consumerAuthRoutes, { prefix: "/public/auth" });
   await app.register(loyaltyRoutes, { prefix: "/public/loyalty" });
+  await app.register(walletPassRoutes, { prefix: "/public/wallet-pass" });
 
   // Admin auth + admin-only routes
   await app.register(adminAuthRoutes, { prefix: "/admin/auth" });

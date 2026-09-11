@@ -40,10 +40,24 @@ export interface ConsumerJwtPayload {
   role: "consumer";
 }
 
+/**
+ * Authorises exactly one thing: downloading a customer's Wallet pass.
+ *
+ * The pass is handed to iOS by opening a URL, and the browser that opens it
+ * carries none of the app's session -- so this token travels in the query
+ * string instead. That is why it is minted with a five-minute expiry and why
+ * it gets its own role: a token that spends time in a URL must not be able to
+ * do anything else if it leaks.
+ */
+export interface WalletPassJwtPayload {
+  sub: string;
+  role: "wallet-pass";
+}
+
 // Sharing one @fastify/jwt instance (one secret) with the admin token above
 // is safe: the `role` claim is checked on every guard, so a consumer token
 // can never pass requireAdmin and vice versa -- there's no route that
-// accepts either role interchangeably.
+// accepts either role interchangeably. The same holds for `wallet-pass`.
 export async function requireConsumer(
   request: FastifyRequest,
 ): Promise<ConsumerJwtPayload> {
