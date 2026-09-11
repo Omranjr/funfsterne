@@ -16,6 +16,7 @@ import i18n, {
   detectBrowserLanguage,
   type LanguageCode,
 } from "@/lib/i18n";
+import { readStored, writeStored } from "@/lib/safe-storage";
 
 interface LanguageContextValue {
   language: LanguageCode;
@@ -33,7 +34,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<LanguageCode>("en");
 
   useEffect(() => {
-    const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    const stored = readStored(LANGUAGE_STORAGE_KEY);
     const lang = isSupportedLanguage(stored) ? stored : detectBrowserLanguage();
     i18n.changeLanguage(lang);
     applyDirection(lang);
@@ -41,7 +42,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setLanguage = useCallback((lang: LanguageCode) => {
-    localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
+    writeStored(LANGUAGE_STORAGE_KEY, lang);
     i18n.changeLanguage(lang);
     applyDirection(lang);
     setLanguageState(lang);

@@ -102,6 +102,16 @@ export default function NotificationsPage() {
       }
       const data = (await res.json()) as { customers: CustomerVisitSummary[] };
       setCustomers(data.customers);
+      // Drop anyone who is no longer in the list. Changing the period
+      // reloads `customers`, and without this the ids of people from the
+      // previous period stayed selected -- invisibly, because the counts on
+      // screen are computed from the *filtered* list. The owner saw "3
+      // selected" and the send went to everyone still in the set.
+      const stillPresent = new Set(data.customers.map((c) => c.userId));
+      setSelectedIds((prev) => {
+        const next = new Set(Array.from(prev).filter((id) => stillPresent.has(id)));
+        return next.size === prev.size ? prev : next;
+      });
       return data.customers;
     },
     [t],
@@ -161,24 +171,33 @@ export default function NotificationsPage() {
   const load = useCallback(async () => {
     setLoading(true);
     setFailed(false);
-    const [notificationsRes, codesRes, countRes] = await Promise.all([
-      apiFetch("/admin/notifications"),
-      apiFetch("/admin/discount-codes"),
-      apiFetch("/admin/notifications/recipient-count"),
-    ]);
-    if (notificationsRes.ok) {
-      setNotifications((await notificationsRes.json()) as Notification[]);
-    } else {
+    // try/finally so a malformed body cannot strand the page on its skeleton
+    // -- `apiFetch` no longer throws on network failure, but `res.json()`
+    // still does, and the loading flag is cleared after it.
+    try {
+      const [notificationsRes, codesRes, countRes] = await Promise.all([
+        apiFetch("/admin/notifications"),
+        apiFetch("/admin/discount-codes"),
+        apiFetch("/admin/notifications/recipient-count"),
+      ]);
+      if (notificationsRes.ok) {
+        setNotifications((await notificationsRes.json()) as Notification[]);
+      } else {
+        setFailed(true);
+        toast.error(t("notifications.loadError"), { description: t("common.tryAgain") });
+      }
+      if (codesRes.ok) {
+        setCodes((await codesRes.json()) as DiscountCode[]);
+      }
+      if (countRes.ok) {
+        setRecipientCount(((await countRes.json()) as { count: number }).count);
+      }
+    } catch {
       setFailed(true);
       toast.error(t("notifications.loadError"), { description: t("common.tryAgain") });
+    } finally {
+      setLoading(false);
     }
-    if (codesRes.ok) {
-      setCodes((await codesRes.json()) as DiscountCode[]);
-    }
-    if (countRes.ok) {
-      setRecipientCount(((await countRes.json()) as { count: number }).count);
-    }
-    setLoading(false);
   }, [t]);
 
   useEffect(() => {
@@ -187,36 +206,67 @@ export default function NotificationsPage() {
 
   async function handleSend() {
     setSending(true);
-    const res = await apiFetch("/admin/notifications/send", {
-      method: "POST",
-      body: JSON.stringify({
-        title,
-        body,
-        discountCodeId: discountCodeId ?? undefined,
-        target: audience,
-        ...(audience === "users" ? { userIds: Array.from(selectedIds) } : {}),
-      }),
-    });
-
-    if (res.ok) {
-      const data = (await res.json()) as { notification: Notification; sent: number };
-      setNotifications((prev) => [data.notification, ...prev]);
-      setTitle("");
-      setBody("");
-      setDiscountCodeId(null);
-      setConfirmOpen(false);
-      toast.success(
-        data.sent === 1
-          ? t("notifications.notificationSent", { count: data.sent })
-          : t("notifications.notificationSentPlural", { count: data.sent }),
-      );
-    } else {
-      toast.error(t("notifications.couldNotSend"), {
-        description: t("notifications.dialogStaysOpen"),
+    try {
+      const res = await apiFetch("/admin/notifications/send", {
+        method: "POST",
+        body: JSON.stringify({
+          title,
+          body,
+          discountCodeId: discountCodeId ?? undefined,
+          target: audience,
+          // Derived from `selectedCustomers`, not the raw id set: this is
+          // exactly the list the confirmation dialog counted, so what is
+          // sent can never be a superset of what was shown.
+          ...(audience === "users"
+            ? { userIds: selectedCustomers.map((c) => c.userId) }
+            : {}),
+        }),
       });
-    }
 
-    setSending(false);
+      if (res.ok) {
+        // `queued` -- the API renamed this from `sent` deliberately, because
+        // Expo accepting a message is not delivery. Reading the old name
+        // silently produced "sent to undefined devices".
+        const data = (await res.json()) as {
+          notification: Notification;
+          queued: number;
+          transportError?: string;
+        };
+        const queued = data.queued ?? 0;
+
+        setNotifications((prev) => [data.notification, ...prev]);
+        setTitle("");
+        setBody("");
+        setDiscountCodeId(null);
+        setConfirmOpen(false);
+
+        if (data.transportError) {
+          // The whole send failed before Expo looked at any message --
+          // almost always a bad EXPO_ACCESS_TOKEN. Saying "sent to 0" here
+          // would hide a misconfiguration behind a success toast.
+          toast.error(t("notifications.couldNotSend"), {
+            description: data.transportError,
+          });
+        } else {
+          toast.success(
+            queued === 1
+              ? t("notifications.notificationSent", { count: queued })
+              : t("notifications.notificationSentPlural", { count: queued }),
+          );
+        }
+      } else {
+        toast.error(t("notifications.couldNotSend"), {
+          description: t("notifications.dialogStaysOpen"),
+        });
+      }
+    } catch {
+      // `res.json()` on a malformed body is the only path left that throws.
+      toast.error(t("notifications.couldNotSend"), {
+        description: t("common.tryAgain"),
+      });
+    } finally {
+      setSending(false);
+    }
   }
 
   return (

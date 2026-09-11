@@ -38,14 +38,24 @@ export default function UsersPage() {
   const load = useCallback(async () => {
     setLoading(true);
     setFailed(false);
-    const res = await apiFetch("/admin/consumer-users");
-    if (res.ok) {
-      setUsers((await res.json()) as ConsumerUser[]);
-    } else {
+    // try/finally so a malformed body can never strand the page on its
+    // skeleton. `apiFetch` no longer throws on a network failure, but
+    // `res.json()` still does -- a 200 carrying a proxy's HTML error page is
+    // enough -- and the loading flag is cleared on the line after it.
+    try {
+      const res = await apiFetch("/admin/consumer-users");
+      if (res.ok) {
+        setUsers((await res.json()) as ConsumerUser[]);
+      } else {
+        setFailed(true);
+        toast.error(t("users.loadError"), { description: t("common.tryAgain") });
+      }
+    } catch {
       setFailed(true);
       toast.error(t("users.loadError"), { description: t("common.tryAgain") });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, [t]);
 
   useEffect(() => {

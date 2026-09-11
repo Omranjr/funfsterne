@@ -17,7 +17,9 @@
     "checkFormValues": "Please check the form values.",
     "edit": "Edit",
     "delete": "Delete",
-    "removeImage": "Remove image"
+    "removeImage": "Remove image",
+    "switchToLightMode": "Switch to light mode",
+    "switchToDarkMode": "Switch to dark mode"
   },
   "productCategories": {
     "HAIR": "Hair",

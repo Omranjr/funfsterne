@@ -5,6 +5,7 @@ import { BrowserQRCodeReader, type IScannerControls } from "@zxing/browser";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "@/lib/api";
+import { readStored, writeStored } from "@/lib/safe-storage";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -57,7 +58,7 @@ export default function LoyaltyScanPage() {
         if (!res.ok) throw new Error("branches request failed");
         const data = (await res.json()) as Branch[];
         setBranches(data);
-        const stored = localStorage.getItem(BRANCH_STORAGE_KEY);
+        const stored = readStored(BRANCH_STORAGE_KEY);
         if (stored && data.some((b) => b.id === stored)) {
           setBranchId(stored);
         } else if (data.length > 0) {
@@ -72,7 +73,7 @@ export default function LoyaltyScanPage() {
   const handleBranchChange = useCallback((value: string | null) => {
     if (!value) return;
     setBranchId(value);
-    localStorage.setItem(BRANCH_STORAGE_KEY, value);
+    writeStored(BRANCH_STORAGE_KEY, value);
   }, []);
 
   const handleDecoded = useCallback(

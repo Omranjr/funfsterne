@@ -17,7 +17,9 @@
     "checkFormValues": "يرجى التحقق من قيم النموذج.",
     "edit": "تعديل",
     "delete": "حذف",
-    "removeImage": "إزالة الصورة"
+    "removeImage": "إزالة الصورة",
+    "switchToLightMode": "التبديل إلى الوضع الفاتح",
+    "switchToDarkMode": "التبديل إلى الوضع الداكن"
   },
   "productCategories": {
     "HAIR": "الشعر",

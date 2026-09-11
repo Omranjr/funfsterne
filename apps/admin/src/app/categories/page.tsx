@@ -136,6 +136,19 @@ export default function CategoriesPage() {
           ...prev,
           [category]: Date.now(),
         }));
+      } catch {
+        // The `finally` already clears the spinner, but without this the
+        // failure was silent: the image looked saved while the database had
+        // nothing. Reload so what is on screen is what was actually stored.
+        const detail = t("common.somethingWrong");
+        setErrors((prev) => ({ ...prev, [category]: detail }));
+        toast.error(
+          t("categories.couldNotSave", {
+            category: t(`productCategories.${category}`),
+          }),
+          { description: detail },
+        );
+        await load();
       } finally {
         setSaving((prev) => ({ ...prev, [category]: false }));
       }

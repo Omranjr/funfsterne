@@ -55,22 +55,31 @@ export default function DiscountCodesPage() {
   const load = useCallback(async () => {
     setLoading(true);
     setFailed(false);
-    const [codesRes, branchesRes] = await Promise.all([
-      apiFetch("/admin/discount-codes"),
-      apiFetch("/admin/branches"),
-    ]);
-    if (codesRes.ok) {
-      setCodes((await codesRes.json()) as DiscountCode[]);
-    } else {
+    // try/finally so a malformed body cannot strand the page on its skeleton
+    // -- `apiFetch` no longer throws on network failure, but `res.json()`
+    // still does, and the loading flag is cleared after it.
+    try {
+      const [codesRes, branchesRes] = await Promise.all([
+        apiFetch("/admin/discount-codes"),
+        apiFetch("/admin/branches"),
+      ]);
+      if (codesRes.ok) {
+        setCodes((await codesRes.json()) as DiscountCode[]);
+      } else {
+        setFailed(true);
+      }
+      if (branchesRes.ok) {
+        setBranches((await branchesRes.json()) as Branch[]);
+      }
+      if (!codesRes.ok) {
+        toast.error(t("discountCodes.loadError"), { description: t("common.tryAgain") });
+      }
+    } catch {
       setFailed(true);
-    }
-    if (branchesRes.ok) {
-      setBranches((await branchesRes.json()) as Branch[]);
-    }
-    if (!codesRes.ok) {
       toast.error(t("discountCodes.loadError"), { description: t("common.tryAgain") });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, [t]);
 
   useEffect(() => {
@@ -274,7 +283,6 @@ function DiscountCodeForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setLoading(true);
 
     const payload = {
       code: formCode,
@@ -286,25 +294,31 @@ function DiscountCodeForm({
       isActive,
     };
 
-    const res = code
-      ? await apiFetch(`/admin/discount-codes/${code.id}`, {
-          method: "PATCH",
-          body: JSON.stringify(payload),
-        })
-      : await apiFetch("/admin/discount-codes", {
-          method: "POST",
-          body: JSON.stringify(payload),
-        });
+    setLoading(true);
+    try {
+      const res = code
+        ? await apiFetch(`/admin/discount-codes/${code.id}`, {
+            method: "PATCH",
+            body: JSON.stringify(payload),
+          })
+        : await apiFetch("/admin/discount-codes", {
+            method: "POST",
+            body: JSON.stringify(payload),
+          });
 
-    if (!res.ok) {
+      if (!res.ok) {
+        setError(t("discountCodes.failedToSave"));
+        return;
+      }
+
+      onSaved((await res.json()) as DiscountCode);
+    } catch {
+      // `res.json()` on a malformed body was the one path that skipped the
+      // line re-enabling Save, leaving the dialog stuck and silent.
       setError(t("discountCodes.failedToSave"));
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const saved = (await res.json()) as DiscountCode;
-    onSaved(saved);
-    setLoading(false);
   }
 
   return (

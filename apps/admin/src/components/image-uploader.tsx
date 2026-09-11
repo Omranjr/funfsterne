@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useTranslation } from "react-i18next";
 import { API_BASE_URL, apiHeaders } from "@/lib/api";
@@ -28,6 +28,15 @@ export function ImageUploader({
   // they persist with the form state.
   const [inFlight, setInFlight] = useState<FileStatus[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
+  const clearTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (clearTimerRef.current !== null) {
+        window.clearTimeout(clearTimerRef.current);
+      }
+    };
+  }, []);
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
@@ -104,9 +113,18 @@ export function ImageUploader({
         setErrors(newErrors);
       }
 
-      // Drop the "uploading" rows from the in-flight list; "uploaded" rows
-      // stay briefly so the success tick is visible, then clear.
-      window.setTimeout(() => {
+      // Clear the finished rows after a beat so the success tick is visible
+      // first. Nothing is still "uploading" by this point -- each row was set
+      // to uploaded or error in the loop -- so this empties the list. Failures
+      // are not lost with it: they are rendered from `errors`, which persists.
+      //
+      // Tracked in a ref and cleared on unmount: this dialog is usually
+      // closed immediately after a save, well inside the 1.5s.
+      if (clearTimerRef.current !== null) {
+        window.clearTimeout(clearTimerRef.current);
+      }
+      clearTimerRef.current = window.setTimeout(() => {
+        clearTimerRef.current = null;
         setInFlight((prev) => prev.filter((f) => f.status === "uploading"));
       }, 1500);
     },

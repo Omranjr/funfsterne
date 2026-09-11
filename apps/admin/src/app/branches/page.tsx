@@ -40,14 +40,24 @@ export default function BranchesPage() {
   const load = useCallback(async () => {
     setLoading(true);
     setFailed(false);
-    const res = await apiFetch("/admin/branches");
-    if (res.ok) {
-      setBranches((await res.json()) as Branch[]);
-    } else {
+    // try/finally so a malformed body can never strand the page on its
+    // skeleton. `apiFetch` no longer throws on a network failure, but
+    // `res.json()` still does -- a 200 carrying a proxy's HTML error page is
+    // enough -- and the loading flag is cleared on the line after it.
+    try {
+      const res = await apiFetch("/admin/branches");
+      if (res.ok) {
+        setBranches((await res.json()) as Branch[]);
+      } else {
+        setFailed(true);
+        toast.error(t("branches.loadError"), { description: t("common.tryAgain") });
+      }
+    } catch {
       setFailed(true);
       toast.error(t("branches.loadError"), { description: t("common.tryAgain") });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, [t]);
 
   useEffect(() => {
@@ -226,7 +236,6 @@ function BranchForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setLoading(true);
 
     const parse = CreateBranchSchema.safeParse({
       name,
@@ -237,31 +246,39 @@ function BranchForm({
       isActive,
     });
 
+    // Validated before the flag is raised, so an invalid form never has to
+    // lower it again on the way out.
     if (!parse.success) {
       setError(t("common.checkFormValues"));
-      setLoading(false);
       return;
     }
 
-    const res = branch
-      ? await apiFetch(`/admin/branches/${branch.id}`, {
-          method: "PATCH",
-          body: JSON.stringify(parse.data),
-        })
-      : await apiFetch("/admin/branches", {
-          method: "POST",
-          body: JSON.stringify(parse.data),
-        });
+    setLoading(true);
+    try {
+      const res = branch
+        ? await apiFetch(`/admin/branches/${branch.id}`, {
+            method: "PATCH",
+            body: JSON.stringify(parse.data),
+          })
+        : await apiFetch("/admin/branches", {
+            method: "POST",
+            body: JSON.stringify(parse.data),
+          });
 
-    if (!res.ok) {
+      if (!res.ok) {
+        setError(t("branches.failedToSave"));
+        return;
+      }
+
+      onSaved((await res.json()) as Branch);
+    } catch {
+      // `res.json()` on a malformed body is the only remaining throw, and it
+      // used to skip the line that re-enables Save -- leaving the dialog
+      // stuck with no error shown.
       setError(t("branches.failedToSave"));
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const saved = (await res.json()) as Branch;
-    onSaved(saved);
-    setLoading(false);
   }
 
   return (

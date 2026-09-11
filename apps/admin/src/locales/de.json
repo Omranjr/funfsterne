@@ -17,7 +17,9 @@
     "checkFormValues": "Bitte überprüfen Sie die Formularwerte.",
     "edit": "Bearbeiten",
     "delete": "Löschen",
-    "removeImage": "Bild entfernen"
+    "removeImage": "Bild entfernen",
+    "switchToLightMode": "Zum hellen Modus wechseln",
+    "switchToDarkMode": "Zum dunklen Modus wechseln"
   },
   "productCategories": {
     "HAIR": "Haare",

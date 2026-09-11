@@ -105,7 +105,6 @@ export function ProductForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setLoading(true);
 
     const parse = CreateProductSchema.safeParse({
       name,
@@ -116,63 +115,74 @@ export function ProductForm({
       isActive,
     });
 
+    // Validated before the flag is raised, so an invalid form never has to
+    // lower it again on the way out.
     if (!parse.success) {
       setError(t("common.checkFormValues"));
-      setLoading(false);
       return;
     }
 
-    const payload = parse.data;
-    const res = product
-      ? await apiFetch(`/admin/products/${product.id}`, {
-          method: "PATCH",
-          body: JSON.stringify(payload),
-        })
-      : await apiFetch("/admin/products", {
-          method: "POST",
-          body: JSON.stringify(payload),
-        });
+    setLoading(true);
+    try {
+      const payload = parse.data;
+      const res = product
+        ? await apiFetch(`/admin/products/${product.id}`, {
+            method: "PATCH",
+            body: JSON.stringify(payload),
+          })
+        : await apiFetch("/admin/products", {
+            method: "POST",
+            body: JSON.stringify(payload),
+          });
 
-    if (!res.ok) {
-      setError(t("products.failedToSave"));
-      setLoading(false);
-      return;
-    }
-
-    const saved = (await res.json()) as Product;
-
-    const availabilityFailures: string[] = [];
-    for (const branchId of Object.keys(availability)) {
-      const a = availability[branchId];
-      if (!a) continue;
-      const availRes = await apiFetch(`/admin/products/${saved.id}/availability`, {
-        method: "PUT",
-        body: JSON.stringify({
-          branchId,
-          inStock: a.inStock,
-          priceOverride: a.priceOverride ? Number(a.priceOverride) : undefined,
-        }),
-      });
-      if (!availRes.ok) {
-        const branchName = branches.find((b) => b.id === branchId)?.name ?? branchId;
-        availabilityFailures.push(branchName);
+      if (!res.ok) {
+        setError(t("products.failedToSave"));
+        return;
       }
-    }
-    if (availabilityFailures.length > 0) {
-      toast.error(t("products.someAvailabilityFailed"), {
-        description: t("products.pleaseRetryFor", { branches: availabilityFailures.join(", ") }),
-      });
-    }
 
-    const refreshed = await apiFetch(`/admin/products/${saved.id}`);
-    if (refreshed.ok) {
-      const full = (await refreshed.json()) as Product;
-      onSaved(full);
-    } else {
-      onSaved(saved);
-    }
+      const saved = (await res.json()) as Product;
 
-    setLoading(false);
+      const availabilityFailures: string[] = [];
+      for (const branchId of Object.keys(availability)) {
+        const a = availability[branchId];
+        if (!a) continue;
+        const availRes = await apiFetch(`/admin/products/${saved.id}/availability`, {
+          method: "PUT",
+          body: JSON.stringify({
+            branchId,
+            inStock: a.inStock,
+            priceOverride: a.priceOverride ? Number(a.priceOverride) : undefined,
+          }),
+        });
+        if (!availRes.ok) {
+          const branchName = branches.find((b) => b.id === branchId)?.name ?? branchId;
+          availabilityFailures.push(branchName);
+        }
+      }
+      if (availabilityFailures.length > 0) {
+        toast.error(t("products.someAvailabilityFailed"), {
+          description: t("products.pleaseRetryFor", {
+            branches: availabilityFailures.join(", "),
+          }),
+        });
+      }
+
+      const refreshed = await apiFetch(`/admin/products/${saved.id}`);
+      if (refreshed.ok) {
+        const full = (await refreshed.json()) as Product;
+        onSaved(full);
+      } else {
+        onSaved(saved);
+      }
+    } catch {
+      // This handler makes several round trips -- create, one availability
+      // PUT per branch, then a refresh -- and any of their `res.json()`
+      // calls can throw on a malformed body. That used to skip the line
+      // re-enabling Save, leaving the dialog stuck with no error shown.
+      setError(t("products.failedToSave"));
+    } finally {
+      setLoading(false);
+    }
   }
 
   function updateAvailability(

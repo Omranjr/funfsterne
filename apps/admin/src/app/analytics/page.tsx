@@ -86,10 +86,27 @@ export default function AnalyticsPage() {
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   useEffect(() => {
-    apiFetch("/admin/consumer-users").then(async (res) => {
-      if (res.ok) setUsers((await res.json()) as ConsumerUser[]);
-    });
-  }, []);
+    let cancelled = false;
+    // Unhandled before. A failure here leaves `users` empty, which makes the
+    // customer filter silently match nothing -- indistinguishable from "no
+    // such customer" -- and a malformed body rejected into the void.
+    apiFetch("/admin/consumer-users")
+      .then(async (res) => {
+        if (!res.ok) throw new Error("Failed to load consumer users");
+        const data = (await res.json()) as ConsumerUser[];
+        if (!cancelled) setUsers(data);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          toast.error(t("analytics.loadError"), {
+            description: t("analytics.loadErrorDescription"),
+          });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [t]);
 
   const load = useCallback(() => {
     let cancelled = false;

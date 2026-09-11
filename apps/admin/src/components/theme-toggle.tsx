@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { Moon, Sun } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 
 export function ThemeToggle() {
+  const { t } = useTranslation();
   const { resolvedTheme, setTheme } = useTheme();
   // next-themes can't know the real theme until it reads localStorage on
   // the client, so resolvedTheme is undefined for one render -- rendering
@@ -20,7 +22,9 @@ export function ThemeToggle() {
       type="button"
       variant="ghost"
       size="icon"
-      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      aria-label={
+        isDark ? t("common.switchToLightMode") : t("common.switchToDarkMode")
+      }
       onClick={() => setTheme(isDark ? "light" : "dark")}
     >
       {mounted ? isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" /> : null}

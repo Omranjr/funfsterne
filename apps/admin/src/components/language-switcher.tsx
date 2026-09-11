@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,6 +12,7 @@ import { useLanguage, SUPPORTED_LANGUAGES } from "@/components/language-provider
 import { Check } from "lucide-react";
 
 export function LanguageSwitcher() {
+  const { t } = useTranslation();
   const { language, setLanguage } = useLanguage();
   const current = SUPPORTED_LANGUAGES.find((l) => l.code === language) ?? SUPPORTED_LANGUAGES[0];
 
@@ -18,7 +20,7 @@ export function LanguageSwitcher() {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button type="button" variant="ghost" size="icon" aria-label="Change language">
+          <Button type="button" variant="ghost" size="icon" aria-label={t("common.language")}>
             <span className="text-base leading-none">{current.flag}</span>
           </Button>
         }
