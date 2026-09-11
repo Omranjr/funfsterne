@@ -193,7 +193,10 @@
     "redeemErrorInsufficientPoints": "Du hast dafür nicht mehr genügend Punkte.",
     "redeemErrorGeneric": "Einlösen momentan nicht möglich. Bitte versuche es erneut.",
     "loadErrorTitle": "Deine Punkte konnten nicht geladen werden",
-    "loadErrorMessage": "Bitte versuche es gleich noch einmal."
+    "loadErrorMessage": "Bitte versuche es gleich noch einmal.",
+    "addToWallet": "Zur Apple Wallet hinzufügen",
+    "addToWalletErrorTitle": "Karte nicht hinzugefügt",
+    "addToWalletErrorMessage": "Die Treuekarte konnte gerade nicht geladen werden. Bitte versuche es später noch einmal."
   },
   "notificationsPermission": {
     "title": "Immer informiert bleiben",

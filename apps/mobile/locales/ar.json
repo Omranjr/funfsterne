@@ -193,7 +193,10 @@
     "redeemErrorInsufficientPoints": "لم يعد لديك نقاط كافية لهذا.",
     "redeemErrorGeneric": "تعذّر الاستبدال حاليًا. يرجى المحاولة مرة أخرى.",
     "loadErrorTitle": "تعذّر تحميل نقاطك",
-    "loadErrorMessage": "يرجى المحاولة مرة أخرى بعد قليل."
+    "loadErrorMessage": "يرجى المحاولة مرة أخرى بعد قليل.",
+    "addToWallet": "أضف إلى Apple Wallet",
+    "addToWalletErrorTitle": "لم تتم إضافة البطاقة",
+    "addToWalletErrorMessage": "تعذّر تحميل بطاقة الولاء الآن. يرجى المحاولة مرة أخرى لاحقًا."
   },
   "notificationsPermission": {
     "title": "ابقَ على اطلاع دائم",

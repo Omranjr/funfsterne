@@ -32,7 +32,14 @@ import {
 import { useTheme } from "@/contexts/ThemeContext";
 import { typography, borderRadius, screenTopPadding } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
-import { Card, Button, Badge, EmptyState, Ground } from "@/components";
+import {
+  Card,
+  Button,
+  Badge,
+  EmptyState,
+  Ground,
+  AddToWalletButton,
+} from "@/components";
 import { useLoyaltyMe } from "@/hooks/usePublicData";
 import { redeemLoyaltyPoints, PublicApiError } from "@/lib/api";
 import { queryClient } from "@/lib/query-client";
@@ -282,6 +289,7 @@ export default function LoyaltyScreen() {
             />
           ) : null}
         </View>
+        <AddToWalletButton />
       </Card>
 
       {activeRewards.length > 0 ? (

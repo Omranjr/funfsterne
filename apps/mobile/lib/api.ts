@@ -508,3 +508,30 @@ export function redeemLoyaltyPoints(
     body: JSON.stringify({ points }),
   });
 }
+
+type WalletPassTokenResponse = {
+  token: string;
+  expiresIn: string;
+};
+
+/**
+ * Builds the URL that hands the loyalty pass to Apple Wallet.
+ *
+ * iOS adds a pass by *opening* it: given a URL that answers with
+ * `application/vnd.apple.pkpass`, it shows the native "Add to Apple Wallet"
+ * sheet itself. Nothing here needs a native module.
+ *
+ * The catch is that whatever opens the URL — Safari — carries none of the
+ * app's session, so the download cannot use the bearer token like every other
+ * call. Instead we mint a short-lived token while we *are* authenticated and
+ * put it in the URL. It expires in five minutes and its `wallet-pass` role
+ * lets it do nothing else.
+ */
+export async function getWalletPassUrl(): Promise<string> {
+  const { token } = await publicApiFetch<WalletPassTokenResponse>(
+    "/public/wallet-pass/token",
+    { method: "POST" }
+  );
+
+  return `${API_BASE_URL}/public/wallet-pass?token=${encodeURIComponent(token)}`;
+}

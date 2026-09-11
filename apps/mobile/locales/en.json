@@ -193,7 +193,10 @@
     "redeemErrorInsufficientPoints": "You no longer have enough points for this.",
     "redeemErrorGeneric": "Could not redeem right now. Please try again.",
     "loadErrorTitle": "Could not load your points",
-    "loadErrorMessage": "Please try again in a moment."
+    "loadErrorMessage": "Please try again in a moment.",
+    "addToWallet": "Add to Apple Wallet",
+    "addToWalletErrorTitle": "Card not added",
+    "addToWalletErrorMessage": "Your loyalty card could not be loaded just now. Please try again later."
   },
   "notificationsPermission": {
     "title": "Stay in the loop",
