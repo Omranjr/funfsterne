@@ -3,9 +3,16 @@ import { View, Text, StyleSheet, ScrollView, Alert, Linking, Pressable } from "r
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
+import { useArabicTextStyle } from "@/hooks/useArabicText";
+import {
+  useNotificationPermission,
+  useExpoPushToken,
+  useRegisterPushToken,
+  getPlatformType,
+} from "@/hooks/useNotifications";
 import { PRIVACY_URL } from "@/constants/links";
 import { logSwallowed } from "@/lib/log";
-import { User, ChevronRight } from "lucide-react-native";
+import { User, ChevronRight, Bell } from "lucide-react-native";
 import { useTheme } from "@/contexts/ThemeContext";
 import { typography, screenTopPadding } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,7 +42,12 @@ export default function AccountScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t, i18n } = useTranslation();
+  const arabicText = useArabicTextStyle();
   const { user, logout, deleteAccount } = useAuth();
+  const { status: notificationStatus, request: requestNotifications } =
+    useNotificationPermission();
+  const { refresh: refreshPushToken } = useExpoPushToken();
+  const { mutateAsync: registerPushToken } = useRegisterPushToken();
   const [deleting, setDeleting] = useState(false);
 
   const currentLanguage =
@@ -64,6 +76,73 @@ export default function AccountScreen() {
     // On success, isAuthenticated flips false and the root layout's boot
     // sequence sends the user back to sign-up/log-in on its own.
   }, [deleteAccount, t]);
+
+  // Notifications can only be turned on from here in one of two ways, and
+  // which one depends on whether the OS has already asked.
+  //
+  //   undetermined -- they tapped "Not now" on our own pre-permission
+  //                   screen, so the real OS prompt was never shown and we
+  //                   can still show it.
+  //   denied       -- they said no to the OS prompt itself. Neither iOS nor
+  //                   Android will ever show it again, so asking is pointless
+  //                   and looks broken; the only route is the system settings.
+  //
+  // Getting this backwards is the usual bug here: a button that re-asks does
+  // nothing at all for the people most likely to press it.
+  const handleNotifications = useCallback(async () => {
+    if (notificationStatus === "undetermined") {
+      const next = await requestNotifications();
+      if (next === "granted") {
+        // Register the token here rather than leaving it to
+        // `usePushTokenSync`. That hook only re-syncs when the app returns
+        // to the foreground, and a permission prompt is a system alert --
+        // it never backgrounds the app. Without this, someone who enabled
+        // notifications from this screen would receive nothing until they
+        // happened to switch apps. Registration upserts, so doing it twice
+        // costs one request and changes nothing.
+        try {
+          const token = await refreshPushToken();
+          if (token) {
+            await registerPushToken({ token, platform: getPlatformType() });
+          }
+        } catch (error) {
+          // The foreground sync will retry; no need to trouble the customer.
+          logSwallowed("register-after-opt-in", error);
+        }
+        return;
+      }
+      // They have now used up the one prompt the OS allows. Say where to go
+      // rather than leaving the row stubbornly reading "Off".
+      Alert.alert(
+        t("account.notificationsBlockedTitle"),
+        t("account.notificationsBlockedMessage"),
+        [
+          { text: t("common.cancel"), style: "cancel" },
+          {
+            text: t("account.openSettings"),
+            onPress: () => {
+              Linking.openSettings().catch((error) =>
+                logSwallowed("open-settings", error),
+              );
+            },
+          },
+        ],
+      );
+      return;
+    }
+
+    // Granted or denied: both are changed in the same place. The status
+    // refreshes on its own when the app comes back to the foreground.
+    Linking.openSettings().catch((error) =>
+      logSwallowed("open-settings", error),
+    );
+  }, [
+    notificationStatus,
+    requestNotifications,
+    refreshPushToken,
+    registerPushToken,
+    t,
+  ]);
 
   const handleDeleteAccount = useCallback(() => {
     Alert.alert(t("account.deleteConfirmTitle"), t("account.deleteConfirmMessage"), [
@@ -117,6 +196,21 @@ export default function AccountScreen() {
         <ThemeToggle />
       </Card>
 
+      <Pressable onPress={handleNotifications}>
+        <Card style={styles.settingRow}>
+          <Bell size={18} color={theme.gold} />
+          <Text style={[typography.bodyMd, styles.settingLabel, { color: theme.text }]}>
+            {t("account.notifications")}
+          </Text>
+          <Text style={[typography.bodySm, { color: theme.textMuted }]}>
+            {notificationStatus === "granted"
+              ? t("account.notificationsOn")
+              : t("account.notificationsOff")}
+          </Text>
+          <ChevronRight size={18} color={theme.textMuted} />
+        </Card>
+      </Pressable>
+
       <View style={styles.actions}>
         <Button
           title={t("account.logOut")}
@@ -137,7 +231,7 @@ export default function AccountScreen() {
       <Text
         onPress={() => { void openPrivacyPolicy(t); }}
         accessibilityRole="link"
-        style={[typography.micro, styles.privacyLink, { color: theme.textMuted }]}
+        style={[typography.micro, styles.privacyLink, arabicText, { color: theme.textMuted }]}
       >
         {t("account.privacyPolicy")}
       </Text>

@@ -3,7 +3,6 @@ import {
   CreateBranchSchema,
   CreateProductSchema,
   CreateDiscountCodeSchema,
-  CreateNotificationSchema,
   ProductCategorySchema,
   ProductSchema,
   SendNotificationSchema,
@@ -85,6 +84,26 @@ export async function adminRoutes(app: FastifyInstance) {
     const id = BranchSchema.shape.id.parse(
       (request.params as { id: string }).id,
     );
+
+    // Availability rows cascade with the branch. Since "no availability row"
+    // means "not carried here", deleting a branch quietly erases which
+    // products it stocked -- unrecoverable, and invisible until someone
+    // reopens the shop and finds the catalogue empty.
+    //
+    // Deactivating hides a branch from customers (the public endpoint
+    // filters on isActive) while keeping all of that intact.
+    const stocked = await app.prisma.productBranchAvailability.count({
+      where: { branchId: id },
+    });
+    if (stocked > 0) {
+      return reply.status(409).send({
+        errorCode: "BRANCH_IN_USE",
+        error:
+          "This branch still has product availability set. Deactivate it instead -- deleting would erase which products it stocks.",
+        products: stocked,
+      });
+    }
+
     await app.prisma.branch.delete({ where: { id } });
     return reply.status(204).send();
   });
@@ -204,7 +223,14 @@ export async function adminRoutes(app: FastifyInstance) {
     const id = (request.params as { id: string }).id;
     const discount = await app.prisma.discountCode.findUnique({
       where: { id },
-      include: { scopeBranch: true, redemptions: true },
+      include: {
+        scopeBranch: true,
+        // Counted, not listed. The rows carry `deviceId` and `userId` for
+        // every customer who used the code, and nothing needs them here --
+        // the redemption report has its own endpoint that returns the
+        // branch and timestamp without the identifiers.
+        _count: { select: { redemptions: true } },
+      },
     });
     if (!discount) {
       return reply.status(404).send({ error: "Discount code not found" });
@@ -225,6 +251,27 @@ export async function adminRoutes(app: FastifyInstance) {
 
   app.delete("/discount-codes/:id", async (request, reply) => {
     const id = (request.params as { id: string }).id;
+
+    // Redemption rows cascade with the code, and those rows are the only
+    // thing enforcing one claim per customer. Delete a used code, recreate
+    // it under the same name, and everyone who already claimed it can claim
+    // it again -- real money, given away silently.
+    //
+    // Switching a code off (`isActive: false`) achieves what deleting is
+    // usually reaching for: customers stop seeing it, and the history that
+    // protects the offer survives.
+    const used = await app.prisma.discountCodeRedemption.count({
+      where: { discountCodeId: id },
+    });
+    if (used > 0) {
+      return reply.status(409).send({
+        errorCode: "CODE_HAS_REDEMPTIONS",
+        error:
+          "This code has been redeemed and cannot be deleted. Deactivate it instead so customers stop seeing it while its history is kept.",
+        redemptions: used,
+      });
+    }
+
     await app.prisma.discountCode.delete({ where: { id } });
     return reply.status(204).send();
   });
@@ -324,16 +371,6 @@ export async function adminRoutes(app: FastifyInstance) {
   app.get("/notifications/recipient-count", async () => {
     const count = await app.prisma.pushToken.count();
     return { count };
-  });
-
-  app.post("/notifications", async (request, reply) => {
-    const parse = CreateNotificationSchema.safeParse(request.body);
-    if (!parse.success) {
-      return reply.status(400).send({ error: "Invalid notification payload" });
-    }
-    return serializePrisma(
-      await app.prisma.notification.create({ data: parse.data }),
-    );
   });
 
   app.post("/notifications/send", async (request, reply) => {

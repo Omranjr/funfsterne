@@ -159,7 +159,13 @@
     "deleteErrorTitle": "تعذّر حذف الحساب",
     "privacyPolicy": "سياسة الخصوصية",
     "language": "اللغة",
-    "appearance": "المظهر"
+    "appearance": "المظهر",
+    "notifications": "الإشعارات",
+    "notificationsOn": "مفعّلة",
+    "notificationsOff": "متوقفة",
+    "notificationsBlockedTitle": "الإشعارات متوقفة",
+    "notificationsBlockedMessage": "هاتفك يحظر إشعارات هذا التطبيق. يمكنك تفعيلها من الإعدادات.",
+    "openSettings": "فتح الإعدادات"
   },
   "loyalty": {
     "title": "برنامج الولاء",

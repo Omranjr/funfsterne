@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Platform } from "react-native";
+import { AppState, Platform } from "react-native";
 import { useMutation } from "@tanstack/react-query";
 import * as Notifications from "expo-notifications";
 import {
@@ -104,6 +104,20 @@ export function useNotificationPermission() {
 
   useEffect(() => {
     check();
+
+    // Re-check whenever the app returns to the foreground.
+    //
+    // Permission can change entirely outside the app: someone who denied the
+    // prompt can only re-enable it in the OS settings, and iOS/Android give
+    // no callback when they do. Without this the app kept believing it was
+    // denied until the next cold start -- the Account row would still read
+    // "Off", and `usePushTokenSync` (which is gated on this status) would
+    // never register a token, so turning notifications on in Settings
+    // silently did nothing.
+    const subscription = AppState.addEventListener("change", (next) => {
+      if (next === "active") check();
+    });
+    return () => subscription.remove();
   }, [check]);
 
   return { status, canAskAgain, request, check };
@@ -118,6 +132,20 @@ export function useRegisterPushToken() {
   });
 }
 
+/**
+ * Recognises the "no Firebase" failure from expo-notifications on Android.
+ *
+ * Matched on the message because the SDK throws a plain Error here with no
+ * code to switch on. Deliberately broad: a false positive costs a slightly
+ * wrong hint in a dev log, a false negative costs hours of looking in the
+ * wrong place.
+ */
+function isFirebaseMissing(error: unknown): boolean {
+  const message =
+    error instanceof Error ? error.message : String(error ?? "");
+  return /firebase|google-services|FirebaseApp/i.test(message);
+}
+
 export function useExpoPushToken() {
   const [token, setToken] = useState<string | null>(null);
 
@@ -129,6 +157,27 @@ export function useExpoPushToken() {
     } catch (error) {
       // Android throws here when Firebase is not configured, which is by far
       // the likeliest cause and was otherwise completely invisible.
+      //
+      // Called out separately because the generic log reads like a transient
+      // network problem, when it is actually a permanent misconfiguration no
+      // amount of retrying fixes -- and the symptom (nobody on Android ever
+      // receives a notification) gives no hint where to look.
+      if (__DEV__ && Platform.OS === "android" && isFirebaseMissing(error)) {
+        console.warn(
+          [
+            "[push] Android cannot issue a push token: Firebase is not configured.",
+            "",
+            "  Two things are needed, and missing either one is silent:",
+            "    1. google-services.json in apps/mobile/ (referenced by",
+            "       expo.android.googleServicesFile in app.json)",
+            "    2. an FCM V1 service account key uploaded to EAS",
+            "       (eas credentials -> Android -> Google Service Account)",
+            "",
+            "  Until both exist, Android installs register no token and every",
+            "  broadcast simply skips them.",
+          ].join("\n"),
+        );
+      }
       logSwallowed("expo-push-token", error);
       setToken(null);
       return null;

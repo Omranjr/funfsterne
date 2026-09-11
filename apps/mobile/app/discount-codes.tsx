@@ -25,6 +25,7 @@ import Svg, { Line as SvgLine } from "react-native-svg";
 import * as Haptics from "expo-haptics";
 import { useFocusEffect } from "expo-router";
 import { useTranslation } from "react-i18next";
+import { useArabicTextStyle } from "@/hooks/useArabicText";
 import { useTheme } from "@/contexts/ThemeContext";
 import { typography, borderRadius, SHARED_TOKENS, screenTopPadding } from "@/constants/theme";
 import {
@@ -408,6 +409,7 @@ function RazorCouponCard({
 }: RazorCouponCardProps) {
   const { theme } = useTheme();
   const { t, i18n } = useTranslation();
+  const arabicText = useArabicTextStyle();
   const reduceMotion = useReduceMotion();
 
   // Travel available to the razor: the card's inner width, less where the
@@ -566,7 +568,7 @@ function RazorCouponCard({
         {/* Upper half — the part that stays after the cut. */}
         <View style={styles.couponTop}>
           <Text
-            style={[typography.micro, styles.upper, { color: theme.goldText }]}
+            style={[typography.micro, styles.upper, arabicText, { color: theme.goldText }]}
             numberOfLines={1}
             allowFontScaling={false}
           >
@@ -691,7 +693,7 @@ function RazorCouponCard({
               pointerEvents="none"
             >
               <Text
-                style={[typography.microXs, styles.upper, { color: theme.textMuted }]}
+                style={[typography.microXs, styles.upper, arabicText, { color: theme.textMuted }]}
                 allowFontScaling={false}
               >
                 {t("offers.dragHint")}

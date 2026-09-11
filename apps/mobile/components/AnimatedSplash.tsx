@@ -76,7 +76,8 @@ export function AnimatedSplash({
   dismissRef,
 }: AnimatedSplashProps) {
   const { theme } = useTheme();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isArabic = i18n.language === "ar";
   const { width } = useWindowDimensions();
   const reduceMotion = useReduceMotion();
 
@@ -290,7 +291,12 @@ export function AnimatedSplash({
         </View>
 
         <Text
-          style={[typography.microXs, styles.loading, { color: theme.textMuted }]}
+          style={[
+            isArabic
+              ? styles.loadingArabic
+              : [typography.microXs, styles.loading],
+            { color: theme.textMuted },
+          ]}
           allowFontScaling={false}
         >
           {t("common.loading")}
@@ -392,6 +398,15 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     marginTop: 6,
+    // Pinned to LTR so the mark is identical in every language.
+    //
+    // The blades are positioned with `left` and pivot from
+    // `transformOrigin: "0% 50%"`. Under a forced-RTL layout the `left`
+    // values flip but the transform origin does not, so the blades pivoted
+    // from the wrong end and the handles landed on the opposite side -- the
+    // scissors came apart in Arabic. This is a logo, not text: it should
+    // read the same way round regardless of reading direction.
+    direction: "ltr",
   },
   blade: {
     position: "absolute",
@@ -425,5 +440,22 @@ const styles = StyleSheet.create({
   },
   loading: {
     textTransform: "uppercase",
+  },
+  /**
+   * The same caption, set for Arabic.
+   *
+   * Three things in the Latin treatment actively damage it. Arabic is a
+   * joined script, so `letterSpacing` severs the connections between
+   * letters -- that is what turned "جارٍ التحميل" into loose fragments.
+   * IBM Plex Mono has no Arabic glyphs, so the text was falling back to a
+   * system face regardless. And `textTransform: "uppercase"` means nothing
+   * in a script with no letter case.
+   *
+   * No `fontFamily` here on purpose: the platform's own default already
+   * shapes Arabic correctly.
+   */
+  loadingArabic: {
+    fontSize: 11,
+    lineHeight: 16,
   },
 });

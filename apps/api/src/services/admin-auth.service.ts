@@ -2,6 +2,23 @@ import bcrypt from "bcryptjs";
 import type { FastifyInstance } from "fastify";
 import type { AdminJwtPayload } from "../plugins/jwt.js";
 
+/**
+ * A real bcrypt hash of a value nobody knows, compared against when the
+ * account does not exist.
+ *
+ * Without it, a miss returned immediately while a wrong password spent
+ * ~150ms hashing -- so response time alone told an attacker whether an
+ * identifier was real. Burning the same time on both paths removes that
+ * signal.
+ *
+ * It is a genuine hash rather than a placeholder string on purpose: bcrypt
+ * rejects a malformed one straight away, which would leave the timing gap
+ * exactly as it was.
+ */
+const ABSENT_ACCOUNT_HASH =
+  "$2b$10$3wQJheRSNsXjWCm.SyqFReOFkCDj9fVdUvExi3ReEY2sHw2xctm0G";
+
+
 export interface AdminLoginInput {
   email: string;
   password: string;
@@ -15,7 +32,12 @@ export async function authenticateAdmin(
     where: { email: input.email },
   });
 
-  if (!admin) return null;
+  if (!admin) {
+    // Spend the same time as a real check before answering. See the note on
+    // ABSENT_ACCOUNT_HASH.
+    await bcrypt.compare(input.password, ABSENT_ACCOUNT_HASH);
+    return null;
+  }
 
   const valid = await bcrypt.compare(input.password, admin.passwordHash);
   if (!valid) return null;

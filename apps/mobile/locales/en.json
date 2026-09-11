@@ -159,7 +159,13 @@
     "deleteErrorTitle": "Couldn't delete account",
     "privacyPolicy": "Privacy Policy",
     "language": "Language",
-    "appearance": "Appearance"
+    "appearance": "Appearance",
+    "notifications": "Notifications",
+    "notificationsOn": "On",
+    "notificationsOff": "Off",
+    "notificationsBlockedTitle": "Notifications are off",
+    "notificationsBlockedMessage": "Your phone is blocking notifications for this app. You can turn them on in Settings.",
+    "openSettings": "Open Settings"
   },
   "loyalty": {
     "title": "Loyalty",

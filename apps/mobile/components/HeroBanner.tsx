@@ -18,6 +18,7 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import { useTranslation } from "react-i18next";
+import { useArabicTextStyle } from "@/hooks/useArabicText";
 import { useTheme } from "@/contexts/ThemeContext";
 import { typography, borderRadius } from "@/constants/theme";
 import { type Branch } from "@funfsterne/shared-types";
@@ -58,6 +59,7 @@ export function HeroBanner({
 }: HeroBannerProps) {
   const { theme } = useTheme();
   const { t } = useTranslation();
+  const arabicText = useArabicTextStyle();
   const { width } = useWindowDimensions();
   const reduceMotion = useReduceMotion();
 
@@ -187,7 +189,7 @@ export function HeroBanner({
       <View style={styles.bottomBlock}>
         <View style={styles.eyebrowRow}>
           <Text
-            style={[typography.microXs, { color: theme.goldText }]}
+            style={[typography.microXs, arabicText, { color: theme.goldText }]}
             numberOfLines={1}
             allowFontScaling={false}
           >

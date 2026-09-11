@@ -16,8 +16,79 @@ import { uploadRoutes } from "./routes/upload.js";
 import { startRetentionSchedule } from "./services/retention.service.js";
 import { startDeliveryCheckSchedule } from "./services/notification-delivery.service.js";
 
+/**
+ * Query-string keys whose values must never reach a log file.
+ *
+ * Fastify logs `request.url` verbatim, so anything in a query string lands
+ * in the application log and from there in the platform's log retention.
+ * Identifiers do not belong there -- they are personal data, and log
+ * retention is the one place the database cleanup cannot reach.
+ *
+ * `userId` reaches /admin/loyalty/stats when the owner filters the chart by
+ * customer. A query parameter is the right shape for a filter, so it stays
+ * one and is hidden here instead.
+ *
+ * `deviceId` no longer arrives this way at all -- it moved to the
+ * X-Device-Id header, which is not logged. It is kept in this set as a
+ * backstop: a build predating that change, or a future route that reaches
+ * for the old parameter name, must not quietly start leaking again.
+ */
+const REDACTED_QUERY_KEYS = new Set(["deviceId", "userId"]);
+
+/**
+ * The request path with sensitive query values replaced. Keys are kept so
+ * the shape of a request is still legible when reading logs.
+ */
+function redactUrl(url: string): string {
+  const split = url.indexOf("?");
+  if (split === -1) return url;
+
+  const path = url.slice(0, split);
+  const params = new URLSearchParams(url.slice(split + 1));
+  for (const key of params.keys()) {
+    if (REDACTED_QUERY_KEYS.has(key)) params.set(key, "[redacted]");
+  }
+  return `${path}?${params.toString()}`;
+}
+
 const app = Fastify({
-  logger: true,
+  logger: {
+    serializers: {
+      req(request) {
+        return {
+          method: request.method,
+          url: redactUrl(request.url),
+          hostname: request.hostname,
+          remoteAddress: request.ip,
+          remotePort: request.socket?.remotePort,
+        };
+      },
+    },
+  },
+
+  /**
+   * Trust exactly one proxy hop.
+   *
+   * The API runs behind Render's load balancer, so the TCP peer is always
+   * Render -- not the customer. Without this, `request.ip` is that one
+   * proxy address for every request, and the rate limiters on the login and
+   * registration routes key on it. The practical effect was a single shared
+   * bucket: ten sign-in attempts per five minutes across the entire
+   * customer base, after which everyone got 429s. Invisible while testing
+   * alone; a growing problem the moment the shop has real traffic.
+   *
+   * Deliberately `1` rather than `true`. `true` trusts the whole
+   * X-Forwarded-For chain and takes the leftmost entry -- which the client
+   * writes, so anyone could rotate a header value and skip the rate limit
+   * entirely. That would be worse than the bug it fixes. A hop count trusts
+   * only the address nearest the server and reads the one before it, which
+   * Render sets and a client cannot forge.
+   *
+   * If Render ever adds a hop, the symptom is a constant `request.ip` again
+   * -- the limiter degrades to today's behaviour rather than becoming
+   * unsafe.
+   */
+  trustProxy: 1,
 });
 
 async function main() {

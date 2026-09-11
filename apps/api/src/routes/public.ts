@@ -8,13 +8,57 @@ import type { FastifyInstance } from "fastify";
 import { serializePrisma } from "../serializers.js";
 import { consumerAuthMiddleware } from "../middleware/consumer-auth.js";
 
+/**
+ * The header the app sends its install identifier in.
+ *
+ * Deliberately a header and not a query parameter. The device id is a stable
+ * per-install value kept in the phone's Keychain or Keystore; in a URL it is
+ * written verbatim into the application log, the platform's log retention,
+ * and any proxy in the path. A header appears in none of those by default.
+ *
+ * It identifies a device, not a person, and it is never a credential -- the
+ * account always comes from the verified JWT. Its only job is to recognise
+ * redemptions made before accounts existed, and to stop one person claiming
+ * the same coupon twice from two accounts on one handset.
+ */
+const DEVICE_ID_HEADER = "x-device-id";
+
+/** Matches the v4 UUID the app generates. */
+const DEVICE_ID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/**
+ * Reads the device id, or null when it is absent or not the shape we issue.
+ *
+ * Ignoring a malformed value rather than rejecting the request: a client
+ * with a corrupted id should still see its coupons, just without the
+ * device-level matching. Validating the shape keeps anything arbitrary out
+ * of the database query and out of anywhere it might later be written.
+ */
+function readDeviceId(request: { headers: Record<string, unknown> }): string | null {
+  const raw = request.headers[DEVICE_ID_HEADER];
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  if (typeof value !== "string") return null;
+  return DEVICE_ID_PATTERN.test(value) ? value : null;
+}
+
 const ProductQuerySchema = z.object({
   category: ProductCategorySchema.optional(),
   branchId: z.string().optional(),
 });
 
 const RedeemDiscountCodeSchema = z.object({
-  deviceId: z.string().min(1),
+  // Same shape the read path validates. This value lands in a column that
+  // forms the one-claim-per-device index, so arbitrary strings do not belong
+  // in it.
+  //
+  // Worth being plain about the limit: the device id is supplied by the
+  // client and the server cannot verify it. Checking the shape keeps the
+  // data clean and blocks casual misuse -- it is not a security boundary,
+  // and was never the thing preventing double redemption. That is the
+  // unique index on (userId, discountCodeId), and the account id comes from
+  // the verified JWT where the client cannot touch it.
+  deviceId: z.string().regex(DEVICE_ID_PATTERN, "Invalid device id"),
   branchId: z.string().optional(),
 });
 
@@ -37,10 +81,13 @@ export async function publicRoutes(app: FastifyInstance) {
     return serializePrisma(images);
   });
 
-  app.get("/products", async (request) => {
+  app.get("/products", async (request, reply) => {
     const query = ProductQuerySchema.safeParse(request.query);
     if (!query.success) {
-      return { error: "Invalid query parameters" };
+      // Sent as 400, not a 200 carrying an error body. The app checks
+      // `res.ok`, so a 200 read as success and then threw trying to map an
+      // object as an array -- a clean failure arriving as a crash.
+      return reply.status(400).send({ error: "Invalid query parameters" });
     }
 
     const { category, branchId } = query.data;
@@ -128,7 +175,7 @@ export async function publicRoutes(app: FastifyInstance) {
     async (request) => {
       const now = new Date();
       const userId = request.consumer!.sub;
-      const { deviceId } = request.query as { deviceId?: string };
+      const deviceId = readDeviceId(request);
 
       // Matched on device as well as account when the client tells us its
       // device id: redemptions made before accounts existed carry a deviceId

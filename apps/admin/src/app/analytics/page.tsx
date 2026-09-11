@@ -73,8 +73,45 @@ type CustomerVisitsResponse = {
   customers: CustomerVisitSummary[];
 };
 
+/**
+ * Turns a bucket key from the API into an axis label in the admin's language.
+ *
+ * The API also sends a ready-made `label`, but it is built with a hardcoded
+ * "en-US" -- so a German admin got "Sep 10" next to otherwise German UI, and
+ * an Arabic one got English too. The server cannot know which language the
+ * browser is set to; the client can, so the formatting belongs here.
+ *
+ * Bucket keys are "YYYY", "YYYY-MM" or "YYYY-MM-DD" depending on granularity.
+ */
+function formatBucket(
+  bucket: string,
+  granularity: Granularity,
+  locale: string,
+): string {
+  if (granularity === "year") return bucket;
+
+  const [year, month, day] = bucket.split("-").map(Number);
+  if (!year || !month) return bucket;
+
+  try {
+    if (granularity === "month") {
+      return new Date(year, month - 1, 1).toLocaleDateString(locale, {
+        month: "short",
+        year: "numeric",
+      });
+    }
+    return new Date(year, month - 1, day ?? 1).toLocaleDateString(locale, {
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    // A locale the browser cannot handle must not blank the axis.
+    return bucket;
+  }
+}
+
 export default function AnalyticsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [granularity, setGranularity] = useState<Granularity>("day");
   const [stats, setStats] = useState<VisitStatsResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -303,7 +340,10 @@ export default function AnalyticsPage() {
                 <BarChart data={stats!.series} barCategoryGap="24%">
                   <CartesianGrid vertical={false} stroke="var(--border)" />
                   <XAxis
-                    dataKey="label"
+                    dataKey="bucket"
+                    tickFormatter={(bucket: string) =>
+                      formatBucket(bucket, granularity, i18n.language)
+                    }
                     tickLine={false}
                     axisLine={false}
                     interval={tickInterval}
@@ -325,6 +365,9 @@ export default function AnalyticsPage() {
                       fontSize: 12,
                     }}
                     labelStyle={{ color: "var(--foreground)", fontWeight: 600 }}
+                    labelFormatter={(bucket: string) =>
+                      formatBucket(bucket, granularity, i18n.language)
+                    }
                   />
                   <Bar
                     dataKey="visits"

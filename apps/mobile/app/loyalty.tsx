@@ -23,6 +23,7 @@ import * as Haptics from "expo-haptics";
 import QRCode from "react-native-qrcode-svg";
 import { Gift, Sparkles } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
+import { useArabicTextStyle } from "@/hooks/useArabicText";
 import type { TFunction } from "i18next";
 import {
   MIN_REDEEM_POINTS,
@@ -59,6 +60,7 @@ function formatDate(iso: string, locale: string): string {
 export default function LoyaltyScreen() {
   const { theme } = useTheme();
   const { t, i18n } = useTranslation();
+  const arabicText = useArabicTextStyle();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { data, isLoading, isRefetching, refetch, error } = useLoyaltyMe();
@@ -225,7 +227,7 @@ export default function LoyaltyScreen() {
       ) : null}
 
       <Card style={styles.balanceCard}>
-        <Text style={[typography.micro, styles.balanceLabel, { color: theme.textMuted }]}>
+        <Text style={[typography.micro, styles.balanceLabel, arabicText, { color: theme.textMuted }]}>
           {t("loyalty.yourPoints")}
         </Text>
         <Animated.Text style={[styles.balanceValue, { color: theme.goldText }, celebrationStyle]}>

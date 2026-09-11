@@ -159,7 +159,13 @@
     "deleteErrorTitle": "Konto konnte nicht gelöscht werden",
     "privacyPolicy": "Datenschutz",
     "language": "Sprache",
-    "appearance": "Erscheinungsbild"
+    "appearance": "Erscheinungsbild",
+    "notifications": "Benachrichtigungen",
+    "notificationsOn": "An",
+    "notificationsOff": "Aus",
+    "notificationsBlockedTitle": "Benachrichtigungen sind aus",
+    "notificationsBlockedMessage": "Ihr Telefon blockiert Benachrichtigungen für diese App. Sie können sie in den Einstellungen aktivieren.",
+    "openSettings": "Einstellungen öffnen"
   },
   "loyalty": {
     "title": "Treueprogramm",

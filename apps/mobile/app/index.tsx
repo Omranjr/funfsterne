@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useIsFocused } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
+import { useArabicTextStyle } from "@/hooks/useArabicText";
 import { PRIVACY_URL } from "@/constants/links";
 import { logSwallowed } from "@/lib/log";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -71,6 +72,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { theme } = useTheme();
   const { t } = useTranslation();
+  const arabicText = useArabicTextStyle();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const isFocused = useIsFocused();
@@ -228,7 +230,7 @@ export default function HomeScreen() {
               {t("home.shopByCategory")}
             </Text>
             <Text
-              style={[typography.micro, styles.microUpper, { color: theme.goldText }]}
+              style={[typography.micro, styles.microUpper, arabicText, { color: theme.goldText }]}
               allowFontScaling={false}
             >
               {t("home.swipeHint")}
@@ -263,7 +265,7 @@ export default function HomeScreen() {
               }
             >
               <Text
-                style={[typography.micro, styles.microUpper, { color: theme.goldText }]}
+                style={[typography.micro, styles.microUpper, arabicText, { color: theme.goldText }]}
                 allowFontScaling={false}
               >
                 {t("home.seeAllShort")}
@@ -311,7 +313,7 @@ export default function HomeScreen() {
             style={styles.privacyLink}
           >
             <Text
-              style={[typography.micro, styles.microUpper, { color: theme.textMuted }]}
+              style={[typography.micro, styles.microUpper, arabicText, { color: theme.textMuted }]}
               allowFontScaling={false}
             >
               {t("home.privacyPolicy")}
@@ -362,6 +364,7 @@ function CategoryTile({
 }) {
   const { theme } = useTheme();
   const { t } = useTranslation();
+  const arabicText = useArabicTextStyle();
 
   return (
     <View style={[styles.tile, { borderColor: theme.hairline }]}>
@@ -392,7 +395,7 @@ function CategoryTile({
           {label}
         </Text>
         <Text
-          style={[typography.microXs, styles.tileCount, { color: theme.gold }]}
+          style={[typography.microXs, styles.tileCount, arabicText, { color: theme.gold }]}
           numberOfLines={1}
           allowFontScaling={false}
         >

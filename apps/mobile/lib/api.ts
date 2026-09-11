@@ -330,16 +330,27 @@ export type DiscountCode = {
   } | null;
 };
 
+/**
+ * Header the device id travels in. Must match DEVICE_ID_HEADER on the API.
+ *
+ * It used to be a query parameter, which put a stable per-install identifier
+ * into the request URL -- and from there into the server's application log
+ * and the hosting platform's log retention, verbatim, on every request. A
+ * header is carried in none of those by default.
+ */
+const DEVICE_ID_HEADER = "X-Device-Id";
+
 export async function getActiveDiscountCodes(): Promise<DiscountCode[]> {
-  // The device id lets the server also hide codes redeemed on this phone
-  // before accounts existed (those rows have no userId). Resolved here
-  // rather than passed in, so callers and the query hook stay unchanged.
+  // Lets the server also recognise coupons redeemed on this phone before
+  // accounts existed (those rows have no userId), and stops one person
+  // claiming the same coupon twice from two accounts on one handset.
+  // Resolved here rather than passed in, so callers and the query hook stay
+  // unchanged.
   const deviceId = await getOrCreateDeviceId();
-  const query = deviceId ? `?deviceId=${encodeURIComponent(deviceId)}` : "";
-  return publicApiFetch<DiscountCode[]>(
-    `/public/discount-codes/active${query}`,
-    { method: "GET" },
-  );
+  return publicApiFetch<DiscountCode[]>("/public/discount-codes/active", {
+    method: "GET",
+    headers: deviceId ? { [DEVICE_ID_HEADER]: deviceId } : undefined,
+  });
 }
 
 // POST /public/discount-codes/:code/redeem
