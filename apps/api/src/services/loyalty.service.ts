@@ -1,6 +1,11 @@
 import type { FastifyInstance } from "fastify";
 import { Prisma } from "@prisma/client";
-import { POINTS_PER_VISIT, POINTS_PER_EURO } from "@funfsterne/shared-types";
+import {
+  POINTS_PER_VISIT,
+  POINTS_PER_EURO,
+  MIN_REDEEM_POINTS,
+} from "@funfsterne/shared-types";
+import { sendPushNotifications } from "./push.service.js";
 
 const BUSINESS_TIMEZONE = "Europe/Berlin";
 
@@ -74,7 +79,55 @@ export async function awardLoyaltyPoints(
     }),
   ]);
 
+  // Not awaited. Expo's send is a network round-trip, and the person holding
+  // the phone is standing at the till waiting for the scan to confirm --
+  // there is no reason to make them watch it. The call swallows its own
+  // errors, so nothing escapes into this path.
+  void notifyIfRewardUnlocked(app, args.userId, updated.loyaltyPoints);
+
   return { ok: true, balance: updated.loyaltyPoints };
+}
+
+/**
+ * Tells a customer when this visit has just earned them a reward.
+ *
+ * Redeeming is the customer's own action in the app, which leaves a gap: the
+ * shop scans, the balance quietly reaches the threshold, and nobody says so.
+ * The barber cannot hand over a voucher that has not been requested, and the
+ * customer has no reason to go looking. This closes that loop at the only
+ * moment it is certain to matter -- while they are still standing there.
+ *
+ * Fires only on the crossing. Someone sitting on 150 points earns another ten
+ * without being told again, because they were already told.
+ *
+ * Deliberately not awaited into the caller's failure path: a push that cannot
+ * be sent must never turn a successful scan into an error at the till.
+ */
+async function notifyIfRewardUnlocked(
+  app: FastifyInstance,
+  userId: string,
+  newBalance: number,
+): Promise<void> {
+  const previous = newBalance - POINTS_PER_VISIT;
+  if (previous >= MIN_REDEEM_POINTS || newBalance < MIN_REDEEM_POINTS) return;
+
+  try {
+    const tokens = await app.prisma.pushToken.findMany({
+      where: { userId },
+      select: { token: true },
+    });
+    if (tokens.length === 0) return;
+
+    const euros = Math.floor(newBalance / POINTS_PER_EURO);
+    await sendPushNotifications(
+      tokens.map((t) => t.token),
+      "Deine Prämie ist bereit",
+      `Du hast ${newBalance} Punkte. Löse sie in der App für ${euros} € ein.`,
+      { screen: "loyalty" },
+    );
+  } catch (error) {
+    app.log.warn({ err: error, userId }, "reward-unlocked push failed");
+  }
 }
 
 export type RedeemPointsResult =

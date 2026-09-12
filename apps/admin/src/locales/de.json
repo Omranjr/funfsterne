@@ -117,7 +117,10 @@
     "couldNotMarkUsed": "Prämie konnte nicht als verwendet markiert werden",
     "pleaseTryAgain": "Bitte versuchen Sie es erneut.",
     "customer": "Kunde",
-    "couldNotLoadBranches": "Filialen konnten nicht geladen werden. Prüfen Sie die Verbindung und laden Sie die Seite neu."
+    "couldNotLoadBranches": "Filialen konnten nicht geladen werden. Prüfen Sie die Verbindung und laden Sie die Seite neu.",
+    "checkForRewards": "Nach Prämien suchen",
+    "refreshing": "Wird geprüft…",
+    "couldNotRefresh": "Aktualisieren fehlgeschlagen. Bitte erneut versuchen."
   },
   "users": {
     "title": "Benutzer",

@@ -117,7 +117,10 @@
     "couldNotMarkUsed": "Could not mark reward as used",
     "pleaseTryAgain": "Please try again.",
     "customer": "Customer",
-    "couldNotLoadBranches": "Could not load branches. Check your connection and reload the page."
+    "couldNotLoadBranches": "Could not load branches. Check your connection and reload the page.",
+    "checkForRewards": "Check for rewards",
+    "refreshing": "Checking…",
+    "couldNotRefresh": "Could not refresh. Try again."
   },
   "users": {
     "title": "Users",

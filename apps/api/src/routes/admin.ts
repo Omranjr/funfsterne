@@ -525,6 +525,32 @@ export async function adminRoutes(app: FastifyInstance) {
 
   // ── Loyalty program ──────────────────────────────────────────────────────
 
+  /**
+   * Everything the till needs to know about one customer: who they are, what
+   * they have, and any voucher waiting to be handed over. Shared by the scan
+   * and the read-only lookup so the two can never disagree.
+   */
+  async function readLoyaltySnapshot(instance: typeof app, userId: string) {
+    const [user, activeRewards] = await Promise.all([
+      instance.prisma.consumerUser.findUnique({
+        where: { id: userId },
+        select: { firstName: true, lastName: true, loyaltyPoints: true },
+      }),
+      instance.prisma.loyaltyReward.findMany({
+        where: { userId, status: "ACTIVE" },
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
+
+    return {
+      customer: user
+        ? { firstName: user.firstName, lastName: user.lastName }
+        : null,
+      balance: user?.loyaltyPoints ?? 0,
+      activeRewards: serializePrisma(activeRewards),
+    };
+  }
+
   app.post("/loyalty/scan", async (request, reply) => {
     const parse = LoyaltyScanSchema.safeParse(request.body);
     if (!parse.success) {
@@ -532,29 +558,51 @@ export async function adminRoutes(app: FastifyInstance) {
     }
 
     const result = await awardLoyaltyPoints(app, parse.data);
-    if (!result.ok) {
-      const status = result.errorCode === "USER_NOT_FOUND" ? 404 : 409;
+
+    // An unknown code is the only genuinely empty answer.
+    if (!result.ok && result.errorCode === "USER_NOT_FOUND") {
       return reply
-        .status(status)
+        .status(404)
         .send({ error: "Could not award points", errorCode: result.errorCode });
     }
 
-    const [user, activeRewards] = await Promise.all([
-      app.prisma.consumerUser.findUnique({
-        where: { id: parse.data.userId },
-        select: { firstName: true, lastName: true },
-      }),
-      app.prisma.loyaltyReward.findMany({
-        where: { userId: parse.data.userId, status: "ACTIVE" },
-        orderBy: { createdAt: "desc" },
-      }),
-    ]);
+    // "Already scanned today" used to be a bare 409, which threw away the
+    // customer along with the refusal. That is the wrong trade at a till: a
+    // customer who earned their point this morning and has come back to
+    // collect a voucher this afternoon was met with an error and no way to
+    // see, let alone hand over, the reward they were owed. The refusal is
+    // reported, and everything needed to serve them comes with it.
+    const snapshot = await readLoyaltySnapshot(app, parse.data.userId);
 
     return {
-      customer: user,
-      balance: result.balance,
-      activeRewards: serializePrisma(activeRewards),
+      awarded: result.ok,
+      errorCode: result.ok ? null : result.errorCode,
+      customer: snapshot.customer,
+      balance: snapshot.balance,
+      activeRewards: snapshot.activeRewards,
     };
+  });
+
+  /**
+   * Read-only view of a customer's loyalty standing.
+   *
+   * Redeeming is the customer's own action in the app, so a reward can appear
+   * seconds after a scan -- while the barber is still looking at the result.
+   * Without this the only way to see it was to scan again, which on a normal
+   * day is refused as a repeat earn. This lets the scan result refresh itself
+   * without touching the ledger.
+   */
+  app.get("/loyalty/customers/:userId", async (request, reply) => {
+    const { userId } = request.params as { userId: string };
+
+    const snapshot = await readLoyaltySnapshot(app, userId);
+    if (!snapshot.customer) {
+      return reply
+        .status(404)
+        .send({ error: "Not found", errorCode: "USER_NOT_FOUND" });
+    }
+
+    return snapshot;
   });
 
   app.post(

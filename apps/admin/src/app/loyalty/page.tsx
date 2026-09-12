@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/select";
 import { PageHeader } from "@/components/page-header";
 import { type Branch, POINTS_PER_VISIT } from "@funfsterne/shared-types";
-import { CheckCircle2, Gift, ScanLine, XCircle } from "lucide-react";
+import { CheckCircle2, Gift, RefreshCw, ScanLine, XCircle } from "lucide-react";
 
 const QR_PREFIX = "funfsterne:loyalty:";
 const BRANCH_STORAGE_KEY = "loyalty-scan-branch-id";
@@ -30,7 +30,18 @@ type ActiveReward = {
 
 type ScanResult =
   | { status: "idle" }
-  | { status: "success"; customer: { firstName: string; lastName: string } | null; balance: number; activeRewards: ActiveReward[] }
+  | {
+      status: "success";
+      /** Kept so the card can refresh itself without another scan. */
+      userId: string;
+      /** False when the earn was refused but the customer was still found. */
+      awarded: boolean;
+      /** Why the earn was refused, if it was. */
+      notice: string | null;
+      customer: { firstName: string; lastName: string } | null;
+      balance: number;
+      activeRewards: ActiveReward[];
+    }
   | { status: "error"; message: string };
 
 export default function LoyaltyScanPage() {
@@ -43,6 +54,7 @@ export default function LoyaltyScanPage() {
   const [redeemingId, setRedeemingId] = useState<string | null>(null);
   // Set when a scan has been asked for but the <video> has not remounted yet.
   const [pendingStart, setPendingStart] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsRef = useRef<IScannerControls | null>(null);
@@ -101,12 +113,24 @@ export default function LoyaltyScanPage() {
 
         if (res.ok) {
           const data = (await res.json()) as {
+            awarded: boolean;
+            errorCode: string | null;
             customer: { firstName: string; lastName: string } | null;
             balance: number;
             activeRewards: ActiveReward[];
           };
+          // A refused earn is no longer a dead end. The customer, their
+          // balance and any waiting voucher come back either way, so someone
+          // who already earned this morning can still be served this
+          // afternoon -- the refusal is just a note on the card.
           setResult({
             status: "success",
+            userId,
+            awarded: data.awarded,
+            notice:
+              data.errorCode === "ALREADY_SCANNED_TODAY"
+                ? t("loyaltyScan.alreadyScannedToday")
+                : null,
             customer: data.customer,
             balance: data.balance,
             activeRewards: data.activeRewards,
@@ -114,11 +138,9 @@ export default function LoyaltyScanPage() {
         } else {
           const body = (await res.json().catch(() => ({}))) as { errorCode?: string };
           const message =
-            body.errorCode === "ALREADY_SCANNED_TODAY"
-              ? t("loyaltyScan.alreadyScannedToday")
-              : body.errorCode === "USER_NOT_FOUND"
-                ? t("loyaltyScan.noAccountFound")
-                : t("loyaltyScan.couldNotAward");
+            body.errorCode === "USER_NOT_FOUND"
+              ? t("loyaltyScan.noAccountFound")
+              : t("loyaltyScan.couldNotAward");
           setResult({ status: "error", message });
         }
       } catch {
@@ -208,6 +230,44 @@ export default function LoyaltyScanPage() {
     setPendingStart(false);
     void startScanning();
   }, [pendingStart, result.status, startScanning]);
+
+  /**
+   * Re-reads the customer without touching the ledger.
+   *
+   * Redeeming is the customer's own action in the app, so a voucher can appear
+   * seconds after the scan -- while the barber is still looking at the result.
+   * Scanning again to find it would be refused as a repeat earn, so this asks
+   * the read-only endpoint instead.
+   */
+  const handleRefresh = useCallback(async () => {
+    if (result.status !== "success") return;
+    setRefreshing(true);
+    try {
+      const res = await apiFetch(
+        `/admin/loyalty/customers/${encodeURIComponent(result.userId)}`,
+      );
+      if (!res.ok) throw new Error("refresh failed");
+      const data = (await res.json()) as {
+        customer: { firstName: string; lastName: string } | null;
+        balance: number;
+        activeRewards: ActiveReward[];
+      };
+      setResult((prev) =>
+        prev.status === "success"
+          ? {
+              ...prev,
+              customer: data.customer,
+              balance: data.balance,
+              activeRewards: data.activeRewards,
+            }
+          : prev,
+      );
+    } catch {
+      toast.error(t("loyaltyScan.couldNotRefresh"));
+    } finally {
+      setRefreshing(false);
+    }
+  }, [result, t]);
 
   const handleRedeemReward = useCallback(
     async (rewardId: string) => {
@@ -312,6 +372,29 @@ export default function LoyaltyScanPage() {
               {t("loyaltyScan.newBalance", { balance: result.balance })}
             </p>
           </div>
+
+          {result.notice ? (
+            <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm">
+              {result.notice}
+            </p>
+          ) : null}
+
+          {/* Redeeming happens in the customer's own app, so a voucher can
+              appear seconds after the scan. Scanning again to find it would
+              be refused as a repeat earn, so the card refreshes itself. */}
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="w-full"
+          >
+            <RefreshCw
+              className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+            />
+            {refreshing
+              ? t("loyaltyScan.refreshing")
+              : t("loyaltyScan.checkForRewards")}
+          </Button>
 
           {result.activeRewards.length > 0 ? (
             <div className="w-full space-y-2 text-left">

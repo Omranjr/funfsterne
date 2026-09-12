@@ -117,7 +117,10 @@
     "couldNotMarkUsed": "تعذّر وضع علامة على المكافأة كمُستخدمة",
     "pleaseTryAgain": "يرجى المحاولة مرة أخرى.",
     "customer": "العميل",
-    "couldNotLoadBranches": "تعذر تحميل الفروع. تحقق من الاتصال وأعد تحميل الصفحة."
+    "couldNotLoadBranches": "تعذر تحميل الفروع. تحقق من الاتصال وأعد تحميل الصفحة.",
+    "checkForRewards": "التحقق من المكافآت",
+    "refreshing": "جارٍ التحقق…",
+    "couldNotRefresh": "تعذّر التحديث. حاول مرة أخرى."
   },
   "users": {
     "title": "المستخدمون",
