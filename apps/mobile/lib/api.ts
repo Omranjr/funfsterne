@@ -88,7 +88,13 @@ export async function apiFetch<T>(
   const token = await getAuthToken();
 
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    // Only declared when there is actually a body to describe.
+    //
+    // Announcing `application/json` on a request with no body tells Fastify to
+    // run its JSON parser over an empty string, which throws before the route
+    // is ever reached -- so a POST that legitimately takes no payload came
+    // back 500, looking like a server fault rather than a malformed request.
+    ...(init?.body ? { "Content-Type": "application/json" } : {}),
     ...(init?.headers as Record<string, string>),
   };
 
@@ -225,7 +231,13 @@ async function publicApiFetch<T>(
   const token = await getAuthToken();
 
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    // Only declared when there is actually a body to describe.
+    //
+    // Announcing `application/json` on a request with no body tells Fastify to
+    // run its JSON parser over an empty string, which throws before the route
+    // is ever reached -- so a POST that legitimately takes no payload came
+    // back 500, looking like a server fault rather than a malformed request.
+    ...(init?.body ? { "Content-Type": "application/json" } : {}),
     ...(init?.headers as Record<string, string>),
   };
 

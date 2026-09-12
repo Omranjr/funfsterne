@@ -6,6 +6,7 @@ import { prismaPlugin } from "./plugins/prisma.js";
 import { jwtPlugin } from "./plugins/jwt.js";
 import { uploadPlugin } from "./plugins/upload.js";
 import { errorHandlerPlugin } from "./plugins/error-handler.js";
+import { registerJsonBodyParser } from "./plugins/json-body-parser.js";
 import { healthRoutes } from "./routes/health.js";
 import { adminAuthRoutes } from "./routes/admin-auth.js";
 import { adminRoutes } from "./routes/admin.js";
@@ -94,6 +95,7 @@ const app = Fastify({
 
 async function main() {
   await app.register(errorHandlerPlugin);
+  registerJsonBodyParser(app);
   // Registered before the routes so the headers land on every reply,
   // including the ones Fastify generates itself.
   await app.register(helmetPlugin);
