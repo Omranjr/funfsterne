@@ -24,6 +24,23 @@ export const errorHandlerPlugin = fp(async function errorHandlerPlugin(
       }
     }
 
+    // Anything that already carries a 4xx is a client error someone has
+    // deliberately labelled -- Fastify's own body-parser failures, and our
+    // JSON parser rejecting malformed input. Reporting those as 500 is wrong
+    // twice over: the caller is told the server broke when the request was at
+    // fault, and a genuine outage is impossible to spot in a log full of
+    // other people's typos.
+    //
+    // Only 4xx is trusted. A thrown 5xx gets the generic treatment below,
+    // because its message may carry internals worth not leaking.
+    const status = (error as { statusCode?: number }).statusCode;
+    if (typeof status === "number" && status >= 400 && status < 500) {
+      request.log.warn({ err: error }, "client error");
+      return reply
+        .status(status)
+        .send({ error: error.message || "Bad request" });
+    }
+
     request.log.error(error);
     return reply.status(500).send({ error: "Internal server error" });
   });
