@@ -21,7 +21,13 @@ import { useArabicTextStyle } from "@/hooks/useArabicText";
 import { PRIVACY_URL } from "@/constants/links";
 import { logSwallowed } from "@/lib/log";
 import { useTheme } from "@/contexts/ThemeContext";
-import { typography, borderRadius, SHARED_TOKENS } from "@/constants/theme";
+import {
+  typography,
+  borderRadius,
+  SHARED_TOKENS,
+  FONT_SCALE_CAPS,
+  HIDE_DECORATION_ABOVE_SCALE,
+} from "@/constants/theme";
 import {
   ProductCard,
   ListSkeleton,
@@ -52,6 +58,23 @@ const CATEGORY_TILE_WIDTH = 134;
 const CATEGORY_TILE_HEIGHT = 176;
 const GUTTER = 22;
 
+/**
+ * Category tiles are fixed-size, so their captions had nowhere to go at large
+ * system text sizes and truncated -- "Skin Care" became "Hautp...".
+ *
+ * Growing the tile with the text is the honest fix: the caption gets the room
+ * it actually needs instead of an ellipsis. Growth is sublinear and capped,
+ * because a tile that scaled 1:1 with a 3x setting would be taller than the
+ * screen and the shelf would stop reading as a row of cards.
+ */
+function scaleTile(base: number, fontScale: number): number {
+  const clamped = Math.min(Math.max(fontScale, 1), 2.2);
+  // 62% of the extra scale: at the largest system size a tile ends up ~1.74x,
+  // which fits three lines of caption without swallowing the screen.
+  const growth = 1 + (clamped - 1) * 0.62;
+  return Math.round(base * growth);
+}
+
 
 /**
  * Opens the privacy policy, and says so if it cannot.
@@ -74,7 +97,7 @@ export default function HomeScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
   const arabicText = useArabicTextStyle();
-  const { width } = useWindowDimensions();
+  const { width, fontScale } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const isFocused = useIsFocused();
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
@@ -239,15 +262,18 @@ export default function HomeScreen() {
 
           {/* ── Category shelf ─────────────────────────────────────── */}
           <View style={styles.sectionHead}>
-            <Text style={[typography.displayLg, { color: theme.text }]}>
+            <Text style={[typography.displayLg, styles.sectionTitle, { color: theme.text }]}>
               {t("home.shopByCategory")}
             </Text>
-            <Text
-              style={[typography.micro, styles.microUpper, arabicText, { color: theme.goldText }]}
-              allowFontScaling={false}
-            >
-              {t("home.swipeHint")}
-            </Text>
+            {fontScale <= HIDE_DECORATION_ABOVE_SCALE ? (
+              <Text
+                style={[typography.micro, styles.microUpper, arabicText, { color: theme.goldText }]}
+                maxFontSizeMultiplier={FONT_SCALE_CAPS.chrome}
+                numberOfLines={1}
+              >
+                {t("home.swipeHint")}
+              </Text>
+            ) : null}
           </View>
 
           <FlatList
@@ -261,29 +287,32 @@ export default function HomeScreen() {
 
           {/* ── Featured ───────────────────────────────────────────── */}
           <View style={[styles.sectionHead, styles.featuredHead]}>
-            <Text style={[typography.displayLg, { color: theme.text }]}>
+            <Text style={[typography.displayLg, styles.sectionTitle, { color: theme.text }]}>
               {t("home.featuredProducts")}
             </Text>
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() =>
-                router.push({
-                  pathname: "/products",
-                  params: {
-                    category: "ALL",
-                    branchId: selectedBranchId ?? "",
-                    nav: String(Date.now()),
-                  },
-                })
-              }
-            >
-              <Text
-                style={[typography.micro, styles.microUpper, arabicText, { color: theme.goldText }]}
-                allowFontScaling={false}
+            {fontScale <= HIDE_DECORATION_ABOVE_SCALE ? (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() =>
+                  router.push({
+                    pathname: "/products",
+                    params: {
+                      category: "ALL",
+                      branchId: selectedBranchId ?? "",
+                      nav: String(Date.now()),
+                    },
+                  })
+                }
               >
-                {t("home.seeAllShort")}
-              </Text>
-            </TouchableOpacity>
+                <Text
+                  style={[typography.micro, styles.microUpper, arabicText, { color: theme.goldText }]}
+                  maxFontSizeMultiplier={FONT_SCALE_CAPS.chrome}
+                  numberOfLines={1}
+                >
+                  {t("home.seeAllShort")}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
 
           <View style={styles.featuredList}>
@@ -375,12 +404,23 @@ function CategoryTile({
   label: string;
   count: number;
 }) {
+  const { fontScale } = useWindowDimensions();
   const { theme } = useTheme();
   const { t } = useTranslation();
   const arabicText = useArabicTextStyle();
 
   return (
-    <View style={[styles.tile, { borderColor: theme.hairline }]}>
+    <View
+      style={[
+        styles.tile,
+        {
+          borderColor: theme.hairline,
+          // Overrides the base size so the caption has somewhere to go.
+          width: scaleTile(CATEGORY_TILE_WIDTH, fontScale),
+          height: scaleTile(CATEGORY_TILE_HEIGHT, fontScale),
+        },
+      ]}
+    >
       {imageUrl ? (
         <CachedImage
           source={imageUrl}
@@ -403,14 +443,27 @@ function CategoryTile({
       <View style={styles.tileCaption}>
         <Text
           style={[typography.displayMd, { color: theme.onImage }]}
-          numberOfLines={1}
+          // Three lines, not one. "Skin Care" and "Hautpflege" both fit on a
+          // single line at the default size, so nothing changes for most
+          // people -- but at large type the label wraps instead of becoming
+          // "Hautp...", and the tile has grown to hold it.
+          numberOfLines={3}
+          // Both levers are needed. The tile grows ~1.74x at most, while the
+          // system can ask for 3.12x: three uncapped lines come to 243pt in a
+          // 138pt caption, so it would truncate again at the very top sizes.
+          // Capped, three lines fit with room to spare.
+          maxFontSizeMultiplier={FONT_SCALE_CAPS.chrome}
         >
           {label}
         </Text>
         <Text
           style={[typography.microXs, styles.tileCount, arabicText, { color: theme.gold }]}
           numberOfLines={1}
-          allowFontScaling={false}
+          // Was allowFontScaling={false}, which froze this at 10pt for
+          // everyone -- including the people who turned the setting up
+          // precisely because they cannot read 10pt. A cap keeps it inside
+          // the tile while still letting it grow.
+          maxFontSizeMultiplier={FONT_SCALE_CAPS.chrome}
         >
           {t("home.itemsCount", { count })}
         </Text>
@@ -458,6 +511,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: GUTTER,
     paddingBottom: 16,
+  },
+  // The heading must be able to shrink and wrap. Without this it pushed the
+  // SWIPE / SEE ALL hint beside it off the row at large type, clipping it to
+  // "WIS" -- the row had no give because neither child could yield.
+  sectionTitle: {
+    flexShrink: 1,
+    marginRight: 12,
   },
   featuredHead: {
     paddingTop: 30,

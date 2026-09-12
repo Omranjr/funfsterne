@@ -8,6 +8,7 @@ import {
   type TextStyle,
   type ImageStyle,
   type StyleProp,
+  useWindowDimensions,
 } from "react-native";
 import Animated, {
   useSharedValue,
@@ -69,6 +70,7 @@ export function ProductCard({
 }: ProductCardProps) {
   const { theme } = useTheme();
   const { t, i18n } = useTranslation();
+  const { fontScale } = useWindowDimensions();
   const scale = useSharedValue(1);
   const isDark = theme.mode === "dark";
   const isGrid = variant === "grid";
@@ -84,6 +86,11 @@ export function ProductCard({
   const handlePressOut = useCallback(() => {
     scale.value = withSpring(1, { stiffness: 400, damping: 20 });
   }, [scale]);
+
+  // A row card has nothing below it to disturb, so at large system text it
+  // grows rather than truncating. The grid keeps two lines whatever happens:
+  // its cards sit side by side and their prices have to line up.
+  const textLines = isGrid || fontScale <= 1.3 ? 2 : 4;
 
   const accessibilityLabel = [name, category, formatCurrency(price, i18n.language)]
     .filter(Boolean)
@@ -163,7 +170,7 @@ export function ProductCard({
             when they only use one, so a short product and a long one
             produce the same card and their prices line up across the row. */}
         <Text
-          numberOfLines={2}
+          numberOfLines={textLines}
           style={[
             typography.bodyLg,
             isGrid && styles.nameGrid,
@@ -176,7 +183,7 @@ export function ProductCard({
 
         {description || isGrid ? (
           <Text
-            numberOfLines={2}
+            numberOfLines={textLines}
             style={[
               typography.bodySm,
               isGrid && styles.descriptionGrid,

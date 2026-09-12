@@ -9,7 +9,7 @@ import {
   POINTS_PER_VISIT,
 } from "@funfsterne/shared-types";
 import { useTheme } from "@/contexts/ThemeContext";
-import { typography, borderRadius } from "@/constants/theme";
+import { typography, borderRadius, FONT_SCALE_CAPS } from "@/constants/theme";
 import { useArabicTextStyle } from "@/hooks/useArabicText";
 import { useReduceMotion } from "@/hooks/useReduceMotion";
 
@@ -100,15 +100,19 @@ export function RewardProgress({ points, onPress }: RewardProgressProps) {
             arabicText,
             { color: complete ? theme.goldText : theme.textMuted },
           ]}
-          numberOfLines={1}
-          allowFontScaling={false}
+          // Two lines and a cap rather than allowFontScaling={false}. "Deine
+          // nächste Prämie" is already long; frozen at 10pt it excluded the
+          // very users who turn the setting up, and uncapped it pushed the
+          // count off the row.
+          numberOfLines={2}
+          maxFontSizeMultiplier={FONT_SCALE_CAPS.chrome}
         >
           {complete ? t("home.rewardReadyLabel") : t("home.rewardLabel")}
         </Text>
         <Text
           style={[typography.microXs, styles.count, { color: theme.goldText }]}
           numberOfLines={1}
-          allowFontScaling={false}
+          maxFontSizeMultiplier={FONT_SCALE_CAPS.chrome}
           // A count is digits and a slash in every one of our languages, so it
           // is never mirrored or reshaped.
         >

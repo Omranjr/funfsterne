@@ -279,3 +279,45 @@ export const theme = {
 } as const;
 
 export type LegacyTheme = typeof theme;
+
+/**
+ * Caps on how far iOS Dynamic Type / Android font scaling may enlarge text.
+ *
+ * At the largest system sizes text was outgrowing its containers: category
+ * tiles are a fixed size, so their labels truncated to "Hautp...", and the
+ * hero wordmark pushed itself off the top of the screen.
+ *
+ * The instinct is to reach for `allowFontScaling={false}`, and much of this
+ * app already does. That is the wrong lever: it freezes text at its design
+ * size, so the people who most need larger text get none at all. A cap still
+ * honours the setting, just not past the point where the layout fails.
+ *
+ * Anything that can simply wrap or grow should have no cap at all -- prose,
+ * product names, descriptions. These values are only for text living inside
+ * something whose size is fixed.
+ */
+export const FONT_SCALE_CAPS = {
+  /**
+   * Brand lockups and display numerals. These are shapes rather than prose:
+   * the Fünf Sterne wordmark at 3x is not more readable, it is off-screen.
+   */
+  display: 1.25,
+  /**
+   * Labels inside fixed chrome -- tile captions, chips, badges, tab bar.
+   * Generous enough to be a real improvement for low-vision users while
+   * staying inside a container that cannot grow with it.
+   */
+  chrome: 1.5,
+} as const;
+
+/**
+ * Above this system scale, decorative affordances are dropped rather than
+ * allowed to crowd out the content they sit beside.
+ *
+ * "SWIPE" and "SEE ALL" are hints, not controls -- a horizontal shelf is
+ * self-evidently swipeable, and the same destination is one tap away in the
+ * tab bar. At large type they were competing with the section heading for a
+ * row that cannot hold both, and losing: the screenshot showed "WIS" where
+ * "SWIPE" should be.
+ */
+export const HIDE_DECORATION_ABOVE_SCALE = 1.35;
