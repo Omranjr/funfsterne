@@ -57,6 +57,53 @@ import { useTranslation } from "react-i18next";
  */
 const TAB_ICON_SIZE = 21;
 
+/**
+ * The Rewards tab, raised on a gold disc.
+ *
+ * Rewards sits in the centre because it is the tab customers open under time
+ * pressure with a barber waiting, and the centre is the easiest reach on a
+ * phone held one-handed. Offers, which used to be there, is browsed at
+ * leisure and can take the harder slot.
+ *
+ * The disc is gold whether or not the tab is active. Everywhere else in this
+ * bar gold means "you are here", which lights up precisely when you no longer
+ * need to find it -- a destination the app is pointing at has to look
+ * different from a state. What focus changes is the star's fill, not the
+ * disc.
+ *
+ * Sizing is deliberately modest. The icon inside is the same TAB_ICON_SIZE as
+ * every other tab, so the disc reads as a sibling wearing a coin rather than
+ * a different species; at 46pt it crowns only ~11pt above the bar, which is
+ * enough to read as raised without towering over the row.
+ */
+const REWARD_DISC = 46;
+const REWARD_DISC_RING = 4;
+const REWARD_DISC_LIFT = 20;
+
+function RewardTabIcon({ focused }: { color: string; focused: boolean }) {
+  const { theme } = useTheme();
+  return (
+    <View
+      style={[
+        styles.rewardDisc,
+        {
+          backgroundColor: theme.gold,
+          // Ring in the bar's own colour, so the disc reads as floating above
+          // the bar rather than punched through it.
+          borderColor: theme.groundDeep,
+        },
+      ]}
+    >
+      <Star
+        size={TAB_ICON_SIZE}
+        color={theme.onGold}
+        fill={focused ? theme.onGold : "transparent"}
+        strokeWidth={focused ? 2.1 : 1.8}
+      />
+    </View>
+  );
+}
+
 function tabIcon(Icon: LucideIcon) {
   return function TabIcon({ color, focused }: { color: string; focused: boolean }) {
     return (
@@ -191,6 +238,9 @@ function AppNavigator() {
             // full-bleed). Without this the labels sit under the home
             // indicator / gesture pill on devices that have one.
             height: 72 + insets.bottom,
+            // The Rewards disc is lifted above the bar's top edge; without
+            // this it is clipped flat and the whole effect disappears.
+            overflow: "visible",
             paddingBottom: Math.max(insets.bottom, 8),
             paddingTop: 9,
           },
@@ -207,6 +257,7 @@ function AppNavigator() {
           },
           tabBarItemStyle: {
             paddingTop: 2,
+            overflow: "visible",
           },
           tabBarIconStyle: {
             marginBottom: 1,
@@ -221,13 +272,14 @@ function AppNavigator() {
           name="products"
           options={{ title: t("tabs.shop"), tabBarIcon: tabIcon(ShoppingBag) }}
         />
+        {/* Centre slot. See RewardTabIcon for why. */}
+        <Tabs.Screen
+          name="loyalty"
+          options={{ title: t("tabs.rewards"), tabBarIcon: RewardTabIcon }}
+        />
         <Tabs.Screen
           name="discount-codes"
           options={{ title: t("tabs.offers"), tabBarIcon: tabIcon(TicketPercent) }}
-        />
-        <Tabs.Screen
-          name="loyalty"
-          options={{ title: t("tabs.rewards"), tabBarIcon: tabIcon(Star) }}
         />
         <Tabs.Screen
           name="account"
@@ -410,6 +462,27 @@ export default function RootLayout() {
 }
 
 const styles = StyleSheet.create({
+  rewardDisc: {
+    width: REWARD_DISC,
+    height: REWARD_DISC,
+    borderRadius: REWARD_DISC / 2,
+    borderWidth: REWARD_DISC_RING,
+    alignItems: "center",
+    justifyContent: "center",
+    // Pulls the disc up out of the icon row, then gives back the height it
+    // would otherwise still claim. A 46pt disc lifted 20pt occupies 26pt of
+    // row where every other tab occupies 21, which would push this one label
+    // 5pt below its neighbours -- exactly the kind of near-miss that reads as
+    // broken without being obviously wrong. The pair leaves the icon slot the
+    // same height as all the others, so only the disc moves.
+    marginTop: -REWARD_DISC_LIFT,
+    marginBottom: -(REWARD_DISC - REWARD_DISC_LIFT - TAB_ICON_SIZE),
+    shadowColor: "#000",
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
   center: {
     flex: 1,
     alignItems: "center",
