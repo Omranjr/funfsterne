@@ -8,13 +8,12 @@ import {
   TouchableOpacity,
   RefreshControl,
   Linking,
-  Platform,
   Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, Share2, MapPin, MessageCircle } from "lucide-react-native";
+import { ChevronLeft, Share2, MapPin, Phone } from "lucide-react-native";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Badge, CachedImage, EmptyState, ProductDetailSkeleton } from "@/components";
 import { useProduct, useBranches } from "@/hooks/usePublicData";
@@ -67,10 +66,10 @@ export default function ProductDetailsScreen() {
   }, [product, branches]);
 
   // Both handlers used to swallow the failure entirely, which turned a
-  // device without Instagram (or without an SMS app — every iPad, and any
-  // phone where the user removed Messages) into a button that visibly does
-  // nothing at all. Tell the customer what happened and give them the phone
-  // number, which is the thing they were reaching for anyway.
+  // device without Instagram (or without a dialler — every iPad, and any
+  // Wi-Fi-only tablet) into a button that visibly does nothing at all. Tell
+  // the customer what happened and give them the number in the alert, so it
+  // is still readable on a device that cannot dial it.
   const handleShare = useCallback(async () => {
     if (!product) return;
     try {
@@ -85,13 +84,16 @@ export default function ProductDetailsScreen() {
   }, [product, t]);
 
   const handleContact = useCallback(async () => {
-    const url = Platform.select({
-      ios: `sms:${SHOP_PHONE}`,
-      android: `sms:${SHOP_PHONE}`,
-      default: `tel:${SHOP_PHONE}`,
-    });
+    // A call, not a message. Someone standing in front of a shelf wanting to
+    // know whether a product suits their hair wants an answer now, and the
+    // shop answers its phone during opening hours -- an SMS lands in an inbox
+    // nobody watches, and the customer is left composing a text with no idea
+    // when it will be read.
+    //
+    // iOS and Android both confirm a `tel:` link before dialling, so the tap
+    // cannot place a call by accident.
     try {
-      await Linking.openURL(url);
+      await Linking.openURL(`tel:${SHOP_PHONE}`);
     } catch (error) {
       logSwallowed("open-contact", error);
       Alert.alert(
@@ -281,7 +283,7 @@ export default function ProductDetailsScreen() {
               { backgroundColor: theme.gold },
             ]}
           >
-            <MessageCircle size={18} color={theme.background} />
+            <Phone size={18} color={theme.background} />
             <Text style={[styles.ctaText, { color: theme.background }]}>
               {t("productDetail.askAboutProduct")}
             </Text>

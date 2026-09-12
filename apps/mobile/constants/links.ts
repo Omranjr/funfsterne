@@ -14,5 +14,5 @@ export const PRIVACY_URL =
 /** The shop's Instagram, offered as "share" on a product. */
 export const SHOP_INSTAGRAM = "https://instagram.com/mido.barbar7";
 
-/** Used to build the sms:/tel: link on a product. */
+/** Used to build the tel: link on a product, and shown when dialling fails. */
 export const SHOP_PHONE = "+4928234198333";
