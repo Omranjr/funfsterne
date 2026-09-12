@@ -86,7 +86,14 @@
     "heroEyebrow": "BARBER · SINCE 2020",
     "swipeHint": "SWIPE ›",
     "seeAllShort": "SEE ALL",
-    "itemsCount": "{{count}} ITEMS"
+    "itemsCount": "{{count}} ITEMS",
+    "rewardLabel": "Your next reward",
+    "rewardReadyLabel": "Reward ready",
+    "rewardFirstVisit": "Your first visit earns a stamp",
+    "rewardLastVisit": "One more visit and it is yours",
+    "rewardReadyMessage": "Tap to redeem your €{{value}} voucher",
+    "rewardVisitsLeft_one": "{{count}} more visit for €{{value}} off",
+    "rewardVisitsLeft_other": "{{count}} more visits for €{{value}} off"
   },
   "products": {
     "title": "Products",

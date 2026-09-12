@@ -27,6 +27,7 @@ import {
   ListSkeleton,
   EmptyState,
   HeroBanner,
+  RewardProgress,
   BranchPicker,
   CachedImage,
   Ground,
@@ -204,8 +205,6 @@ export default function HomeScreen() {
           branches={branches}
           onSelectBranch={handleSelectBranch}
           onOpenBranchPicker={() => setPickerOpen(true)}
-          loyaltyPoints={loyalty?.balance ?? 0}
-          topInset={insets.top}
         />
 
         {/* The rising sheet: overlaps the hero and carries the page's own
@@ -223,6 +222,20 @@ export default function HomeScreen() {
         >
           <View style={[styles.sheetHairline, { backgroundColor: theme.hairlineStrong }]} />
           <View style={[styles.grabHandle, { backgroundColor: theme.hairlineStrong }]} />
+
+          {/* ── Loyalty progress ───────────────────────────────────── */}
+          {/* First thing under the fold line, so it is seen without
+              scrolling -- which the hero ring it replaced never managed,
+              being a bare number over a portrait. Rendered only when the
+              balance has actually loaded: a signed-out visitor gets no
+              loyalty data, and an empty card promising rewards they cannot
+              collect would be worse than no card. */}
+          {loyalty ? (
+            <RewardProgress
+              points={loyalty.balance}
+              onPress={() => router.push("/loyalty")}
+            />
+          ) : null}
 
           {/* ── Category shelf ─────────────────────────────────────── */}
           <View style={styles.sectionHead}>

@@ -86,7 +86,18 @@
     "heroEyebrow": "حلاقة · منذ 2020",
     "swipeHint": "اسحب ›",
     "seeAllShort": "عرض الكل",
-    "itemsCount": "{{count}} منتج"
+    "itemsCount": "{{count}} منتج",
+    "rewardLabel": "مكافأتك التالية",
+    "rewardReadyLabel": "المكافأة جاهزة",
+    "rewardFirstVisit": "زيارتك الأولى تمنحك ختماً",
+    "rewardLastVisit": "زيارة واحدة فقط وتصبح لك",
+    "rewardReadyMessage": "اضغط لاستبدال قسيمة بقيمة {{value}} يورو",
+    "rewardVisitsLeft_zero": "{{count}} زيارة لخصم {{value}} يورو",
+    "rewardVisitsLeft_one": "زيارة واحدة لخصم {{value}} يورو",
+    "rewardVisitsLeft_two": "زيارتان لخصم {{value}} يورو",
+    "rewardVisitsLeft_few": "{{count}} زيارات لخصم {{value}} يورو",
+    "rewardVisitsLeft_many": "{{count}} زيارة لخصم {{value}} يورو",
+    "rewardVisitsLeft_other": "{{count}} زيارة لخصم {{value}} يورو"
   },
   "products": {
     "title": "المنتجات",

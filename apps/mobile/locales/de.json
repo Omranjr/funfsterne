@@ -86,7 +86,14 @@
     "heroEyebrow": "FRISEUR · SEIT 2020",
     "swipeHint": "WISCHEN ›",
     "seeAllShort": "ALLE",
-    "itemsCount": "{{count}} ARTIKEL"
+    "itemsCount": "{{count}} ARTIKEL",
+    "rewardLabel": "Deine nächste Prämie",
+    "rewardReadyLabel": "Prämie bereit",
+    "rewardFirstVisit": "Dein erster Besuch bringt einen Stempel",
+    "rewardLastVisit": "Nur noch ein Besuch, dann gehört sie dir",
+    "rewardReadyMessage": "Tippen und {{value}} € Gutschein einlösen",
+    "rewardVisitsLeft_one": "Noch {{count}} Besuch für {{value}} € Rabatt",
+    "rewardVisitsLeft_other": "Noch {{count}} Besuche für {{value}} € Rabatt"
   },
   "products": {
     "title": "Produkte",

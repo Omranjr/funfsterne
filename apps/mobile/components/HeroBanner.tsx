@@ -9,7 +9,6 @@ import {
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
-import Svg, { Circle } from "react-native-svg";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -29,33 +28,21 @@ export interface HeroBannerProps {
   branches: Branch[] | undefined;
   onSelectBranch: (branch: Branch | null) => void;
   onOpenBranchPicker: () => void;
-  /** Loyalty stamps earned, drives the ring arc. Presentational only. */
-  loyaltyPoints?: number;
-  /** Points that complete one ring. */
-  loyaltyTarget?: number;
-  /**
-   * Safe-area top inset. The hero is full-bleed to y:0 with the status bar
-   * floating over it, so its overlay content has to clear the notch itself.
-   */
-  topInset?: number;
+  // Loyalty progress used to live here as a ring in the top-right corner. It
+  // moved to RewardProgress on the sheet below: over a portrait it was a
+  // contrast gamble, it could not be tapped, and a bare number with no unit
+  // or goal said nothing. See components/RewardProgress.tsx.
 }
 
 const HERO_HEIGHT = 400;
 const SHIMMER_WIDTH = 100;
 const SHIMMER_DURATION = 7000;
 
-const RING_SIZE = 42;
-const RING_STROKE = 4;
-const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2;
-const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 export function HeroBanner({
   selectedBranch,
   branches,
   onOpenBranchPicker,
-  loyaltyPoints = 0,
-  loyaltyTarget = 100,
-  topInset = 0,
 }: HeroBannerProps) {
   const { theme } = useTheme();
   const { t } = useTranslation();
@@ -88,10 +75,6 @@ export function HeroBanner({
   const shimmerStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: shimmerX.value }],
   }));
-
-  // Ring arc. Clamped so an over-target balance doesn't wrap the circle.
-  const progress = Math.max(0, Math.min(1, loyaltyTarget > 0 ? loyaltyPoints / loyaltyTarget : 0));
-  const dashOffset = RING_CIRCUMFERENCE * (1 - progress);
 
   return (
     <View style={[styles.container, { height: HERO_HEIGHT, backgroundColor: theme.ground }]}>
@@ -138,52 +121,6 @@ export function HeroBanner({
         </Animated.View>
       ) : null}
 
-      {/* Loyalty ring, top-right. Sits clear of the portrait's face. */}
-      {/* The reference puts the ring 54dp down from the screen edge, which
-          already clears a standard status bar. A device with a taller notch
-          reports a bigger inset, so that wins when it is larger. */}
-      <View
-        style={[styles.ring, { top: Math.max(topInset + 12, 54) }]}
-        pointerEvents="none"
-      >
-        <Svg width={RING_SIZE} height={RING_SIZE}>
-          <Circle
-            cx={RING_SIZE / 2}
-            cy={RING_SIZE / 2}
-            r={RING_RADIUS}
-            stroke={hexToRgba(theme.gold, 0.16)}
-            strokeWidth={RING_STROKE}
-            fill="none"
-          />
-          <Circle
-            cx={RING_SIZE / 2}
-            cy={RING_SIZE / 2}
-            r={RING_RADIUS}
-            stroke={theme.gold}
-            strokeWidth={RING_STROKE}
-            fill="none"
-            strokeLinecap="round"
-            strokeDasharray={RING_CIRCUMFERENCE}
-            strokeDashoffset={dashOffset}
-            // Start the arc at 12 o'clock rather than 3.
-            transform={`rotate(-90 ${RING_SIZE / 2} ${RING_SIZE / 2})`}
-          />
-        </Svg>
-        <View
-          style={[
-            styles.ringInner,
-            { backgroundColor: hexToRgba(theme.ground, 0.9) },
-          ]}
-        >
-          <Text
-            style={[typography.priceSm, styles.ringValue, { color: theme.gold }]}
-            allowFontScaling={false}
-            numberOfLines={1}
-          >
-            {loyaltyPoints}
-          </Text>
-        </View>
-      </View>
 
       {/* Bottom block: eyebrow + wordmark + branch chip. */}
       <View style={styles.bottomBlock}>
@@ -323,25 +260,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     width: SHIMMER_WIDTH,
-  },
-  ring: {
-    position: "absolute",
-    right: 22,
-    width: RING_SIZE,
-    height: RING_SIZE,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  ringInner: {
-    position: "absolute",
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  ringValue: {
-    textAlign: "center",
   },
   bottomBlock: {
     position: "absolute",
