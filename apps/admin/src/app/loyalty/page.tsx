@@ -41,6 +41,8 @@ export default function LoyaltyScanPage() {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [result, setResult] = useState<ScanResult>({ status: "idle" });
   const [redeemingId, setRedeemingId] = useState<string | null>(null);
+  // Set when a scan has been asked for but the <video> has not remounted yet.
+  const [pendingStart, setPendingStart] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsRef = useRef<IScannerControls | null>(null);
@@ -86,6 +88,7 @@ export default function LoyaltyScanPage() {
 
       processingRef.current = true;
       controlsRef.current?.stop();
+      controlsRef.current = null;
       setScanning(false);
 
       const userId = text.slice(QR_PREFIX.length);
@@ -138,6 +141,18 @@ export default function LoyaltyScanPage() {
   );
 
   const startScanning = useCallback(async () => {
+    // The <video> only exists while `result.status === "idle"`, so this can
+    // be reached before React has re-rendered it -- and zxing, handed nothing,
+    // quietly creates its own detached video and plays the camera into that.
+    // Decoding kept working while the element on screen stayed black, which is
+    // a miserable thing to debug at a till. Fail loudly instead.
+    const video = videoRef.current;
+    if (!video) {
+      setScanning(false);
+      setCameraError(t("loyaltyScan.cameraErrorGeneric"));
+      return;
+    }
+
     setCameraError(null);
     setResult({ status: "idle" });
     setScanning(true);
@@ -146,7 +161,7 @@ export default function LoyaltyScanPage() {
     try {
       const controls = await reader.decodeFromConstraints(
         { video: { facingMode: "environment" } },
-        videoRef.current!,
+        video,
         (decoded) => {
           if (decoded) {
             handleDecoded(decoded.getText());
@@ -176,10 +191,23 @@ export default function LoyaltyScanPage() {
     };
   }, []);
 
+  // Returning to idle unmounts the success card and remounts the <video>, but
+  // that only happens on the next render -- so the camera cannot be started in
+  // the same handler. This asks for a start and lets the effect below run it
+  // once the element is actually back in the DOM.
   const handleScanNext = useCallback(() => {
     setResult({ status: "idle" });
-    startScanning();
-  }, [startScanning]);
+    setPendingStart(true);
+  }, []);
+
+  useEffect(() => {
+    if (!pendingStart) return;
+    // Effects run after commit, so by the time this fires the idle card -- and
+    // with it the video element -- has been rendered.
+    if (result.status !== "idle" || !videoRef.current) return;
+    setPendingStart(false);
+    void startScanning();
+  }, [pendingStart, result.status, startScanning]);
 
   const handleRedeemReward = useCallback(
     async (rewardId: string) => {
