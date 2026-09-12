@@ -121,6 +121,19 @@ async function main() {
 
   await app.listen({ port, host });
 
+  // The daily-earn limit is the only thing stopping an admin login from
+  // minting vouchers by scanning one customer repeatedly, and points convert
+  // straight into euros. Turning it off is a legitimate testing move, but
+  // leaving it off is an open till -- and an environment variable set weeks
+  // ago is invisible. Say so on every boot, loudly enough to notice.
+  if (process.env.LOYALTY_DISABLE_DAILY_LIMIT === "1") {
+    app.log.warn(
+      "LOYALTY_DISABLE_DAILY_LIMIT=1 -- the once-per-day earn limit is OFF. " +
+        "A customer can be scanned for points repeatedly. Fine for testing; " +
+        "unset this before the shop goes live.",
+    );
+  }
+
   // Started only after the server is accepting requests, so housekeeping can
   // never delay or fail a boot.
   startRetentionSchedule(app);
